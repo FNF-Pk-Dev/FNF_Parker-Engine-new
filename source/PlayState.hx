@@ -61,6 +61,7 @@ import FunkinLua;
 import DialogueBoxPsych;
 import Conductor.Rating;
 import flixel.system.FlxAssets.FlxShader;
+import hscript.Script;
 
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
@@ -310,6 +311,9 @@ class PlayState extends MusicBeatState
 	var keysPressed:Array<Bool> = [];
 	var boyfriendIdleTime:Float = 0.0;
 	var boyfriendIdled:Bool = false;
+	
+	// Hscript
+	public var script:Script;
 
 	// Lua shit
 	public static var instance:PlayState;
@@ -1076,6 +1080,8 @@ class PlayState extends MusicBeatState
 
 		opponentStrums = new FlxTypedGroup<StrumNote>();
 		playerStrums = new FlxTypedGroup<StrumNote>();
+		
+		startScript();
 
 		// startCountdown();
 
@@ -5374,4 +5380,114 @@ class PlayState extends MusicBeatState
 
 	var curLight:Int = -1;
 	var curLightEvent:Int = -1;
+	
+	public function startScript()
+	{
+		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
+		//var curStageFolder:String = curStage;
+
+		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
+		
+		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
+
+		var hxdata:String = "";
+		
+		var hxsdata:String = "";
+
+		if (FileSystem.exists(path))
+			hxdata = FileSystem.getText(path);
+		
+		if (FileSystem.exists(stagepath))
+			hxsdata = FileSystem.getText(stagepath);
+
+		if (hxdata != "" || hxsdata != "")
+		{
+			script = new Script();
+
+			script.setVariable("onSongStart", function()
+			{
+			});
+
+			script.setVariable("destroy", function()
+			{
+			});
+
+			script.setVariable("onCreate", function()
+			{
+			});
+			
+			script.setVariable("onCreatePost", function()
+			{
+			});
+
+			script.setVariable("onStartCountdown", function()
+			{
+			});
+
+			script.setVariable("onStepHit", function()
+			{
+			});
+			
+			script.setVariable("onEvent", function()
+			{
+			});
+			
+			script.setVariable("onBeatHit", function()
+			{
+			});
+
+			script.setVariable("onUpdate", function()
+			{
+			});
+			
+			script.setVariable("onUpdatePost", function()
+			{
+			});
+			
+			script.setVariable("onMoveCamera", function()
+			{
+			});
+
+			script.setVariable("import", function(lib:String, ?as:Null<String>) // Does this even work?
+			{
+				if (lib != null && Type.resolveClass(lib) != null)
+				{
+					script.setVariable(as != null ? as : lib, Type.resolveClass(lib));
+				}
+			});
+
+			script.setVariable("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
+			{
+				return FlxColor.fromRGB(Red, Green, Blue, Alpha);
+			});
+
+			script.setVariable("curStep", curStep);
+			script.setVariable("curBeat", curBeat);
+			script.setVariable("bpm", SONG.bpm);
+
+			// PRESET CLASSES
+			script.setVariable("PlayState", instance);
+			script.setVariable("FlxTween", FlxTween);
+			//script.setVariable("FlxColor", FlxColor); error
+			script.setVariable("FlxEase", FlxEase);
+			script.setVariable("FlxSprite", FlxSprite);
+			script.setVariable("Math", Math);
+			script.setVariable("FlxG", FlxG);
+			script.setVariable("ClientPrefs", ClientPrefs);
+			script.setVariable("FlxTimer", FlxTimer);
+			script.setVariable("Main", Main);
+			//script.setVariable("eventName", eventName);
+			script.setVariable("Conductor", Conductor);
+			script.setVariable("Std", Std);
+			script.setVariable("FlxTextBorderStyle", FlxTextBorderStyle);
+			script.setVariable("Paths", Paths);
+			script.setVariable("CENTER", FlxTextAlign.CENTER);
+			script.setVariable("FlxTextFormat", FlxTextFormat);
+			script.setVariable("InputFormatter", InputFormatter);
+			script.setVariable("FlxTextFormatMarkerPair", FlxTextFormatMarkerPair);
+
+			script.runScript(hxdata);
+			script.runScript(hxsdata);
+		}
+	}
 }
