@@ -1382,6 +1382,11 @@ class PlayState extends MusicBeatState
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 		}
 		callOnLuas('onCreatePost', []);
+		if (script != null)
+		{
+			script.executeFunc("onCreate");
+			script.executeFunc("onCreatePost");
+		}
 
 		super.create();
 
@@ -2126,6 +2131,10 @@ class PlayState extends MusicBeatState
 	{
 		if(startedCountdown) {
 			callOnLuas('onStartCountdown', []);
+			if (script != null)
+		{
+			script.executeFunc("onStartCountdown");
+		}
 			return;
 		}
 
@@ -2284,6 +2293,11 @@ class PlayState extends MusicBeatState
 					}
 				});
 				callOnLuas('onCountdownTick', [swagCounter]);
+				if (script != null)
+		{
+			script.setVariable("swagCounter", swagCounter);
+			script.executeFunc("onCountdownTick");
+		}
 
 				swagCounter += 1;
 				// generateSong('fresh');
@@ -2441,6 +2455,10 @@ class PlayState extends MusicBeatState
 		#end
 		setOnLuas('songLength', songLength);
 		callOnLuas('onSongStart', []);
+		if (script != null)
+		{
+			script.executeFunc("onSongStart");
+		}
 	}
 
 	var debugNum:Int = 0;
@@ -2907,6 +2925,11 @@ class PlayState extends MusicBeatState
 			iconP1.swapOldIcon();
 		}*/
 		callOnLuas('onUpdate', [elapsed]);
+		if (script != null)
+		{
+			script.setVariable("elapsed", elapsed);
+			script.executeFunc("onUpdate");
+		}
 
 		switch (curStage)
 		{
@@ -3354,6 +3377,11 @@ class PlayState extends MusicBeatState
 		setOnLuas('cameraY', camFollowPos.y);
 		setOnLuas('botPlay', cpuControlled);
 		callOnLuas('onUpdatePost', [elapsed]);
+		if (script != null)
+		{
+			script.setVariable("elapsed", elapsed);
+			script.executeFunc("onUpdatePost");
+		}
 	}
 
 	function openPauseMenu()
@@ -3850,6 +3878,11 @@ class PlayState extends MusicBeatState
 			camFollow.y += gf.cameraPosition[1] + girlfriendCameraOffset[1];
 			tweenCamIn();
 			callOnLuas('onMoveCamera', ['gf']);
+			if (script != null)
+		{
+			script.setVariable("gf", gf);
+			script.executeFunc("onMoveCamera");
+		}
 			return;
 		}
 
@@ -3857,11 +3890,21 @@ class PlayState extends MusicBeatState
 		{
 			moveCamera(true);
 			callOnLuas('onMoveCamera', ['dad']);
+			if (script != null)
+		{
+			script.setVariable("dad", dad);
+			script.executeFunc("onMoveCamera");
+		}
 		}
 		else
 		{
 			moveCamera(false);
 			callOnLuas('onMoveCamera', ['boyfriend']);
+			if (script != null)
+		{
+			script.setVariable("boyfriend", boyfriend);
+			script.executeFunc("onMoveCamera");
+		}
 		}
 	}
 
@@ -3978,6 +4021,10 @@ class PlayState extends MusicBeatState
 		#end
 
 		var ret:Dynamic = callOnLuas('onEndSong', [], false);
+		if (script != null)
+		{
+			script.executeFunc("onEndSong");
+		}
 		if(ret != FunkinLua.Function_Stop && !transitioning) {
 			if (SONG.validScore)
 			{
@@ -4672,6 +4719,15 @@ class PlayState extends MusicBeatState
 		note.hitByOpponent = true;
 
 		callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+		if (script != null)
+		{
+			script.setVariable("notes.members.indexOf(note)", notes.members.indexOf(note));
+			script.setVariable("note.noteData", note.noteData);
+			script.setVariable("note.noteType", note.noteType);
+			script.setVariable("note.isSustainNote", note.isSustainNote);
+			script.setVariable("note:Note", note:Note);
+			script.executeFunc("opponentNoteHit");
+		}
 
 		if (!note.isSustainNote)
 		{
@@ -4779,6 +4835,11 @@ class PlayState extends MusicBeatState
 			var leData:Int = Math.round(Math.abs(note.noteData));
 			var leType:String = note.noteType;
 			callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
+			if (script != null)
+		{
+			script.setVariable("note:Note", note:Note);
+			script.executeFunc("goodNoteHit");
+		}
 
 			if (!note.isSustainNote)
 			{
@@ -5044,6 +5105,11 @@ class PlayState extends MusicBeatState
 		lastStepHit = curStep;
 		setOnLuas('curStep', curStep);
 		callOnLuas('onStepHit', []);
+		if (script != null)
+		{
+			script.setVariable("curStep", curStep);
+			script.executeFunc("onStepHit");
+		}
 	}
 
 	var lightningStrikeBeat:Int = 0;
@@ -5142,6 +5208,11 @@ class PlayState extends MusicBeatState
 
 		setOnLuas('curBeat', curBeat); //DAWGG?????
 		callOnLuas('onBeatHit', []);
+		if (script != null)
+		{
+			script.setVariable("curBeat", curBeat);
+			script.executeFunc("onBeatHit");
+		}
 	}
 
 	override function sectionHit()
@@ -5407,6 +5478,10 @@ class PlayState extends MusicBeatState
 			script.setVariable("onSongStart", function()
 			{
 			});
+			
+			script.setVariable("onEndSong", function()
+			{
+			});
 
 			script.setVariable("destroy", function()
 			{
@@ -5445,6 +5520,14 @@ class PlayState extends MusicBeatState
 			});
 			
 			script.setVariable("onMoveCamera", function()
+			{
+			});
+			
+			script.setVariable("goodNoteHit", function()
+			{
+			});
+			
+			script.setVariable("opponentNoteHit", function()
 			{
 			});
 
