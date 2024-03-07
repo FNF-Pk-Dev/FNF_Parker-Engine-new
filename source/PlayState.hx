@@ -4725,7 +4725,6 @@ class PlayState extends MusicBeatState
 			script.setVariable("note.noteData", note.noteData);
 			script.setVariable("note.noteType", note.noteType);
 			script.setVariable("note.isSustainNote", note.isSustainNote);
-			script.setVariable("note:Note", note:Note);
 			script.executeFunc("opponentNoteHit");
 		}
 
@@ -4837,7 +4836,6 @@ class PlayState extends MusicBeatState
 			callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
 			if (script != null)
 		{
-			script.setVariable("note:Note", note:Note);
 			script.executeFunc("goodNoteHit");
 		}
 
