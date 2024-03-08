@@ -5116,7 +5116,7 @@ class PlayState extends MusicBeatState
 	var lastBeatHit:Int = -1;
 	
 	public function runLuaCode(string:String) {
-        luaArray.push(new FunkinLua((string), true));
+        luaArray.push(new FunkinLua(string, true));
     }
 
 	override function beatHit()
@@ -5553,7 +5553,6 @@ class PlayState extends MusicBeatState
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
-			script.setVariable("focus", focus);
 			script.setVariable("bpm", SONG.bpm);
 
 			// PRESET CLASSES
