@@ -5548,7 +5548,7 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("runLuaCode", function(code:String)
 			{
-				runLuaCode(code)
+				runLuaCode(code);
 			});
 
 			script.setVariable("curStep", curStep);
