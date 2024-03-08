@@ -5464,10 +5464,10 @@ class PlayState extends MusicBeatState
 		var hxsdata:String = "";
 
 		if (FileSystem.exists(path))
-			hxdata = FileSystem.getText(path);
+			hxdata = File.getContent(path);
 		
 		if (FileSystem.exists(stagepath))
-			hxsdata = FileSystem.getText(stagepath);
+			hxsdata = File.getContent(stagepath);
 
 		if (hxdata != "" || hxsdata != "")
 		{
