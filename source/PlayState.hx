@@ -5116,7 +5116,7 @@ class PlayState extends MusicBeatState
 	var lastBeatHit:Int = -1;
 	
 	public function runLuaCode(string:String) {
-        luaArray.push(new FunkinLua(Paths.getPreloadPath(string));
+        luaArray.push(new FunkinLua(Paths.getPreloadPath(string)));
     }
 
 	override function beatHit()
