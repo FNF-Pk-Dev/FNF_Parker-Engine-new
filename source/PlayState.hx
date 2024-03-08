@@ -5114,6 +5114,10 @@ class PlayState extends MusicBeatState
 	var lightningOffset:Int = 8;
 
 	var lastBeatHit:Int = -1;
+	
+	public function runLuaCode(string:String) {
+        luaArray.push(new FunkinLua((string), true));
+    }
 
 	override function beatHit()
 	{
@@ -5517,7 +5521,7 @@ class PlayState extends MusicBeatState
 			{
 			});
 			
-			script.setVariable("onMoveCamera", function()
+			script.setVariable("onMoveCamera", function(focus:String)
 			{
 			});
 			
@@ -5541,9 +5545,15 @@ class PlayState extends MusicBeatState
 			{
 				return FlxColor.fromRGB(Red, Green, Blue, Alpha);
 			});
+			
+			script.setVariable("runLuaCode", function(code:String)
+			{
+				runLuaCode(code)
+			});
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
+			script.setVariable("focus", focus);
 			script.setVariable("bpm", SONG.bpm);
 
 			// PRESET CLASSES
