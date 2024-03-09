@@ -5470,7 +5470,6 @@ class PlayState extends MusicBeatState
 		
 		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
 		
-		var hxToLoadEvent:String = Paths.modFolders('custom_events/' + event + '.hx');
 
 		var hxdata:String = "";
 		
@@ -5480,7 +5479,7 @@ class PlayState extends MusicBeatState
 		
 		for (event in eventPushedMap.keys())
 		{
-			
+			var hxToLoadEvent:String = Paths.modFolders('custom_events/' + event + '.hx');
 			if(FileSystem.exists(hxToLoadEvent))
 			{
 				hxdataEvent = File.getContent(hxToLoadEvent);
@@ -5573,9 +5572,6 @@ class PlayState extends MusicBeatState
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
-			script.setVariable("event", event);
-			script.setVariable("value1", value1);
-			script.setVariable("value2", value2);
 			script.setVariable("bpm", SONG.bpm);
 
 			// PRESET CLASSES
