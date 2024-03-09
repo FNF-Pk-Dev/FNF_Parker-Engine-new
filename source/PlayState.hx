@@ -3866,6 +3866,13 @@ class PlayState extends MusicBeatState
 				}
 		}
 		callOnLuas('onEvent', [eventName, value1, value2]);
+		if (script != null)
+		{
+			script.setVariable("eventName", eventName);
+			script.setVariable("value1", value1);
+			script.setVariable("value2", value2);
+			script.executeFunc("onEvent");
+		}
 	}
 
 	function moveCameraSection():Void {
@@ -5462,10 +5469,23 @@ class PlayState extends MusicBeatState
 		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
 		
 		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
+		
+		var hxToLoadEvent:String = Paths.modFolders('custom_events/' + event + '.hx');
 
 		var hxdata:String = "";
 		
 		var hxsdata:String = "";
+		
+		var hxdataEvent:String = "";
+		
+		for (event in eventPushedMap.keys())
+		{
+			
+			if(FileSystem.exists(hxToLoadEvent))
+			{
+				hxdataEvent = File.getContent(hxToLoadEvent);
+			}
+		}
 
 		if (FileSystem.exists(path))
 			hxdata = File.getContent(path);
@@ -5473,7 +5493,7 @@ class PlayState extends MusicBeatState
 		if (FileSystem.exists(stagepath))
 			hxsdata = File.getContent(stagepath);
 
-		if (hxdata != "" || hxsdata != "")
+		if (hxdata != "" || hxsdata != "" || hxdataEvent != "")
 		{
 			script = new Script();
 
@@ -5553,6 +5573,9 @@ class PlayState extends MusicBeatState
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
+			script.setVariable("event", event);
+			script.setVariable("value1", value1);
+			script.setVariable("value2", value2);
 			script.setVariable("bpm", SONG.bpm);
 
 			// PRESET CLASSES
