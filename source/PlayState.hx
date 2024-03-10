@@ -72,7 +72,7 @@ import openfl.filters.ShaderFilter;
 import sys.FileSystem;
 import sys.io.File;
 #end
-
+/*
 #if VIDEOS_ALLOWED
 #if (hxCodec >= "3.0.0")
 import hxcodec.flixel.FlxVideo as MP4Handler;
@@ -86,7 +86,11 @@ import VideoHandler as MP4Handler;
 import vlc.MP4Handler;
 #end
 #end
-
+*/
+#if VIDEOS_ALLOWED
+import hxcodec.flixel.FlxVideo as MP4Handler;
+import hxcodec.VideoSprite;
+#end
 using StringTools;
 
 class PlayState extends MusicBeatState
