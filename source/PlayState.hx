@@ -76,8 +76,10 @@ import sys.io.File;
 #if VIDEOS_ALLOWED
 #if (hxCodec >= "3.0.0")
 import hxcodec.flixel.FlxVideo as MP4Handler;
+import hxcodec.VideoSprite;
 #elseif (hxCodec == "2.6.1")
 import hxcodec.VideoHandler as MP4Handler;
+import hxcodec.VideoSprite;
 #elseif (hxCodec == "2.6.0")
 import VideoHandler as MP4Handler;
 #else
@@ -91,6 +93,9 @@ class PlayState extends MusicBeatState
 {
 	public static var STRUM_X = 48.5;
 	public static var STRUM_X_MIDDLESCROLL = -278;
+	
+	public var midSongVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
+	public var cheatingVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
 
 	public static var ratingStuff:Array<Dynamic> = [
 		['You Suck!', 0.2], //From 0% to 19%
@@ -2491,8 +2496,19 @@ class PlayState extends MusicBeatState
 		FlxG.sound.list.add(vocals);
 		FlxG.sound.list.add(new FlxSound().loadEmbedded(Paths.inst(PlayState.SONG.song)));
 
+		
+		#if VIDEOS_ALLOWED
+		midSongVideo = new VideoSprite();
+		add(midSongVideo);
+		#end
+
 		notes = new FlxTypedGroup<Note>();
 		add(notes);
+
+		#if VIDEOS_ALLOWED
+		cheatingVideo = new VideoSprite();
+		add(cheatingVideo);
+		#end
 
 		var noteData:Array<SwagSection>;
 
@@ -5577,7 +5593,7 @@ class PlayState extends MusicBeatState
 			// PRESET CLASSES
 			script.setVariable("PlayState", instance);
 			script.setVariable("FlxTween", FlxTween);
-			//script.setVariable("FlxColor", FlxColor); error
+			script.setVariable("MP4Handler", MP4Handler);
 			script.setVariable("FlxEase", FlxEase);
 			script.setVariable("FlxSprite", FlxSprite);
 			script.setVariable("Math", Math);
@@ -5587,7 +5603,8 @@ class PlayState extends MusicBeatState
 			script.setVariable("Main", Main);
 			script.setVariable("ShaderFilter", ShaderFilter);
 			script.setVariable("FlxRuntimeShader", FlxRuntimeShader);
-			//script.setVariable("eventName", eventName);
+			script.setVariable("VideoSprite", VideoSprite);
+			script.setVariable("BitmapFilter", BitmapFilter);
 			script.setVariable("Conductor", Conductor);
 			script.setVariable("Std", Std);
 			script.setVariable("FlxTextBorderStyle", FlxTextBorderStyle);
