@@ -72,25 +72,19 @@ import openfl.filters.ShaderFilter;
 import sys.FileSystem;
 import sys.io.File;
 #end
-/*
+
 #if VIDEOS_ALLOWED
 #if (hxCodec >= "3.0.0")
 import hxcodec.flixel.FlxVideo as MP4Handler;
-import hxcodec.VideoSprite;
 #elseif (hxCodec == "2.6.1")
 import hxcodec.VideoHandler as MP4Handler;
-import hxcodec.VideoSprite;
 #elseif (hxCodec == "2.6.0")
 import VideoHandler as MP4Handler;
 #else
 import vlc.MP4Handler;
 #end
 #end
-*/
-#if VIDEOS_ALLOWED
-import hxcodec.flixel.FlxVideo as MP4Handler;
-import hxcodec.VideoSprite;
-#end
+
 using StringTools;
 
 class PlayState extends MusicBeatState
@@ -4864,6 +4858,9 @@ class PlayState extends MusicBeatState
 			if (script != null)
 		{
 			script.executeFunc("goodNoteHit");
+			script.setVariable("note.noteData", note.noteData);
+			script.setVariable("note.noteType", note.noteType);
+			script.setVariable("note.isSustainNote", note.isSustainNote);
 		}
 
 			if (!note.isSustainNote)
@@ -5592,6 +5589,12 @@ class PlayState extends MusicBeatState
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
+			script.setVariable("note.noteData", note.noteData);
+			script.setVariable("note.noteType", note.noteType);
+			script.setVariable("note.isSustainNote", note.isSustainNote);
+			script.setVariable("daNote.noteData", daNote.noteData);
+			script.setVariable("daNote.noteType", daNote.noteType);
+			script.setVariable("daNote.isSustainNote", daNote.isSustainNote);
 			script.setVariable("bpm", SONG.bpm);
 
 			// PRESET CLASSES
@@ -5603,6 +5606,8 @@ class PlayState extends MusicBeatState
 			script.setVariable("Math", Math);
 			script.setVariable("FlxG", FlxG);
 			script.setVariable("ClientPrefs", ClientPrefs);
+			script.setVariable("Note", Note);
+			script.setVariable("FlxG.camera", FlxG.camera);
 			script.setVariable("FlxTimer", FlxTimer);
 			script.setVariable("Main", Main);
 			script.setVariable("ShaderFilter", ShaderFilter);
@@ -5611,6 +5616,8 @@ class PlayState extends MusicBeatState
 			script.setVariable("BitmapFilter", BitmapFilter);
 			script.setVariable("Conductor", Conductor);
 			script.setVariable("Std", Std);
+			script.setVariable("mustHitSection", SONG.notes[curSection].mustHitSection);
+			script.setVariable("curSection", SONG.notes[curSection]);
 			script.setVariable("FlxTextBorderStyle", FlxTextBorderStyle);
 			script.setVariable("Paths", Paths);
 			script.setVariable("CENTER", FlxTextAlign.CENTER);
