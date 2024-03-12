@@ -92,8 +92,8 @@ class PlayState extends MusicBeatState
 	public static var STRUM_X = 48.5;
 	public static var STRUM_X_MIDDLESCROLL = -278;
 	
-	public var midSongVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
-	public var cheatingVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
+	//public var midSongVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
+	//public var cheatingVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
 
 	public static var ratingStuff:Array<Dynamic> = [
 		['You Suck!', 0.2], //From 0% to 19%
@@ -2494,19 +2494,23 @@ class PlayState extends MusicBeatState
 		FlxG.sound.list.add(vocals);
 		FlxG.sound.list.add(new FlxSound().loadEmbedded(Paths.inst(PlayState.SONG.song)));
 
-		
+		/*
 		#if VIDEOS_ALLOWED
 		midSongVideo = new VideoSprite();
 		add(midSongVideo);
 		#end
+		*/
 
 		notes = new FlxTypedGroup<Note>();
 		add(notes);
+		
+		/*
 
 		#if VIDEOS_ALLOWED
 		cheatingVideo = new VideoSprite();
 		add(cheatingVideo);
 		#end
+		*/
 
 		var noteData:Array<SwagSection>;
 
@@ -5589,12 +5593,12 @@ class PlayState extends MusicBeatState
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
-			script.setVariable("note.noteData", note.noteData);
+		/*	script.setVariable("note.noteData", note.noteData);
 			script.setVariable("note.noteType", note.noteType);
 			script.setVariable("note.isSustainNote", note.isSustainNote);
 			script.setVariable("daNote.noteData", daNote.noteData);
 			script.setVariable("daNote.noteType", daNote.noteType);
-			script.setVariable("daNote.isSustainNote", daNote.isSustainNote);
+			script.setVariable("daNote.isSustainNote", daNote.isSustainNote); */
 			script.setVariable("bpm", SONG.bpm);
 
 			// PRESET CLASSES
@@ -5616,6 +5620,8 @@ class PlayState extends MusicBeatState
 			script.setVariable("BitmapFilter", BitmapFilter);
 			script.setVariable("Conductor", Conductor);
 			script.setVariable("Std", Std);
+			script.setVariable("note", note);
+			script.setVariable("daNote", daNote);
 			script.setVariable("mustHitSection", SONG.notes[curSection].mustHitSection);
 			script.setVariable("curSection", SONG.notes[curSection]);
 			script.setVariable("FlxTextBorderStyle", FlxTextBorderStyle);
