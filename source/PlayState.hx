@@ -5545,7 +5545,7 @@ class PlayState extends MusicBeatState
 			{
 			});
 			
-			script.setVariable("onEvent", function()
+			script.setVariable("onEvent", function(?event:String, ?val1:Dynamic, ?val2:Dynamic)
 			{
 			});
 			
@@ -5565,11 +5565,11 @@ class PlayState extends MusicBeatState
 			{
 			});
 			
-			script.setVariable("goodNoteHit", function()
+			script.setVariable("goodNoteHit", function(?note:Note)
 			{
 			});
 			
-			script.setVariable("opponentNoteHit", function()
+			script.setVariable("opponentNoteHit", function(?note:Note)
 			{
 			});
 
@@ -5593,10 +5593,10 @@ class PlayState extends MusicBeatState
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
-			script.setVariable("note.noteData", Note.noteData);
+		/*	script.setVariable("note.noteData", Note.noteData);
 			script.setVariable("note.noteType", Note.noteType);
 			script.setVariable("note.isSustainNote", Note.isSustainNote);
-		/*	script.setVariable("daNote.noteData", daNote.noteData);
+			script.setVariable("daNote.noteData", daNote.noteData);
 			script.setVariable("daNote.noteType", daNote.noteType);
 			script.setVariable("daNote.isSustainNote", daNote.isSustainNote); */
 			script.setVariable("bpm", SONG.bpm);
@@ -5611,7 +5611,7 @@ class PlayState extends MusicBeatState
 			script.setVariable("Math", Math);
 			script.setVariable("FlxG", FlxG);
 			script.setVariable("ClientPrefs", ClientPrefs);
-			script.setVariable("note", Note);
+			script.setVariable("Note", Note);
 			script.setVariable("FlxG.camera", FlxG.camera);
 			script.setVariable("FlxTimer", FlxTimer);
 			script.setVariable("Main", Main);
