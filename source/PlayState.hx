@@ -5593,16 +5593,17 @@ class PlayState extends MusicBeatState
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
-		/*	script.setVariable("note.noteData", note.noteData);
-			script.setVariable("note.noteType", note.noteType);
-			script.setVariable("note.isSustainNote", note.isSustainNote);
-			script.setVariable("daNote.noteData", daNote.noteData);
+			script.setVariable("note.noteData", Note.noteData);
+			script.setVariable("note.noteType", Note.noteType);
+			script.setVariable("note.isSustainNote", Note.isSustainNote);
+		/*	script.setVariable("daNote.noteData", daNote.noteData);
 			script.setVariable("daNote.noteType", daNote.noteType);
 			script.setVariable("daNote.isSustainNote", daNote.isSustainNote); */
 			script.setVariable("bpm", SONG.bpm);
 
 			// PRESET CLASSES
 			script.setVariable("PlayState", instance);
+			script.setVariable("game", instance);
 			script.setVariable("FlxTween", FlxTween);
 			script.setVariable("MP4Handler", MP4Handler);
 			script.setVariable("FlxEase", FlxEase);
