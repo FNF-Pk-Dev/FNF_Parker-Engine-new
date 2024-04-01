@@ -66,6 +66,7 @@ class LoadingState extends MusicBeatState
 		loadingRun.updateHitbox();
 		loadingRun.scale.x = ScaleloadingRun;
 		loadingRun.scale.y = ScaleloadingRun;
+		loadingRun.cameras = [game.camOther];
 	    add(loadingRun);
 
 		loadBar = new FlxSprite(0, FlxG.height - 20).makeGraphic(FlxG.width, 10, 0xffff16d2);
