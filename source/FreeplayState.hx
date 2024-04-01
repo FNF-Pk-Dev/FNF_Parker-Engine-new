@@ -15,6 +15,7 @@ import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
+import flixel.util.FlxTimer;
 import flixel.effects.FlxFlicker;
 import lime.utils.Assets;
 import flixel.system.FlxSound;
@@ -385,44 +386,13 @@ class FreeplayState extends MusicBeatState
 			trace(poop);
 			
 			FlxG.sound.play(Paths.sound('confirmMenu'));
-			grpSongs.forEach(function(spr:FlxSprite)
-			{
-			if (curSelected != spr.ID)
-			{
-			FlxTween.tween(spr, {alpha: 0}, 0.4, {
-			ease: FlxEase.quadOut,
-			onComplete: function(twn:FlxTween)
-			{
-			spr.kill();
-			}
-			});
-			}
-			else
-			{
-			FlxFlicker.flicker(spr, 3, 0.06, false, false, function(flick:FlxFlicker)
-			{
-			destroyFreeplayVocals();
 			PlayState.SONG = Song.loadFromJson(poop, songLowercase);
 			PlayState.isStoryMode = false;
 			PlayState.storyDifficulty = curDifficulty;
+			new FlxTimer().start(2, function(tmr:FlxTimer)
+			{
+			LoadingState.loadAndSwitchState(new PlayState());
 			});
-			}
-			});
-			
-			for (spr in iconArray)
-            {
-             if (curSelected != spr.ID)
-            {
-            FlxTween.tween(spr, {alpha: 0}, 0.4, {
-            ease: FlxEase.quadOut,
-            onComplete: function(twn:FlxTween)
-            {
-                spr.kill();
-            }
-            });
-           }
-         }
-
 
 			
 
@@ -434,10 +404,12 @@ class FreeplayState extends MusicBeatState
 			if (FlxG.keys.pressed.SHIFT #if android || _virtualpad.buttonZ.pressed #end){
 				LoadingState.loadAndSwitchState(new ChartingState());
 			}else{
-				LoadingState.loadAndSwitchState(new PlayState());
+				
 			}
 
 			FlxG.sound.music.volume = 0;
+					
+			destroyFreeplayVocals();
 					
 		}
 		else if(controls.RESET #if android || _virtualpad.buttonY.justPressed #end)
