@@ -132,8 +132,8 @@ class CoolUtil
 		Paths.music(sound, library);
 	}
 
-	public static function precacheImage(name:String, ?allowGPU:Bool = true):Void {
-		Paths.image(name, allowGPU);
+	public static function precacheImage(name:String, ?library:String = null):Void {
+		Paths.image(name, library);
 	}
 
 	public static function browserLoad(site:String) {
