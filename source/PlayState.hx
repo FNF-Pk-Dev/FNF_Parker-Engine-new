@@ -345,6 +345,7 @@ class PlayState extends MusicBeatState
 	{
 		//trace('Playback Rate: ' + playbackRate);
 		Paths.clearStoredMemory();
+		CoolUtil.precacheImage("ui/diaTrans");
 
 		// for lua
 		instance = this;
