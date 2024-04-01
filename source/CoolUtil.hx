@@ -132,6 +132,10 @@ class CoolUtil
 		Paths.music(sound, library);
 	}
 
+	public static function precacheImage(name:String, ?allowGPU:Bool = true):Void {
+		Paths.image(name, allowGPU);
+	}
+
 	public static function browserLoad(site:String) {
 		#if linux
 		Sys.command('/usr/bin/xdg-open', [site]);
