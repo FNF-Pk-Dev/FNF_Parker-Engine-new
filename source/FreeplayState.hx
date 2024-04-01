@@ -409,19 +409,20 @@ class FreeplayState extends MusicBeatState
 			}
 			});
 			
-			iconArray.forEach(function(spr:FlxSprite)
-			{
-			if (curSelected != spr.ID)
-			{
-			FlxTween.tween(spr, {alpha: 0}, 0.4, {
-			ease: FlxEase.quadOut,
-			onComplete: function(twn:FlxTween)
-			{
-			spr.kill();
-			}
-			});
-			}
-			});
+			for (spr in iconArray)
+            {
+             if (curSelected != spr.ID)
+            {
+            FlxTween.tween(spr, {alpha: 0}, 0.4, {
+            ease: FlxEase.quadOut,
+            onComplete: function(twn:FlxTween)
+            {
+                spr.kill();
+            }
+            });
+           }
+         }
+
 
 			
 
