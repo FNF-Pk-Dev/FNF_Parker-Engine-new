@@ -4,6 +4,7 @@ import haxe.Timer;
 import openfl.events.Event;
 import openfl.text.TextField;
 import openfl.text.TextFormat;
+import flixel.util.FlxColor;
 import flixel.math.FlxMath;
 #if gl_stats
 import openfl.display._internal.stats.Context3DStats;
@@ -36,7 +37,7 @@ class FPS extends TextField
 	@:noCompletion private var cacheCount:Int;
 	@:noCompletion private var currentTime:Float;
 	@:noCompletion private var times:Array<Float>;
-
+    @:noCompletion private var pkEngineVersion:String;
 	public function new(x:Float = 10, y:Float = 10, color:Int = 0x000000)
 	{
 		super();
@@ -51,11 +52,14 @@ class FPS extends TextField
 		autoSize = LEFT;
 		multiline = true;
 		text = "FPS: ";
+		textColor = 0xFFFFFFFF;
 
 		cacheCount = 0;
 		currentTime = 0;
 		times = [];
 
+        pkEngineVersion = "v0.5.1fix";
+        
 		#if flash
 		addEventListener(Event.ENTER_FRAME, function(e)
 		{
@@ -64,11 +68,45 @@ class FPS extends TextField
 		});
 		#end
 	}
+	
+    public static var currentColor = 0;	
+	var skippedFrames = 0;
 
+	var ColorArray:Array<Int> = [
+		0x9400D3,
+		0x4B0082,
+		0x0000FF,
+		0x00FF00,
+		0xFFFF00,
+		0xFF7F00,
+		0xFF0000
+		];
+		
 	// Event Handlers
 	@:noCompletion
 	private #if !flash override #end function __enterFrame(deltaTime:Float):Void
 	{
+	
+	if (ClientPrefs.rainbowFPS)
+		{
+			if (skippedFrames >= 6)
+			{
+				if (currentColor >= ColorArray.length)
+					currentColor = 0;
+				textColor = ColorArray[currentColor];
+				currentColor++;
+				skippedFrames = 0;
+			}
+			else
+			{
+				skippedFrames++;
+			}
+		}
+		else
+		{
+			textColor = 0xFFFFFFFF;
+		}
+		
 		currentTime += deltaTime;
 		times.push(currentTime);
 
@@ -89,12 +127,16 @@ class FPS extends TextField
 			#if openfl
 			memoryMegas = Math.abs(FlxMath.roundDecimal(System.totalMemory / 1000000, 1));
 			text += "\nMemory: " + memoryMegas + " MB";
+			text += "\nPk Engine: " + pkEngineVersion;
 			#end
-
-			textColor = 0xFFFFFFFF;
+			var memoryMegas:Float = 0;
+			
 			if (memoryMegas > 3000 || currentFPS <= ClientPrefs.framerate / 2)
 			{
-				textColor = 0xFFFF0000;
+				// textColor = 0xFFFF0000;
+				text = "FPS: " + currentFPS;
+				text += "\nMemory: " + memoryMegas + " MB";
+				text += "\nPk Engine: " + pkEngineVersion;
 			}
 
 			#if (gl_stats && !disable_cffi && (!html5 || !canvas))
