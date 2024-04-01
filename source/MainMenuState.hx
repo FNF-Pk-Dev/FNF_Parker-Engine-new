@@ -15,6 +15,7 @@ import flixel.text.FlxText;
 import flixel.math.FlxMath;
 import flixel.tweens.FlxEase;
 import flixel.addons.display.FlxBackdrop;
+import flixel.addons.display.FlxGridOverlay;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import lime.app.Application;
@@ -86,6 +87,13 @@ class MainMenuState extends MusicBeatState
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(bg);
 
+		velocityBackground = new FlxBackdrop(FlxGridOverlay.createGrid(30, 30, 60, 60, true, 0x3B161932, 0x0));
+		velocityBackground.velocity.set(FlxG.random.bool(50) ? 90 : -90, FlxG.random.bool(50) ? 90 : -90);
+		velocityBackground.antialiasing = ClientPrefs.globalAntialiasing;
+		velocityBackground.alpha = 0;
+		FlxTween.tween(velocityBackground, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
+		add(velocityBackground);
+
 		camFollow = new FlxObject(0, 0, 1, 1);
 		camFollowPos = new FlxObject(0, 0, 1, 1);
 		add(camFollow);
@@ -101,12 +109,7 @@ class MainMenuState extends MusicBeatState
 		magenta.color = 0xFFfd719b;
 		add(magenta);
 
-		velocityBackground = new FlxBackdrop(FlxGridOverlay.createGrid(30, 30, 60, 60, true, 0x3B161932, 0x0));
-		velocityBackground.velocity.set(FlxG.random.bool(50) ? 90 : -90, FlxG.random.bool(50) ? 90 : -90);
-		velocityBackground.antialiasing = ClientPrefs.globalAntialiasing;
-		velocityBackground.alpha = 0;
-		FlxTween.tween(velocityBackground, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
-		add(velocityBackground);
+		
 		
 		// magenta.scrollFactor.set();
 
