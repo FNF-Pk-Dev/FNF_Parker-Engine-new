@@ -28,12 +28,13 @@ class LoadingState extends MusicBeatState
 	// TO DO: Make this easier
 
 	var funkay:FlxSprite;
-	var loadingRun:FlxSprite;
+	public var loadingRun:FlxSprite;
 	var target:FlxState;
 	var stopMusic = false;
 	var directory:String;
 	var callbacks:MultiCallback;
 	var targetShit:Float = 0;
+	public var ScaleloadingRun:Float = 0.3;
 
 	function new(target:FlxState, stopMusic:Bool, directory:String)
 	{
@@ -63,6 +64,8 @@ class LoadingState extends MusicBeatState
 	    loadingRun.animation.play('a');
 		loadingRun.antialiasing = ClientPrefs.globalAntialiasing;
 		loadingRun.updateHitbox();
+		loadingRun.scale.x = ScaleloadingRun;
+		loadingRun.scale.y = ScaleloadingRun;
 	    add(loadingRun);
 
 		loadBar = new FlxSprite(0, FlxG.height - 20).makeGraphic(FlxG.width, 10, 0xffff16d2);
