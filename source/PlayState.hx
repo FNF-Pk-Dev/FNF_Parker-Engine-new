@@ -5588,7 +5588,7 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("addCharacterToList", function(name:Int, type:Int)
 			{
-				return addCharacterToList(name, type)
+				return addCharacterToList(name, type);
 			});
 			
 			script.setVariable("runLuaCode", function(code:String)
