@@ -27,7 +27,7 @@ typedef LoadingRunData =
 	loadingrunx:Float,
 	loadingruny:Float,
 	loadingRunSprite:String,
-	loadingrunfps:Float,
+	loadingrunfps:Int,
 	loadingrunloop:Bool,
 	scaleloadingrun:Float,
 	loadingrunaddbyprefix:String,
