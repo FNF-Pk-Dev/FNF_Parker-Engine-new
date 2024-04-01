@@ -110,6 +110,7 @@ class Paths
 		// flags everything to be cleared out next unused memory clear
 		localTrackedAssets = [];
 		openfl.Assets.cache.clear("songs");
+		CoolUtil.precacheImage("ui/diaTrans");
 	}
 
 	static public var currentModDirectory:String = '';
