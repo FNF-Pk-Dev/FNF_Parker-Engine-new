@@ -5553,15 +5553,15 @@ class PlayState extends MusicBeatState
 			{
 			});
 
-			script.setVariable("onUpdate", function()
+			script.setVariable("onUpdate", function(?elapsed:Float)
 			{
 			});
 			
-			script.setVariable("onUpdatePost", function()
+			script.setVariable("onUpdatePost", function(?elapsed:Float)
 			{
 			});
 			
-			script.setVariable("onMoveCamera", function(focus:String)
+			script.setVariable("onMoveCamera", function(?focus:String)
 			{
 			});
 			
