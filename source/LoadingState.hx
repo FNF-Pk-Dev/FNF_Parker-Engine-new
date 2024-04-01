@@ -9,6 +9,7 @@ import flixel.FlxSprite;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.util.FlxTimer;
 import flixel.math.FlxMath;
+import flixel.FlxCamera;
 
 import openfl.utils.Assets;
 import lime.utils.Assets as LimeAssets;
@@ -29,6 +30,7 @@ class LoadingState extends MusicBeatState
 
 	var funkay:FlxSprite;
 	public var loadingRun:FlxSprite;
+	var camOther:FlxCamera;
 	var target:FlxState;
 	var stopMusic = false;
 	var directory:String;
@@ -47,6 +49,11 @@ class LoadingState extends MusicBeatState
 	var loadBar:FlxSprite;
 	override function create()
 	{
+	    camOther = new FlxCamera();
+	    camOther.bgColor.alpha = 0;
+	    FlxG.cameras.add(camOther, false);
+	    CustomFadeTransition.nextCamera = camOther;
+	
 		var bg:FlxSprite = new FlxSprite(0, 0).makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		add(bg);
 		funkay = new FlxSprite(0, 0).loadGraphic(Paths.image('loading/loading1'));
@@ -59,15 +66,15 @@ class LoadingState extends MusicBeatState
 		funkay.screenCenter();
 		
 		loadingRun = new FlxSprite(40, 460);
-	        loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
-	        loadingRun.animation.addByPrefix('a', 'bf running', 24, true);
-	        loadingRun.animation.play('a');
+	    loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
+	    loadingRun.animation.addByPrefix('a', 'bf running', 24, true);
+	    loadingRun.animation.play('a');
 		loadingRun.antialiasing = ClientPrefs.globalAntialiasing;
 		loadingRun.updateHitbox();
 		loadingRun.scale.x = ScaleloadingRun;
 		loadingRun.scale.y = ScaleloadingRun;
-		loadingRun.cameras = [PlayState.instance.camOther];
-	        add(loadingRun);
+		loadingRun.cameras = [camOther];
+	    add(loadingRun);
 
 		loadBar = new FlxSprite(0, FlxG.height - 20).makeGraphic(FlxG.width, 10, 0xffff16d2);
 		loadBar.screenCenter(X);
