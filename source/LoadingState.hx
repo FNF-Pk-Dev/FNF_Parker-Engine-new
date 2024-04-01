@@ -66,7 +66,7 @@ class LoadingState extends MusicBeatState
 		funkay.screenCenter();
 		
 		loadingRun = new FlxSprite();
-		loadingRun.x = 140;
+		loadingRun.x = 440;
 		loadingRun.y = 230;
 	    loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
 	    loadingRun.animation.addByPrefix('a', 'bf running', 24, true);
@@ -100,7 +100,7 @@ class LoadingState extends MusicBeatState
 					checkLibrary(directory);
 				}
 
-				var fadeTime = 0.5;
+				var fadeTime = 1;
 				FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);
 				new FlxTimer().start(fadeTime + MIN_TIME, function(_) introComplete());
 			}
