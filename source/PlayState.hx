@@ -5586,9 +5586,14 @@ class PlayState extends MusicBeatState
 				return FlxColor.fromRGB(Red, Green, Blue, Alpha);
 			});
 			
+			script.setVariable("addCharacterToList", function(name:Int, type:Int)
+			{
+				return addCharacterToList(name, type)
+			});
+			
 			script.setVariable("runLuaCode", function(code:String)
 			{
-				runLuaCode(code);
+				return runLuaCode(code);
 			});
 
 			script.setVariable("curStep", curStep);
