@@ -94,6 +94,8 @@ class TitleState extends MusicBeatState
 		Paths.clearStoredMemory();
 		Paths.clearUnusedMemory();
 
+		CoolUtil.precacheImage("ui/diaTrans");
+
 		#if LUA_ALLOWED
 		Paths.pushGlobalMods();
 		#end
