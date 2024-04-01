@@ -119,7 +119,7 @@ class MusicBeatState extends FlxUIState
 		super.create();
 
 		if(!skip) {
-			openSubState(new CustomFadeTransition(0.7, true));
+			openSubState(new CustomTilesTransition(true));
 		}
 		FlxTransitionableState.skipNextTransOut = false;
 	}
