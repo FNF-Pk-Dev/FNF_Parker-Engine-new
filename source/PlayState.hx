@@ -5585,12 +5585,12 @@ class PlayState extends MusicBeatState
 			{
 				return FlxColor.fromRGB(Red, Green, Blue, Alpha);
 			});
-			
-			script.setVariable("addCharacterToList", function(name:Int, type:Int)
+			/*
+			script.setVariable("addCharacterToList", function(name:String, type:String)
 			{
 				return addCharacterToList(name, type);
 			});
-			
+			只能用game.addCharacterToList了 */ 
 			script.setVariable("runLuaCode", function(code:String)
 			{
 				return runLuaCode(code);
