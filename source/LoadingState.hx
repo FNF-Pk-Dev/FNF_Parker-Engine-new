@@ -1,5 +1,8 @@
 package;
 
+#if desktop
+import sys.thread.Thread;
+#end
 import flixel.util.FlxColor;
 import lime.app.Promise;
 import lime.app.Future;
@@ -18,7 +21,8 @@ import lime.utils.AssetLibrary;
 import lime.utils.AssetManifest;
 
 import haxe.io.Path;
-typedef loadingRunData =
+import openfl.Assets;
+typedef LoadingRunData =
 {
 	loadingrunx:Float,
 	loadingruny:Float,
@@ -45,7 +49,7 @@ class LoadingState extends MusicBeatState
 
 	var funkay:FlxSprite;
 	public var loadingRun:FlxSprite;
-	var loadingRunJSON:loadingRunData;
+	var loadingRunJSON:LoadingRunData;
 	var camOther:FlxCamera;
 	var target:FlxState;
 	var stopMusic = false;
