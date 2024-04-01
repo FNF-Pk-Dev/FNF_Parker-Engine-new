@@ -10,6 +10,7 @@ import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.util.FlxTimer;
 import flixel.math.FlxMath;
 import flixel.FlxCamera;
+import haxe.Json;
 
 import openfl.utils.Assets;
 import lime.utils.Assets as LimeAssets;
@@ -17,7 +18,21 @@ import lime.utils.AssetLibrary;
 import lime.utils.AssetManifest;
 
 import haxe.io.Path;
-
+typedef loadingRunData =
+{
+	loadingrunx:Float,
+	loadingruny:Float,
+	loadingRunSprite:String,
+	loadingrunfps:Float,
+	loadingrunloop:Bool,
+	scaleloadingrun:Float,
+	loadingrunaddbyprefix:String,
+	loadingRunvisible:Bool,
+	backgroundSprite:String,
+	backgroundvisible:Bool,
+	loadbarvisible:Bool,
+	fadeTime:Float
+}
 class LoadingState extends MusicBeatState
 {
 	inline static var MIN_TIME = 1.0;
@@ -30,13 +45,13 @@ class LoadingState extends MusicBeatState
 
 	var funkay:FlxSprite;
 	public var loadingRun:FlxSprite;
+	var loadingRunJSON:loadingRunData;
 	var camOther:FlxCamera;
 	var target:FlxState;
 	var stopMusic = false;
 	var directory:String;
 	var callbacks:MultiCallback;
 	var targetShit:Float = 0;
-	public var ScaleloadingRun:Float = 0.3;
 
 	function new(target:FlxState, stopMusic:Bool, directory:String)
 	{
@@ -49,6 +64,9 @@ class LoadingState extends MusicBeatState
 	var loadBar:FlxSprite;
 	override function create()
 	{
+	
+	    loadingRunJSON = Json.parse(Paths.getTextFromFile('images/loading/loading.json'));
+	
 	    camOther = new FlxCamera();
 	    camOther.bgColor.alpha = 0;
 	    FlxG.cameras.add(camOther, false);
@@ -56,32 +74,33 @@ class LoadingState extends MusicBeatState
 	
 		var bg:FlxSprite = new FlxSprite(0, 0).makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		add(bg);
-		funkay = new FlxSprite(0, 0).loadGraphic(Paths.image('loading/loading1'));
+		funkay = new FlxSprite(0, 0).loadGraphic(Paths.image('loading/' + loadingRunJSON.backgroundSprite));
 		funkay.setGraphicSize(FlxG.width, FlxG.height);
 		funkay.updateHitbox();
 		funkay.antialiasing = ClientPrefs.globalAntialiasing;
 		add(funkay);
-		funkay.visible = false;
+		funkay.visible = loadingRunJSON.backgroundvisible;
 		funkay.scrollFactor.set();
 		funkay.screenCenter();
 		
 		loadingRun = new FlxSprite();
-		loadingRun.x = 520;
-		loadingRun.y = 230;
-	    loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
-	    loadingRun.animation.addByPrefix('a', 'running', 24, true);
-	    loadingRun.animation.play('a');
+		loadingRun.x = loadingRunJSON.loadingrunx;
+		loadingRun.y = loadingRunJSON.loadingruny;
+	    loadingRun.frames = Paths.getSparrowAtlas('loading/' + loadingRunJSON.loadingRunSprite);
+	    loadingRun.animation.addByPrefix('idle', loadingRunJSON.loadingrunaddbyprefix, loadingRunJSON.loadingrunfps, loadingRunJSON.loadingrunloop);
+	    loadingRun.animation.play('idle');
 		loadingRun.antialiasing = ClientPrefs.globalAntialiasing;
 		loadingRun.updateHitbox();
-		loadingRun.scale.x = ScaleloadingRun;
-		loadingRun.scale.y = ScaleloadingRun;
+		loadingRun.scale.x = loadingRunJSON.scaleloadingrun;
+		loadingRun.scale.y = loadingRunJSON.scaleloadingrun;
 		loadingRun.cameras = [camOther];
+		loadingRun.visible = loadingRunJSON.loadingRunvisible;
 	    add(loadingRun);
 
 		loadBar = new FlxSprite(0, FlxG.height - 20).makeGraphic(FlxG.width, 10, 0xffff16d2);
 		loadBar.screenCenter(X);
 		loadBar.antialiasing = ClientPrefs.globalAntialiasing;
-		loadBar.visible = false;
+		loadBar.visible = loadingRunJSON.loadbarvisible;
 		add(loadBar);
 		
 		initSongsManifest().onComplete
@@ -100,9 +119,9 @@ class LoadingState extends MusicBeatState
 					checkLibrary(directory);
 				}
 
-				var fadeTime = 1;
-				FlxG.camera.fade(FlxG.camera.bgColor, fadeTime, true);
-				new FlxTimer().start(fadeTime + MIN_TIME, function(_) introComplete());
+				//var fadeTime = 1;
+				FlxG.camera.fade(FlxG.camera.bgColor, loadingRunJSON.fadeTime, true);
+				new FlxTimer().start(loadingRunJSON.fadeTime + MIN_TIME, function(_) introComplete());
 			}
 		);
 	}
