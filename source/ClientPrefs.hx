@@ -17,10 +17,12 @@ class ClientPrefs {
 	public static var lowQuality:Bool = false;
 	public static var shaders:Bool = true;
 	public static var framerate:Int = 60;
+	public static var rainbowFPS:Bool = false;
 	public static var cursing:Bool = true;
 	public static var violence:Bool = true;
 	public static var camZooms:Bool = true;
 	public static var hideHud:Bool = false;
+	public static var comboHud:Bool = true;
 	public static var noteOffset:Int = 0;
 	public static var arrowHSV:Array<Array<Int>> = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
 	public static var vibration:Bool = false;
@@ -33,9 +35,13 @@ class ClientPrefs {
 	public static var hitsoundVolume:Float = 0;
 	public static var pauseMusic:String = 'Tea Time';
 	public static var checkForUpdates:Bool = true;
+	public static var gamerting:Bool = true;
 	public static var comboStacking = true;
-	public static var hitboxmode:String = 'Classic';  //starting new way to change between hitboxes yay
+	public var hitboxPT = true;
+	public var hitboxLocation:String = 'Space';
+	public static var hitboxmode:String = 'New';  //starting new way to change between hitboxes yay
 	public static var hitboxalpha:Float = 0.2; //someone request this lol
+	public static var virtualPadAlpha:Float = 0.5;
 	public static var gameplaySettings:Map<String, Dynamic> = [
 		'scrollspeed' => 1.0,
 		'scrolltype' => 'multiplicative', 
@@ -49,6 +55,7 @@ class ClientPrefs {
 		// just fine. but I wont implement it because I don't know how you handle sustains and other stuff like that.
 		// oh yeah when you calculate the bps divide it by the songSpeed or rate because it wont scroll correctly when speeds exist.
 		'songspeed' => 1.0,
+		'backbaropacity' => 0.0,
 		'healthgain' => 1.0,
 		'healthloss' => 1.0,
 		'instakill' => false,
@@ -109,6 +116,7 @@ class ClientPrefs {
 		FlxG.save.data.framerate = framerate;
 		//FlxG.save.data.cursing = cursing;
 		//FlxG.save.data.violence = violence;
+		FlxG.save.data.rainbowFPS = rainbowFPS;
 		FlxG.save.data.camZooms = camZooms;
 		FlxG.save.data.noteOffset = noteOffset;
 		FlxG.save.data.hideHud = hideHud;
@@ -134,9 +142,12 @@ class ClientPrefs {
 		FlxG.save.data.pauseMusic = pauseMusic;
 		FlxG.save.data.checkForUpdates = checkForUpdates;
 		FlxG.save.data.comboStacking = comboStacking;
+		FlxG.save.data.gamerting = gamerting;
 		
 		FlxG.save.data.hitboxmode = hitboxmode;
 		FlxG.save.data.hitboxalpha = hitboxalpha;
+		FlxG.save.data.virtualPadAlpha = virtualPadAlpha;
+		
 	
 	
 		FlxG.save.flush();
@@ -188,6 +199,9 @@ class ClientPrefs {
 				FlxG.drawFramerate = framerate;
 				FlxG.updateFramerate = framerate;
 			}
+		}
+		if(FlxG.save.data.rainbowFPS != null) {
+			rainbowFPS = FlxG.save.data.rainbowFPS;
 		}
 		/*if(FlxG.save.data.cursing != null) {
 			cursing = FlxG.save.data.cursing;
@@ -250,11 +264,17 @@ class ClientPrefs {
 		if(FlxG.save.data.hitsoundVolume != null) {
 			hitsoundVolume = FlxG.save.data.hitsoundVolume;
 		}
+		if(FlxG.save.data.gamerting != null) {
+			gamerting = FlxG.save.data.gamerting;
+		}
 		if(FlxG.save.data.hitboxmode != null) {
 			hitboxmode = FlxG.save.data.hitboxmode;
 		}
 		if(FlxG.save.data.hitboxalpha != null) {
 			hitboxalpha = FlxG.save.data.hitboxalpha;
+		}
+		if(FlxG.save.data.virtualPadAlpha != null) {
+			virtualPadAlpha = FlxG.save.data.virtualPadAlpha;
 		}
 		if(FlxG.save.data.pauseMusic != null) {
 			pauseMusic = FlxG.save.data.pauseMusic;
