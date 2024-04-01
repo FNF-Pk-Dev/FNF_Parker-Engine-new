@@ -65,7 +65,9 @@ class LoadingState extends MusicBeatState
 		funkay.scrollFactor.set();
 		funkay.screenCenter();
 		
-		loadingRun = new FlxSprite(40, 460);
+		loadingRun = new FlxSprite();
+		loadingRun.x = 140;
+		loadingRun.y = 230;
 	    loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
 	    loadingRun.animation.addByPrefix('a', 'bf running', 24, true);
 	    loadingRun.animation.play('a');
