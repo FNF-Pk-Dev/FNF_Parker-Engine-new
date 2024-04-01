@@ -59,15 +59,15 @@ class LoadingState extends MusicBeatState
 		funkay.screenCenter();
 		
 		loadingRun = new FlxSprite(40, 460);
-	    loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
-	    loadingRun.animation.addByPrefix('a', 'bf running', 24, true);
-	    loadingRun.animation.play('a');
+	        loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
+	        loadingRun.animation.addByPrefix('a', 'bf running', 24, true);
+	        loadingRun.animation.play('a');
 		loadingRun.antialiasing = ClientPrefs.globalAntialiasing;
 		loadingRun.updateHitbox();
 		loadingRun.scale.x = ScaleloadingRun;
 		loadingRun.scale.y = ScaleloadingRun;
-		loadingRun.cameras = [game.camOther];
-	    add(loadingRun);
+		loadingRun.cameras = [PlayState.instance.camOther];
+	        add(loadingRun);
 
 		loadBar = new FlxSprite(0, FlxG.height - 20).makeGraphic(FlxG.width, 10, 0xffff16d2);
 		loadBar.screenCenter(X);
