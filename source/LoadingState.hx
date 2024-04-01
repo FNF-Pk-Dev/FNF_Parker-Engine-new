@@ -1,5 +1,6 @@
 package;
 
+import flixel.util.FlxColor;
 import lime.app.Promise;
 import lime.app.Future;
 import flixel.FlxG;
@@ -25,7 +26,9 @@ class LoadingState extends MusicBeatState
 	// I'd recommend doing it on both actually lol
 	
 	// TO DO: Make this easier
-	
+
+	var funkay:FlxSprite;
+	var loadingRun:FlxSprite;
 	var target:FlxState;
 	var stopMusic = false;
 	var directory:String;
@@ -40,23 +43,32 @@ class LoadingState extends MusicBeatState
 		this.directory = directory;
 	}
 
-	var funkay:FlxSprite;
 	var loadBar:FlxSprite;
 	override function create()
 	{
-		var bg:FlxSprite = new FlxSprite(0, 0).makeGraphic(FlxG.width, FlxG.height, 0xffcaff4d);
+		var bg:FlxSprite = new FlxSprite(0, 0).makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
 		add(bg);
-		funkay = new FlxSprite(0, 0).loadGraphic(Paths.getPath('images/funkay.png', IMAGE));
-		funkay.setGraphicSize(0, FlxG.height);
+		funkay = new FlxSprite(0, 0).loadGraphic(Paths.image('loading/loading1'));
+		funkay.setGraphicSize(FlxG.width, FlxG.height);
 		funkay.updateHitbox();
 		funkay.antialiasing = ClientPrefs.globalAntialiasing;
 		add(funkay);
+		funkay.visible = false;
 		funkay.scrollFactor.set();
 		funkay.screenCenter();
+		
+		loadingRun = new FlxSprite(40, 460);
+	    loadingRun.frames = Paths.getSparrowAtlas('loading/loadingRun');
+	    loadingRun.animation.addByPrefix('a', 'bf running', 24, true);
+	    loadingRun.animation.play('a');
+		loadingRun.antialiasing = ClientPrefs.globalAntialiasing;
+		loadingRun.updateHitbox();
+	    add(loadingRun);
 
 		loadBar = new FlxSprite(0, FlxG.height - 20).makeGraphic(FlxG.width, 10, 0xffff16d2);
 		loadBar.screenCenter(X);
 		loadBar.antialiasing = ClientPrefs.globalAntialiasing;
+		loadBar.visible = false;
 		add(loadBar);
 		
 		initSongsManifest().onComplete
@@ -161,7 +173,6 @@ class LoadingState extends MusicBeatState
 		Paths.setCurrentLevel(directory);
 		trace('Setting asset folder to ' + directory);
 
-		#if NO_PRELOAD_ALL
 		var loaded:Bool = false;
 		if (PlayState.SONG != null) {
 			loaded = isSoundLoaded(getSongPath()) && (!PlayState.SONG.needsVoices || isSoundLoaded(getVocalPath())) && isLibraryLoaded("shared") && isLibraryLoaded(directory);
@@ -169,14 +180,12 @@ class LoadingState extends MusicBeatState
 		
 		if (!loaded)
 			return new LoadingState(target, stopMusic, directory);
-		#end
 		if (stopMusic && FlxG.sound.music != null)
 			FlxG.sound.music.stop();
 		
 		return target;
 	}
 	
-	#if NO_PRELOAD_ALL
 	static function isSoundLoaded(path:String):Bool
 	{
 		return Assets.cache.hasSound(path);
@@ -186,7 +195,6 @@ class LoadingState extends MusicBeatState
 	{
 		return Assets.getLibrary(library) != null;
 	}
-	#end
 	
 	override function destroy()
 	{
