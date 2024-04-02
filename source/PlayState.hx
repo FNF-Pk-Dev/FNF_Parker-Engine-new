@@ -5495,6 +5495,9 @@ class PlayState extends MusicBeatState
 		
 		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
 		
+		var scriptname:String = "";
+		
+		var hxToLoadEvent:String = "";
 
 		var hxdata:String = "";
 		
@@ -5502,20 +5505,15 @@ class PlayState extends MusicBeatState
 		
 		var hxdataEvent:String = "";
 		
-		for (event in eventPushedMap.keys())
-		{
-			var hxToLoadEvent:String = Paths.modFolders('custom_events/' + event + '.hx');
-			if(FileSystem.exists(hxToLoadEvent))
-			{
-				hxdataEvent = File.getContent(hxToLoadEvent);
-			}
-		}
 
 		if (FileSystem.exists(path))
 			hxdata = File.getContent(path);
 		
 		if (FileSystem.exists(stagepath))
 			hxsdata = File.getContent(stagepath);
+			
+		if (FileSystem.exists(scriptname))
+			hxdataEvent = File.getContent(scriptname);
 
 		if (hxdata != "" || hxsdata != "" || hxdataEvent != "")
 		{
@@ -5575,6 +5573,11 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("opponentNoteHit", function(?note:Note)
 			{
+			});
+			
+			script.setVariable("addHscript", function(name:String)
+			{
+			return scriptname = name;
 			});
 
 			script.setVariable("import", function(lib:String, ?as:Null<String>) // Does this even work?
