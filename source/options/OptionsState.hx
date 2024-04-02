@@ -24,6 +24,7 @@ import flixel.tweens.FlxTween;
 import flixel.util.FlxTimer;
 import flixel.input.keyboard.FlxKey;
 import flixel.graphics.FlxGraphic;
+import flixel.addons.display.FlxBackdrop;
 import Controls;
 
 using StringTools;
@@ -69,6 +70,7 @@ class OptionsState extends MusicBeatState
 
 	var selectorLeft:Alphabet;
 	var selectorRight:Alphabet;
+	var velocityBackground:FlxBackdrop;
 
 	override function create() {
 		Paths.clearStoredMemory();
@@ -85,6 +87,13 @@ class OptionsState extends MusicBeatState
 		bg.screenCenter();
 		bg.antialiasing = ClientPrefs.globalAntialiasing;
 		add(bg);
+
+		velocityBackground = new FlxBackdrop(FlxGridOverlay.createGrid(30, 30, 60, 60, true, 0x3B161932, 0x0));
+		velocityBackground.velocity.set(FlxG.random.bool(50) ? 90 : -90, FlxG.random.bool(50) ? 90 : -90);
+		velocityBackground.antialiasing = ClientPrefs.globalAntialiasing;
+		velocityBackground.alpha = 0;
+		FlxTween.tween(velocityBackground, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
+		add(velocityBackground);
 
 		grpOptions = new FlxTypedGroup<Alphabet>();
 		add(grpOptions);
