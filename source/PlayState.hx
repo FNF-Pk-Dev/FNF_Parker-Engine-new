@@ -4755,6 +4755,10 @@ class PlayState extends MusicBeatState
 		}
 		if(note.hitCausesMiss)
 		{
+		noteMiss(note);
+		if(!note.noteSplashDisabled && !note.isSustainNote) {
+		spawnNoteSplashOnNote(note);
+		}
 		if (!note.isSustainNote)
 		{
 			note.kill();
@@ -4809,7 +4813,10 @@ class PlayState extends MusicBeatState
 				if(combo > 9999) combo = 9999;
 				popUpScore(note);
 			}
+			if(!cpuControlled)
+			{
 			health += note.hitHealth * healthGain;
+			}
 
 			if(!note.noAnimation) {
 				var animToPlay:String = singAnimations[Std.int(Math.abs(note.noteData))];
@@ -5355,7 +5362,7 @@ class PlayState extends MusicBeatState
 			spr = playerStrums.members[id];
 		}
 
-		if(spr != null) {
+		if(isDad || spr != null) {
 			spr.playAnim('confirm', true);
 			spr.resetAnim = time;
 		}
