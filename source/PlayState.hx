@@ -4753,12 +4753,16 @@ class PlayState extends MusicBeatState
 			script.setVariable("note.isSustainNote", note.isSustainNote);
 			script.executeFunc("opponentNoteHit");
 		}
+		if(note.hitCausesMiss)
+		{
 		if (!note.isSustainNote)
 		{
 			note.kill();
 			notes.remove(note, true);
 			note.destroy();
 		}
+		return;
+	}
 	}
 
 	function goodNoteHit(note:Note):Void
