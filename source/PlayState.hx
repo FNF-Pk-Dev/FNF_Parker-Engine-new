@@ -2947,7 +2947,7 @@ class PlayState extends MusicBeatState
 		if (script != null)
 		{
 			script.setVariable("elapsed", elapsed);
-			script.executeFunc("onUpdate");
+			script.executeFunc("onUpdate", [elapsed]);
 		}
 
 		switch (curStage)
@@ -3399,7 +3399,7 @@ class PlayState extends MusicBeatState
 		if (script != null)
 		{
 			script.setVariable("elapsed", elapsed);
-			script.executeFunc("onUpdatePost");
+			script.executeFunc("onUpdatePost", [elapsed]);
 		}
 	}
 
@@ -3907,7 +3907,7 @@ class PlayState extends MusicBeatState
 			if (script != null)
 		{
 			script.setVariable("gf", gf);
-			script.executeFunc("onMoveCamera");
+			script.executeFunc("onMoveCamera", [gf]);
 		}
 			return;
 		}
@@ -3919,7 +3919,7 @@ class PlayState extends MusicBeatState
 			if (script != null)
 		{
 			script.setVariable("dad", dad);
-			script.executeFunc("onMoveCamera");
+			script.executeFunc("onMoveCamera", [dad]);
 		}
 		}
 		else
@@ -3929,7 +3929,7 @@ class PlayState extends MusicBeatState
 			if (script != null)
 		{
 			script.setVariable("boyfriend", boyfriend);
-			script.executeFunc("onMoveCamera");
+			script.executeFunc("onMoveCamera", boyfriend);
 		}
 		}
 	}
