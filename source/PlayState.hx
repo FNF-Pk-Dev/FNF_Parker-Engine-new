@@ -2360,8 +2360,8 @@ class PlayState extends MusicBeatState
 	public function updateScore(miss:Bool = false)
 	{
 		scoreTxt.text = 'Score: ' + songScore
-		+ ' | Misses: ' + songMisses
-		+ ' | Rating: ' + ratingName
+		+ ' | Combo Breaks: ' + songMisses
+		+ ' | Rank: ' + ratingName
 		+ (ratingName != '?' ? ' (${Highscore.floorDecimal(ratingPercent * 100, 2)}%) - $ratingFC' : '');
 
 		if(ClientPrefs.scoreZoom && !miss && !cpuControlled)
@@ -3890,7 +3890,7 @@ class PlayState extends MusicBeatState
 			script.setVariable("eventName", eventName);
 			script.setVariable("value1", value1);
 			script.setVariable("value2", value2);
-			script.executeFunc("onEvent");
+			script.executeFunc("onEvent", [eventName, value1, value2]);
 		}
 	}
 
@@ -4871,10 +4871,12 @@ class PlayState extends MusicBeatState
 		}
 
 
+			if(!cpuControlled)
+			{
 				note.kill();
 				notes.remove(note, true);
 				note.destroy();
-			
+			}
 		}
 	}
 
@@ -5354,7 +5356,7 @@ class PlayState extends MusicBeatState
 			spr = playerStrums.members[id];
 		}
 
-		if(isDad || spr != null) {
+		if(spr != null) {
 			spr.playAnim('confirm', true);
 			spr.resetAnim = time;
 		}
