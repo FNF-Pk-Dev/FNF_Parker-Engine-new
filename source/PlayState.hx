@@ -4753,11 +4753,12 @@ class PlayState extends MusicBeatState
 			script.setVariable("note.isSustainNote", note.isSustainNote);
 			script.executeFunc("opponentNoteHit");
 		}
-
-	
+		if (!note.isSustainNote)
+		{
 			note.kill();
 			notes.remove(note, true);
 			note.destroy();
+		}
 	}
 
 	function goodNoteHit(note:Note):Void
@@ -4789,10 +4790,12 @@ class PlayState extends MusicBeatState
 				}
 
 				note.wasGoodHit = true;
-				
+				if (!note.isSustainNote)
+				{
 					note.kill();
 					notes.remove(note, true);
 					note.destroy();
+				}
 				return;
 			}
 
