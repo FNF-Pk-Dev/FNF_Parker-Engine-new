@@ -10,6 +10,8 @@ import flixel.input.keyboard.FlxKey;
 import flixel.system.FlxSound;
 import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
+import flixel.addons.display.FlxBackdrop;
+import flixel.addons.display.FlxGridOverlay;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.FlxCamera;
@@ -27,6 +29,7 @@ class PauseSubState extends MusicBeatSubstate
 	var pauseMusic:FlxSound;
 	var practiceText:FlxText;
 	var skipTimeText:FlxText;
+	var velocityBackground:FlxBackdrop;
 	var skipTimeTracker:Alphabet;
 	var curTime:Float = Math.max(0, Conductor.songPosition);
 	//var botplayText:FlxText;
@@ -76,6 +79,13 @@ class PauseSubState extends MusicBeatSubstate
 		bg.alpha = 0;
 		bg.scrollFactor.set();
 		add(bg);
+
+		velocityBackground = new FlxBackdrop(FlxGridOverlay.createGrid(30, 30, 60, 60, true, 0x3B161932, 0x0));
+		velocityBackground.velocity.set(FlxG.random.bool(50) ? 90 : -90, FlxG.random.bool(50) ? 90 : -90);
+		velocityBackground.antialiasing = ClientPrefs.globalAntialiasing;
+		velocityBackground.alpha = 0;
+		FlxTween.tween(velocityBackground, {alpha: 1}, 0.5, {ease: FlxEase.quadOut});
+		add(velocityBackground);
 
 		var levelInfo:FlxText = new FlxText(20, 15, 0, "", 32);
 		levelInfo.text += PlayState.SONG.song;
