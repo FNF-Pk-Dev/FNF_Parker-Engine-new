@@ -3929,7 +3929,7 @@ class PlayState extends MusicBeatState
 			if (script != null)
 		{
 			script.setVariable("boyfriend", boyfriend);
-			script.executeFunc("onMoveCamera", boyfriend);
+			script.executeFunc("onMoveCamera", [boyfriend]);
 		}
 		}
 	}
