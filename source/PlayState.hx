@@ -5497,7 +5497,7 @@ class PlayState extends MusicBeatState
 		
 		var scriptname:String = "";
 		
-		var hxToLoadEvent:String = "";
+		var hxToLoadEvent:String = Paths.modFolders(scriptname + '.hx');
 
 		var hxdata:String = "";
 		
@@ -5512,8 +5512,8 @@ class PlayState extends MusicBeatState
 		if (FileSystem.exists(stagepath))
 			hxsdata = File.getContent(stagepath);
 			
-		if (FileSystem.exists(scriptname))
-			hxdataEvent = File.getContent(scriptname);
+		if (FileSystem.exists(hxToLoadEvent))
+			hxdataEvent = File.getContent(hxToLoadEvent);
 
 		if (hxdata != "" || hxsdata != "" || hxdataEvent != "")
 		{
