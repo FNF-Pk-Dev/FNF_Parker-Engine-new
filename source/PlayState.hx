@@ -4767,6 +4767,9 @@ class PlayState extends MusicBeatState
 		}
 		return;
 	}
+	note.kill();
+	notes.remove(note, true);
+	note.destroy();
 	}
 
 	function goodNoteHit(note:Note):Void
@@ -4855,7 +4858,7 @@ class PlayState extends MusicBeatState
 				if(note.isSustainNote && !note.animation.curAnim.name.endsWith('end')) {
 					time += 0.15;
 				}
-				StrumPlayAnim(false, Std.int(Math.abs(note.noteData)), time);
+				//StrumPlayAnim(false, Std.int(Math.abs(note.noteData)), time);
 			} else {
 				var spr = playerStrums.members[note.noteData];
 				if(spr != null)
