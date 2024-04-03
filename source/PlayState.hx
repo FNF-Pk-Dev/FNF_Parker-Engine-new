@@ -317,6 +317,9 @@ class PlayState extends MusicBeatState
 	
 	// Hscript
 	public var script:Script;
+	public static final extns:Array<String> = ["hx", "hscript", "hsc", "hxs"];
+	public var scripts:Array<Script> = [];
+	var _group:Null<ScriptGroup>;
 
 	// Lua shit
 	public static var instance:PlayState;
@@ -4805,10 +4808,9 @@ class PlayState extends MusicBeatState
 				if(combo > 9999) combo = 9999;
 				popUpScore(note);
 			}
-			if(!cpuControlled)
-			{
+		
 			health += note.hitHealth * healthGain;
-			}
+			
 
 			if(!note.noAnimation) {
 				var animToPlay:String = singAnimations[Std.int(Math.abs(note.noteData))];
@@ -5602,6 +5604,43 @@ class PlayState extends MusicBeatState
 			{
 				return runLuaCode(code);
 			});
+			
+			script.setVariable("addScript", function(scriptName:String)
+		    {
+			var hx:Null<String> = null;
+
+			for (extn in extns)
+			{
+				var path:String = Paths.modFolders('scripts/$scriptName.$extn');
+
+				if (FileSystem.exists(path))
+				{
+					hx = File.getContent(path);
+					break;
+				}
+			}
+
+			if (hx != null)
+			{
+				if (_group != null && _group.getScriptByTag(scriptName) == null)
+					_group.addScript(scriptName).executeString(hx);
+				else
+				{
+					if (_group == null)
+						error('Script group not found!', '$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
+					else
+						error('$scriptName is alreadly added as a Script!',
+							'$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
+				}
+
+				return _group.getScriptByTag(scriptName).interacter.getNewObj();
+			}
+			else
+			{
+				error('Script "$scriptName" not Found!', '$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
+			}
+			return null;
+		    });
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
