@@ -5615,7 +5615,6 @@ class PlayState extends MusicBeatState
 				if (FileSystem.exists(path))
 				{
 					hx = File.getContent(path);
-					break;
 				}	
 		    });
 
