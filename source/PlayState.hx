@@ -62,6 +62,7 @@ import DialogueBoxPsych;
 import Conductor.Rating;
 import flixel.system.FlxAssets.FlxShader;
 import hscript.Script;
+import hscript.ScriptGroup;
 
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
