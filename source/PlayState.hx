@@ -5577,7 +5577,7 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("addHscript", function(name:String)
 			{
-			return scriptname = name;
+			 scriptname = name;
 			});
 
 			script.setVariable("import", function(lib:String, ?as:Null<String>) // Does this even work?
