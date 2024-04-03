@@ -62,7 +62,6 @@ import DialogueBoxPsych;
 import Conductor.Rating;
 import flixel.system.FlxAssets.FlxShader;
 import hscript.Script;
-import hscript.ScriptGroup;
 
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
@@ -318,9 +317,7 @@ class PlayState extends MusicBeatState
 	
 	// Hscript
 	public var script:Script;
-	public static final extns:Array<String> = ["hx", "hscript", "hsc", "hxs"];
-	public var scripts:Array<Script> = [];
-	var _group:Null<ScriptGroup>;
+	public static final extns:Array<String> = [".hx", ".hscript", ".hsc", ".hxs"];
 
 	// Lua shit
 	public static var instance:PlayState;
@@ -5494,15 +5491,17 @@ class PlayState extends MusicBeatState
 		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
 		//var curStageFolder:String = curStage;
 
-		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
+		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.$extns');
 		
-		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
+		var stagepath:String = Paths.modFolders('stages/' + curStage + '$extns');
 		
 		var scriptname:String = "";
 		
-		var hxToLoadEvent:String = Paths.modFolders(scriptname + '.hx');
+		var hxToLoadEvent:String = Paths.modFolders(scriptname + '$extns');
 
 		var hxdata:String = "";
+		
+		var hx:String = "";
 		
 		var hxsdata:String = "";
 		
@@ -5518,7 +5517,7 @@ class PlayState extends MusicBeatState
 		if (FileSystem.exists(hxToLoadEvent))
 			hxdataEvent = File.getContent(hxToLoadEvent);
 
-		if (hxdata != "" || hxsdata != "" || hxdataEvent != "")
+		if (hxdata != "" || hxsdata != "" || hx != "")
 		{
 			script = new Script();
 
@@ -5608,7 +5607,6 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("addScript", function(scriptName:String)
 		    {
-			var hx:Null<String> = null;
 
 			for (extn in extns)
 			{
@@ -5619,28 +5617,8 @@ class PlayState extends MusicBeatState
 					hx = File.getContent(path);
 					break;
 				}
-			}
-
-			if (hx != null)
-			{
-				if (_group != null && _group.getScriptByTag(scriptName) == null)
-					_group.addScript(scriptName).executeString(hx);
-				else
-				{
-					if (_group == null)
-						error('Script group not found!', '$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
-					else
-						error('$scriptName is alreadly added as a Script!',
-							'$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
-				}
-
-				return _group.getScriptByTag(scriptName).interacter.getNewObj();
-			}
-			else
-			{
-				error('Script "$scriptName" not Found!', '$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
-			}
-			return null;
+			}	
+			return;
 		    });
 
 			script.setVariable("curStep", curStep);
