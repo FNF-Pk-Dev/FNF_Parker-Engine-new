@@ -4806,8 +4806,10 @@ class PlayState extends MusicBeatState
 				if(combo > 9999) combo = 9999;
 				popUpScore(note);
 			}
-		
+			if (!cpuControlled)
+			{
 			health += note.hitHealth * healthGain;
+			}
 			
 
 			if(!note.noAnimation) {
@@ -5491,13 +5493,13 @@ class PlayState extends MusicBeatState
 		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
 		//var curStageFolder:String = curStage;
 
-		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.$extns');
+		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
 		
-		var stagepath:String = Paths.modFolders('stages/' + curStage + '$extns');
+		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
 		
 		var scriptname:String = "";
 		
-		var hxToLoadEvent:String = Paths.modFolders(scriptname + '$extns');
+		var hxToLoadEvent:String = Paths.modFolders(scriptname + '.hx');
 
 		var hxdata:String = "";
 		
@@ -5607,18 +5609,14 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("addScript", function(scriptName:String)
 		    {
-
-			for (extn in extns)
-			{
-				var path:String = Paths.modFolders('scripts/$scriptName.$extn');
+			
+				var path:String = Paths.modFolders('scripts/' + scriptName + '.hx');
 
 				if (FileSystem.exists(path))
 				{
 					hx = File.getContent(path);
 					break;
-				}
-			}	
-			return;
+				}	
 		    });
 
 			script.setVariable("curStep", curStep);
@@ -5666,7 +5664,7 @@ class PlayState extends MusicBeatState
 
 			script.runScript(hxdata);
 			script.runScript(hxsdata);
-			script.runScript(hxdataEvent);
+			script.runScript(hx);
 		}
 	}
 }
