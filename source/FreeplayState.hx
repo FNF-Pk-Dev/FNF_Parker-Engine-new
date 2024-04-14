@@ -414,8 +414,6 @@ class FreeplayState extends MusicBeatState
 			}
 			for (i in 0...iconArray.length)
 			{
-				if (curSelected != i)
-				{
 					FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
 						ease: FlxEase.quadOut,
 						onComplete: function(twn:FlxTween)
@@ -423,9 +421,8 @@ class FreeplayState extends MusicBeatState
 							spr.kill();
 						}
 					});
-				}
 			}
-			
+			iconArray[curSelected].alpha = 1;
 			
 			FlxG.sound.play(Paths.sound('confirmMenu'));
 			PlayState.SONG = Song.loadFromJson(poop, songLowercase);
