@@ -297,7 +297,8 @@ class FreeplayState extends MusicBeatState
 
 		var shiftMult:Int = 1;
 		if(FlxG.keys.pressed.SHIFT #if android || _virtualpad.buttonZ.pressed #end) shiftMult = 3;
-
+        if (upordown)
+        {
 		if(songs.length > 1)
 		{
 			if (upP)
@@ -331,8 +332,6 @@ class FreeplayState extends MusicBeatState
 				changeDiff();
 			}
 		}
-        if (upordown)
-        {
 		if (controls.UI_LEFT_P)
 			changeDiff(-1);
 		else if (controls.UI_RIGHT_P)
@@ -384,6 +383,8 @@ class FreeplayState extends MusicBeatState
 			}
 		}
 
+        if (upordown)
+        {
 		else if (accepted)
 		{
 		    upordown = false;
@@ -456,6 +457,7 @@ class FreeplayState extends MusicBeatState
 			destroyFreeplayVocals();
 					
 		}
+	}
 		else if(controls.RESET #if android || _virtualpad.buttonY.justPressed #end)
 		{
 			#if android
