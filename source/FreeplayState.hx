@@ -441,10 +441,8 @@ class FreeplayState extends MusicBeatState
 				colorTween.cancel();
 			}
 			
-			if (FlxG.keys.pressed.SHIFT #if android || _virtualpad.buttonZ.pressed #end){
-				LoadingState.loadAndSwitchState(new ChartingState());
-			}else{
-				
+			if (FlxG.keys.pressed.SHIFT #if android || _virtualpad.buttonZ.pressed #end) {
+            LoadingState.loadAndSwitchState(new ChartingState());
 			}
 
 			FlxG.sound.music.volume = 0;
