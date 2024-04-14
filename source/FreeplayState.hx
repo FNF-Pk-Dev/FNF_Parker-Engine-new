@@ -383,9 +383,7 @@ class FreeplayState extends MusicBeatState
 			}
 		}
 
-        if (upordown)
-        {
-		else if (accepted)
+		else if (accepted && upordown)
 		{
 		    upordown = false;
 			persistentUpdate = false;
@@ -416,7 +414,7 @@ class FreeplayState extends MusicBeatState
 			}
 			for (i in 0...iconArray.length)
 			{
-				if (curSelected != spr.ID)
+				if (curSelected != icon.ID)
 				{
 					FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
 						ease: FlxEase.quadOut,
@@ -457,7 +455,6 @@ class FreeplayState extends MusicBeatState
 			destroyFreeplayVocals();
 					
 		}
-	}
 		else if(controls.RESET #if android || _virtualpad.buttonY.justPressed #end)
 		{
 			#if android
