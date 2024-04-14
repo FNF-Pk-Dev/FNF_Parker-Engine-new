@@ -412,6 +412,7 @@ class FreeplayState extends MusicBeatState
 					});
 				}
 			}
+			/*
 			for (i in 0...iconArray.length)
 			{
 					FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
@@ -422,6 +423,7 @@ class FreeplayState extends MusicBeatState
 						}
 					});
 			}
+			*/
 			iconArray[curSelected].alpha = 1;
 			
 			FlxG.sound.play(Paths.sound('confirmMenu'));
