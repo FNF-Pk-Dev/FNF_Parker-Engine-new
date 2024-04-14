@@ -22,6 +22,7 @@ import lime.utils.Assets;
 import flixel.system.FlxSound;
 import openfl.utils.Assets as OpenFlAssets;
 import WeekData;
+import flixel.FlxCamera;
 #if MODS_ALLOWED
 import sys.FileSystem;
 #end
@@ -47,6 +48,7 @@ class FreeplayState extends MusicBeatState
 
 	private var grpSongs:FlxTypedGroup<Alphabet>;
 	private var curPlaying:Bool = false;
+	var upordown:Bool = true;
 
 	private var iconArray:Array<HealthIcon> = [];
 
@@ -127,6 +129,7 @@ class FreeplayState extends MusicBeatState
 			var songText:Alphabet = new Alphabet(90, 320, songs[i].songName, true);
 			songText.isMenuItem = true;
 			songText.targetY = i - curSelected;
+			songText.ID = i;
 			grpSongs.add(songText);
 
 			var maxWidth = 980;
@@ -139,6 +142,7 @@ class FreeplayState extends MusicBeatState
 			Paths.currentModDirectory = songs[i].folder;
 			var icon:HealthIcon = new HealthIcon(songs[i].songCharacter);
 			icon.sprTracker = songText;
+			icon.ID = i;
 
 			// using a FlxGroup is too much fuss!
 			iconArray.push(icon);
@@ -327,12 +331,14 @@ class FreeplayState extends MusicBeatState
 				changeDiff();
 			}
 		}
-
+        if (upordown)
+        {
 		if (controls.UI_LEFT_P)
 			changeDiff(-1);
 		else if (controls.UI_RIGHT_P)
 			changeDiff(1);
 		else if (upP || downP) changeDiff();
+		}
 
 		if (controls.BACK)
 		{
@@ -380,6 +386,7 @@ class FreeplayState extends MusicBeatState
 
 		else if (accepted)
 		{
+		    upordown = false;
 			persistentUpdate = false;
 			var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 			var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
@@ -393,17 +400,45 @@ class FreeplayState extends MusicBeatState
 				trace('Couldnt find file');
 			}*/
 			trace(poop);
+			grpSongs.forEach(function(spr:FlxSprite)
+			{
+				if (curSelected != spr.ID)
+				{
+					FlxTween.tween(spr, {alpha: 0}, 0.4, {
+						ease: FlxEase.quadOut,
+						onComplete: function(twn:FlxTween)
+						{
+							spr.kill();
+						}
+					});
+				}
+			}
+			for (i in 0...iconArray.length)
+			{
+				if (curSelected != spr.ID)
+				{
+					FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
+						ease: FlxEase.quadOut,
+						onComplete: function(twn:FlxTween)
+						{
+							spr.kill();
+						}
+					});
+				}
+			}
+			
 			
 			FlxG.sound.play(Paths.sound('confirmMenu'));
 			PlayState.SONG = Song.loadFromJson(poop, songLowercase);
 			PlayState.isStoryMode = false;
 			PlayState.storyDifficulty = curDifficulty;
-			new FlxTimer().start(2, function(tmr:FlxTimer)
+			new FlxTimer().start(1.5, function(tmr:FlxTimer)
 			{
 			LoadingState.loadAndSwitchState(new PlayState());
+			upordown = true;
 			});
 
-			
+			FlxTween.tween(FlxG.cameras, {zoom: 1.2}, 4.1, {ease: FlxEase.quadOut});
 
 			trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
 			if(colorTween != null) {
