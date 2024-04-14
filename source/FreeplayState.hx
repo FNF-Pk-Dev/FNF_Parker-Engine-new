@@ -414,7 +414,7 @@ class FreeplayState extends MusicBeatState
 			}
 			for (i in 0...iconArray.length)
 			{
-				if (curSelected != icon.ID)
+				if (curSelected != i)
 				{
 					FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
 						ease: FlxEase.quadOut,
