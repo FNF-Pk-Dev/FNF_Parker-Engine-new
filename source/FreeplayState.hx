@@ -458,6 +458,7 @@ class FreeplayState extends MusicBeatState
 					
 		}
 	}
+	}
 		else if(controls.RESET #if android || _virtualpad.buttonY.justPressed #end)
 		{
 			#if android
