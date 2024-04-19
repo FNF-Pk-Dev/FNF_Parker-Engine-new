@@ -5507,14 +5507,16 @@ class PlayState extends MusicBeatState
 	{
 		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
 		//var curStageFolder:String = curStage;
+		
+		var scriptname:String = "";
 
 		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
 		
+		var pathscript:String = Paths.modFolders('script/' + scriptname + '.hx');
+		
 		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
 		
-		var scriptname:String = "";
 		
-		var hxToLoadEvent:String = Paths.modFolders(scriptname + '.hx');
 
 		var hxdata:String = "";
 		
@@ -5522,7 +5524,6 @@ class PlayState extends MusicBeatState
 		
 		var hxsdata:String = "";
 		
-		var hxdataEvent:String = "";
 		
 
 		if (FileSystem.exists(path))
@@ -5531,8 +5532,10 @@ class PlayState extends MusicBeatState
 		if (FileSystem.exists(stagepath))
 			hxsdata = File.getContent(stagepath);
 			
-		if (FileSystem.exists(hxToLoadEvent))
-			hxdataEvent = File.getContent(hxToLoadEvent);
+		if (FileSystem.exists(pathscript))
+		{
+			hx = File.getContent(pathscript);
+		}	
 
 		if (hxdata != "" || hxsdata != "" || hx != "")
 		{
@@ -5596,7 +5599,7 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("addHscript", function(name:String)
 			{
-			 scriptname = name;
+			      scriptname = name;
 			});
 
 			script.setVariable("import", function(lib:String, ?as:Null<String>) // Does this even work?
@@ -5622,15 +5625,11 @@ class PlayState extends MusicBeatState
 				return runLuaCode(code);
 			});
 			
-			script.setVariable("addScript", function(scriptName:String)
+			script.setVariable("addScript", function(scriptNames:String)
 		    {
 			
-				var path:String = Paths.modFolders('scripts/' + scriptName + '.hx');
+				return scriptname = scriptNames;
 
-				if (FileSystem.exists(path))
-				{
-					hx = File.getContent(path);
-				}	
 		    });
 
 			script.setVariable("curStep", curStep);
