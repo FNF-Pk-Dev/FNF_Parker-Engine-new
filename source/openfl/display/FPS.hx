@@ -49,11 +49,7 @@ class FPS extends TextField
 		currentFPS = 0;
 		selectable = false;
 		mouseEnabled = false;
-		#if android
-                defaultTextFormat = new TextFormat('_sans', Std.int(14 * Math.min(openfl.Lib.current.stage.stageWidth / FlxG.width, openfl.Lib.current.stage.stageHeight / FlxG.height)), color);
-                #else
 		defaultTextFormat = new TextFormat("_sans", 14, color);
-                #end
 		autoSize = LEFT;
 		multiline = true;
 		text = "FPS: ";
