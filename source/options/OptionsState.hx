@@ -32,6 +32,7 @@ using StringTools;
 class OptionsState extends MusicBeatState
 {
 	var options:Array<String> = ['Note Colors', 'Controls', 'Adjust Delay and Combo', 'Graphics', 'Visuals and UI', 'Gameplay'];
+	var HUDwrinText:FlxText:
 	private var grpOptions:FlxTypedGroup<Alphabet>;
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
@@ -64,7 +65,8 @@ class OptionsState extends MusicBeatState
 				#end
 				openSubState(new options.GameplaySettingsSubState());
 			case 'Adjust Delay and Combo':
-				LoadingState.loadAndSwitchState(new options.NoteOffsetState());
+				if (ClientPrefs.comboHUD == 'camHUD')
+				{LoadingState.loadAndSwitchState(new options.NoteOffsetState());}
 		}
 	}
 
@@ -126,6 +128,13 @@ class OptionsState extends MusicBeatState
 		tipText.scrollFactor.set();
 		add(tipText);
 		#end
+
+		HUDwrinText = new FlxText(10, 32, 0, 'Press Go In Visuals and UI Menu Change it inside to camHUD', 36);
+		HUDwrinText.setFormat(Paths.font("vcr.ttf"), 16, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		HUDwrinText.borderSize = 2;
+		HUDwrinText.scrollFactor.set();
+		HUDwrinText.alpha = 0.001;
+		add(HUDwrinText);
 
 		changeSelection();
 		ClientPrefs.saveSettings();
