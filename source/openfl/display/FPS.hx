@@ -6,6 +6,7 @@ import openfl.text.TextField;
 import openfl.text.TextFormat;
 import flixel.util.FlxColor;
 import flixel.math.FlxMath;
+import lime.system.System as LimeSystem;
 #if gl_stats
 import openfl.display._internal.stats.Context3DStats;
 import openfl.display._internal.stats.DrawCallContext;
@@ -48,7 +49,11 @@ class FPS extends TextField
 		currentFPS = 0;
 		selectable = false;
 		mouseEnabled = false;
-		defaultTextFormat = new TextFormat("_sans", 24, color);
+		#if android
+                defaultTextFormat = new TextFormat('_sans', Std.int(14 * Math.min(openfl.Lib.current.stage.stageWidth / FlxG.width, openfl.Lib.current.stage.stageHeight / FlxG.height)), color);
+                #else
+		defaultTextFormat = new TextFormat("_sans", 14, color);
+                #end
 		autoSize = LEFT;
 		multiline = true;
 		text = "FPS: ";
@@ -58,7 +63,7 @@ class FPS extends TextField
 		currentTime = 0;
 		times = [];
 
-        pkEngineVersion = "v0.5.1fix";
+                pkEngineVersion = "v0.5.2";
         
 		#if flash
 		addEventListener(Event.ENTER_FRAME, function(e)
