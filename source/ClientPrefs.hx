@@ -144,7 +144,7 @@ class ClientPrefs {
 		FlxG.save.data.checkForUpdates = checkForUpdates;
 		FlxG.save.data.comboStacking = comboStacking;
 		FlxG.save.data.gamerting = gamerting;
-		
+		FlxG.save.data.comboHUD = comboHUD;
 		FlxG.save.data.hitboxmode = hitboxmode;
 		FlxG.save.data.hitboxalpha = hitboxalpha;
 		FlxG.save.data.virtualPadAlpha = virtualPadAlpha;
@@ -203,6 +203,9 @@ class ClientPrefs {
 		}
 		if(FlxG.save.data.rainbowFPS != null) {
 			rainbowFPS = FlxG.save.data.rainbowFPS;
+		}
+		if(FlxG.save.data.comboHUD != null) {
+			comboHUD = FlxG.save.data.comboHUD;
 		}
 		/*if(FlxG.save.data.cursing != null) {
 			cursing = FlxG.save.data.cursing;
