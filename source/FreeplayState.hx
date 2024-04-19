@@ -399,6 +399,7 @@ class FreeplayState extends MusicBeatState
 				trace('Couldnt find file');
 			}*/
 			trace(poop);
+			/*
 			grpSongs.forEach(function(spr:FlxSprite)
 			{
 				if (curSelected != spr.ID)
@@ -412,7 +413,7 @@ class FreeplayState extends MusicBeatState
 					});
 				}
 			}
-			/*
+			
 			for (i in 0...iconArray.length)
 			{
 					FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
