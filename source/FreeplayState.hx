@@ -437,7 +437,7 @@ class FreeplayState extends MusicBeatState
 			upordown = true;
 			});
 
-			FlxTween.tween(FlxG.cameras, {zoom: 1.2}, 4.1, {ease: FlxEase.quadOut});
+			FlxTween.tween(FlxG.camera, {zoom: 1.2}, 1.2, {ease: FlxEase.quadOut});
 
 			trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
 			if(colorTween != null) {
