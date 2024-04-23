@@ -5503,19 +5503,24 @@ class PlayState extends MusicBeatState
 	var curLight:Int = -1;
 	var curLightEvent:Int = -1;
 	
+	var scriptname:String = "";
 	public function startScript()
 	{
+	    var HscriptShit:Array<String> = [
+		'hx',
+		'hxs',
+		'hscript',
+		'hsc'
+	];
 		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
 		//var curStageFolder:String = curStage;
 		
-		var scriptname:String = "";
 
 		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
 		
-		var pathscript:String = Paths.modFolders('script/' + scriptname + '.hx');
+		var pathscript:String = Paths.modFolders('scripts/' + scriptname + '.hx');
 		
 		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
-		
 		
 
 		var hxdata:String = "";
@@ -5524,7 +5529,13 @@ class PlayState extends MusicBeatState
 		
 		var hxsdata:String = "";
 		
+		script = new Script();
 		
+		
+		script.setVariable("addHscript", function(name:String)
+		{
+		scriptname = name;
+		});
 
 		if (FileSystem.exists(path))
 			hxdata = File.getContent(path);
@@ -5533,13 +5544,24 @@ class PlayState extends MusicBeatState
 			hxsdata = File.getContent(stagepath);
 			
 		if (FileSystem.exists(pathscript))
-		{
 			hx = File.getContent(pathscript);
-		}	
-
-		if (hxdata != "" || hxsdata != "" || hx != "")
+			
+		if (hx != "")
 		{
-			script = new Script();
+		startHScript();
+		script.runScript(hx);
+		}
+
+		if (hxdata != "" || hxsdata != "")
+		{
+		startHScript();	
+		script.runScript(hxdata);
+		script.runScript(hxsdata);
+		}
+	}
+	public function startHScript()
+	{
+	        script = new Script();
 
 			script.setVariable("onSongStart", function()
 			{
@@ -5675,9 +5697,5 @@ class PlayState extends MusicBeatState
 			script.setVariable("InputFormatter", InputFormatter);
 			script.setVariable("FlxTextFormatMarkerPair", FlxTextFormatMarkerPair);
 
-			script.runScript(hxdata);
-			script.runScript(hxsdata);
-			script.runScript(hx);
-		}
 	}
 }
