@@ -40,7 +40,7 @@ class HitboxSettingsSubState extends BaseOptionsMenu
 		rpcTitle = 'Hitbox Settings Menu'; //hi, you can ask what is that, i will answer it's all what you needed lol.
 
 		var option:Option = new Option('Hitbox Mode:',
-			"Choose your Hitbox Style!  -mariomaster",
+			"Choose your Hitbox Style!",
 			'hitboxmode',
 			'string',
 			'Classic',
@@ -48,8 +48,20 @@ class HitboxSettingsSubState extends BaseOptionsMenu
 		  addOption(option);
 		  
 		var option:Option = new Option('Hitbox Opacity', //mariomaster was here again
-			'Changes opacity -omg',
+			'Changes opacity',
 			'hitboxalpha',
+			'float',
+			0.2);
+		option.scrollSpeed = 1.6;
+		option.minValue = 0.0;
+		option.maxValue = 1;
+		option.changeValue = 0.1;
+		option.decimals = 1;
+		addOption(option);
+
+		var option:Option = new Option('VirtualPad Opacity', //Ajwwk
+			'Changes VirtualPad opacity',
+			'virtualPadAlpha',
 			'float',
 			0.2);
 		option.scrollSpeed = 1.6;
