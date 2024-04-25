@@ -347,9 +347,9 @@ class Paths
 			jsonExists = true;
 		}
 
-		return FlxAtlasFrames.fromSparrow((imageLoaded != null ? imageLoaded : image(key, library)), (jsonExists ? File.getContent(modsJsons(key)) : file('images/$key.json', library)));
+		return FlxAtlasFrames.fromTexturePackerJson((imageLoaded != null ? imageLoaded : image(key, library)), (jsonExists ? File.getContent(modsJsons(key)) : file('images/$key.json', library)));
 		#else
-		return FlxAtlasFrames.fromSparrow(image(key, library), file('images/$key.json', library));
+		return FlxAtlasFrames.fromTexturePackerJson(image(key, library), file('images/$key.json', library));
 		#end
 	}
 
