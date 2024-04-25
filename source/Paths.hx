@@ -343,11 +343,11 @@ class Paths
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = returnGraphic(key);
 		var jsonExists:Bool = false;
-		if(FileSystem.exists(modsJson(key))) {
+		if(FileSystem.exists(modsJsons(key))) {
 			jsonExists = true;
 		}
 
-		return FlxAtlasFrames.fromSparrow((imageLoaded != null ? imageLoaded : image(key, library)), (jsonExists ? File.getContent(modsJson(key)) : file('images/$key.json', library)));
+		return FlxAtlasFrames.fromSparrow((imageLoaded != null ? imageLoaded : image(key, library)), (jsonExists ? File.getContent(modsJsons(key)) : file('images/$key.json', library)));
 		#else
 		return FlxAtlasFrames.fromSparrow(image(key, library), file('images/$key.json', library));
 		#end
@@ -451,6 +451,9 @@ class Paths
 
 	inline static public function modsXml(key:String) {
 		return modFolders('images/' + key + '.xml');
+	}
+	inline static public function modsJsons(key:String) {
+		return modFolders('images/' + key + '.json');
 	}
 
 	inline static public function modsTxt(key:String) {
