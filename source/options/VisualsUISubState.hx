@@ -125,7 +125,7 @@ class VisualsUISubState extends BaseOptionsMenu
 			'pauseMusic',
 			'string',
 			'Snowden Sancturay',
-			['None', 'Breakfast', 'Tea Time', 'Snowden Sancturay']);
+			['None', 'Breakfast', 'Tea Time', 'Peace']);
 		addOption(option);
 		option.onChange = onChangePauseMusic;
 		
