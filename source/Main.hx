@@ -118,8 +118,8 @@ class Main extends Sprite
 			});
 		}
 		Lib.application.window.fullscreen = false;
-		Lib.application.window.x = CURRENT_X;
-		Lib.application.window.y = CURRENT_Y;
+		//Lib.application.window.x = CURRENT_X;
+		//Lib.application.window.y = CURRENT_Y;
 		#end
 	}
 
