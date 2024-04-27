@@ -2190,14 +2190,15 @@ class FunkinLua {
 			#end
 		});
 		
-		Lua_helper.add_callback(lua, "playVideo", function(videoFile:String) {
+		Lua_helper.add_callback(lua, "playVideo", function(tag:String, videoFile:String) {
 			#if VIDEOS_ALLOWED
 			if(FileSystem.exists(Paths.video(videoFile))) {
-				PlayState.instance.playVideo(videoFile);
+				PlayState.instance.playVideo(tag, videoFile);
 				return true;
 			} else {
 				luaTrace('playVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
 			}
+			#end
 		});
 
 		Lua_helper.add_callback(lua, "playMusic", function(sound:String, volume:Float = 1, loop:Bool = false) {

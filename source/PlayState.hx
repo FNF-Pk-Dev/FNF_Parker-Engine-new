@@ -1666,7 +1666,7 @@ class PlayState extends MusicBeatState
 		#end
 	}
 	
-	public function playVideo(name:String)
+	public function playVideo(tag:String, name:String)
 	{
 		#if VIDEOS_ALLOWED
 		
@@ -1682,18 +1682,22 @@ class PlayState extends MusicBeatState
 			return;
 		}
 
-		var video:MP4Handler = new MP4Handler();
+		tag = new MP4Handler();
 		#if (hxCodec < "3.0.0")
-		video.playVideo(filepath);
-		video.finishCallback = function()
+		tag.playVideo(filepath);
+		tag.finishCallback = function()
 		{
+		    callOnLuas('onVideofinishCallback', [tag]);
+		    remove(tag);
 			//startAndEnd();
 			return;
 		}
 		#else
-		video.play(filepath);
-		video.onEndReached.add(function(){
-			video.dispose();
+		tag.play(filepath);
+		tag.onEndReached.add(function(){
+			tag.dispose();
+			callOnLuas('onVideofinishCallback', [tag]);
+			remove(tag);
 			//startAndEnd();
 			return;
 		});
