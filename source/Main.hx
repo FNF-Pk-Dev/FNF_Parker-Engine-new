@@ -117,6 +117,9 @@ class Main extends Sprite
 				DiscordClient.shutdown();
 			});
 		}
+		Lib.application.window.fullscreen = false;
+		Lib.application.window.x = CURRENT_X;
+		Lib.application.window.y = CURRENT_Y;
 		#end
 	}
 
