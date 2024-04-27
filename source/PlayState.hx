@@ -1641,13 +1641,14 @@ class PlayState extends MusicBeatState
 			}
 		#end
 	}
-	
+	var hi:VideoSprite;
 	public function playVideo(name:String, cam:String = '')
 	{
 		#if VIDEOS_ALLOWED
-		var hi:VideoSprite;
+		
 		var filepath:String = Paths.video(name);
 		hi = new VideoSprite();
+		hi.volume = 1;
 		hi.playVideo(filepath);
 		hi.cameras = [cameraFromString(cam)];
 		hi.finishCallback = function()
@@ -2807,6 +2808,7 @@ class PlayState extends MusicBeatState
 		{
 			if (FlxG.sound.music != null)
 			{
+			    hi.pause();
 				FlxG.sound.music.pause();
 				vocals.pause();
 			}
@@ -2833,6 +2835,8 @@ class PlayState extends MusicBeatState
 			for (timer in modchartTimers) {
 				timer.active = false;
 			}
+			
+			hi.active = false;
 		}
 
 		super.openSubState(SubState);
@@ -2882,6 +2886,7 @@ class PlayState extends MusicBeatState
 				DiscordClient.changePresence(detailsText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 			}
 			#end
+			hi.active = true;
 		}
 
 		super.closeSubState();
@@ -2925,6 +2930,7 @@ class PlayState extends MusicBeatState
 		vocals.pause();
 
 		FlxG.sound.music.play();
+		hi.play();
 		FlxG.sound.music.pitch = playbackRate;
 		Conductor.songPosition = FlxG.sound.music.time;
 		if (Conductor.songPosition <= vocals.length)
