@@ -74,15 +74,8 @@ import sys.io.File;
 #end
 
 #if VIDEOS_ALLOWED
-#if (hxCodec >= "3.0.0")
-import hxcodec.flixel.FlxVideo as MP4Handler;
-#elseif (hxCodec == "2.6.1")
-import hxcodec.VideoHandler as MP4Handler;
-#elseif (hxCodec == "2.6.0")
-import VideoHandler as MP4Handler;
-#else
-import vlc.MP4Handler;
-#end
+import VideoHandler;
+import VideoSprite;
 #end
 
 using StringTools;
@@ -1629,83 +1622,35 @@ class PlayState extends MusicBeatState
 	public function startVideo(name:String)
 	{
 		#if VIDEOS_ALLOWED
-		inCutscene = true;
-
-		var filepath:String = Paths.video(name);
-		#if sys
-		if(!FileSystem.exists(filepath))
-		#else
-		if(!OpenFlAssets.exists(filepath))
-		#end
-		{
-			FlxG.log.warn('Couldnt find video file: ' + name);
+		var bg:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+			bg.cameras = [camOther];
+			bg.scrollFactor.set(0, 0);
+			add(bg);
+			var cutVid:VideoHandler;
+			inCutscene = true;
+			cutVid = new VideoHandler();
+			cutVid.playVideo(Paths.video(name));
+			cutVid.finishCallback = function()
+			{
 			startAndEnd();
-			return;
-		}
-
-		var video:MP4Handler = new MP4Handler();
-		#if (hxCodec < "3.0.0")
-		video.playVideo(filepath);
-		video.finishCallback = function()
-		{
-			startAndEnd();
-			return;
-		}
-		#else
-		video.play(filepath);
-		video.onEndReached.add(function(){
-			video.dispose();
-			startAndEnd();
-			return;
-		});
-		#end
-		#else
-		FlxG.log.warn('Platform not supported!');
-		startAndEnd();
-		return;
+			}
 		#end
 	}
 	
-	public function playVideo(tag:MP4Handler, name:String, cam:String = '', end:String)
+	public function playVideo(name:String, cam:String = '')
 	{
 		#if VIDEOS_ALLOWED
-		
+		var hi:VideoSprite;
 		var filepath:String = Paths.video(name);
-		#if sys
-		if(!FileSystem.exists(filepath))
-		#else
-		if(!OpenFlAssets.exists(filepath))
-		#end
+		hi = new VideoSprite();
+		hi.playVideo(filepath);
+		hi.cameras = [cam];
+		hi.finishCallback = function()
 		{
-			FlxG.log.warn('Couldnt find video file: ' + name);
-			//startAndEnd();
-			return;
+		hi.destroy();
+		callOnLuas('onVideoCompleted', []);
 		}
-
-		tag = new MP4Handler();
-		tag.cameras = [cam];
-		#if (hxCodec < "3.0.0")
-		tag.playVideo(filepath);
-		tag.finishCallback = function()
-		{
-		    callOnLuas('onVideofinishCallback', [end]);
-		    //tag.dispose(); bug
-			//startAndEnd();
-			return;
-		}
-		#else
-		tag.play(filepath);
-		tag.onEndReached.add(function(){
-			tag.dispose();
-			callOnLuas('onVideofinishCallback', [end]);
-			//startAndEnd();
-			return;
-		});
-		#end
-		#else
-		FlxG.log.warn('Platform not supported!');
-		//startAndEnd();
-		return;
+		add(hi);
 		#end
 	}
 
