@@ -1688,7 +1688,7 @@ class PlayState extends MusicBeatState
 		tag.finishCallback = function()
 		{
 		    callOnLuas('onVideofinishCallback', [end]);
-		    remove(end);
+		    tag.dispose();
 			//startAndEnd();
 			return;
 		}
@@ -1697,7 +1697,6 @@ class PlayState extends MusicBeatState
 		tag.onEndReached.add(function(){
 			tag.dispose();
 			callOnLuas('onVideofinishCallback', [end]);
-			remove(end);
 			//startAndEnd();
 			return;
 		});

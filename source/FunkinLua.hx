@@ -53,6 +53,18 @@ import hscript.Interp;
 import hscript.Expr;
 #end
 
+#if VIDEOS_ALLOWED
+#if (hxCodec >= "3.0.0")
+import hxcodec.flixel.FlxVideo as MP4Handler;
+#elseif (hxCodec == "2.6.1")
+import hxcodec.VideoHandler as MP4Handler;
+#elseif (hxCodec == "2.6.0")
+import VideoHandler as MP4Handler;
+#else
+import vlc.MP4Handler;
+#end
+#end
+
 #if desktop
 import Discord;
 #end
@@ -2190,10 +2202,10 @@ class FunkinLua {
 			#end
 		});
 		
-		Lua_helper.add_callback(lua, "playVideo", function(tag:String, videoFile:String) {
+		Lua_helper.add_callback(lua, "playVideo", function(tag:MP4Handler, videoFile:String, end:String) {
 			#if VIDEOS_ALLOWED
 			if(FileSystem.exists(Paths.video(videoFile))) {
-				PlayState.instance.playVideo(tag, videoFile);
+				PlayState.instance.playVideo(tag, videoFile, end);
 				return true;
 			} else {
 			luaTrace('playVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
