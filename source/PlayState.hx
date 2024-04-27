@@ -1642,7 +1642,7 @@ class PlayState extends MusicBeatState
 		#end
 	}
 	var hi:VideoSprite;
-	public function playVideo(name:String, cam:String = '')
+	public function playVideo(tag:String, name:String, cam:String = '')
 	{
 		#if VIDEOS_ALLOWED
 		
@@ -1653,7 +1653,7 @@ class PlayState extends MusicBeatState
 		hi.finishCallback = function()
 		{
 		hi.destroy();
-		callOnLuas('onVideoCompleted', []);
+		callOnLuas('onVideoCompleted', [tag]);
 		}
 		add(hi);
 		#end
@@ -2835,7 +2835,7 @@ class PlayState extends MusicBeatState
 				timer.active = false;
 			}
 			
-			hi.active = false;
+//			hi.active = false;
 		}
 
 		super.openSubState(SubState);
