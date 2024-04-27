@@ -1644,7 +1644,7 @@ class PlayState extends MusicBeatState
 		var filepath:String = Paths.video(name);
 		hi = new VideoSprite();
 		hi.playVideo(filepath);
-		hi.cameras = [cam];
+		hi.cameras = [cameraFromString(cam)];
 		hi.finishCallback = function()
 		{
 		hi.destroy();
@@ -1660,6 +1660,14 @@ class PlayState extends MusicBeatState
 			endSong();
 		else
 			startCountdown();
+	}
+	
+	function cameraFromString(cam:String):FlxCamera {
+		switch(cam.toLowerCase()) {
+			case 'camhud' | 'hud': return camHUD;
+			case 'camother' | 'other': return camOther;
+		}
+		return camGame;
 	}
 
 	var dialogueCount:Int = 0;
@@ -5718,7 +5726,8 @@ class PlayState extends MusicBeatState
 			script.setVariable("PlayState", instance);
 			script.setVariable("game", instance);
 			script.setVariable("FlxTween", FlxTween);
-			script.setVariable("MP4Handler", MP4Handler);
+			script.setVariable("VideoSprite", VideoSprite);
+			script.setVariable("VideoHandler", VideoHandler);
 			script.setVariable("FlxEase", FlxEase);
 			script.setVariable("FlxSprite", FlxSprite);
 			script.setVariable("Math", Math);

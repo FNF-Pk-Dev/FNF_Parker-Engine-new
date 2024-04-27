@@ -54,8 +54,8 @@ import hscript.Expr;
 #end
 
 #if VIDEOS_ALLOWED
-import hxcodec.VideoHandler;
-import hxcodec.VideoSprite;
+import VideoHandler;
+import VideoSprite;
 #end
 
 #if desktop
@@ -2195,10 +2195,10 @@ class FunkinLua {
 			#end
 		});
 		
-		Lua_helper.add_callback(lua, "playVideo", function(tag:String, videoFile:String, cam:String) {
+		Lua_helper.add_callback(lua, "playVideo", function(videoFile:String, cam:String) {
 			#if VIDEOS_ALLOWED
 			if(FileSystem.exists(Paths.video(videoFile))) {
-				PlayState.instance.playVideo(tag, videoFile, cam);
+				PlayState.instance.playVideo(videoFile, cam);
 				return true;
 			} else {
 			luaTrace('playVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
