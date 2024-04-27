@@ -317,6 +317,7 @@ class PlayState extends MusicBeatState
 	
 	// Hscript
 	public var script:Script;
+	public var scriptArray:Array<String> = [];
 	public static final extns:Array<String> = [".hx", ".hscript", ".hsc", ".hxs"];
 
 	// Lua shit
@@ -1661,6 +1662,45 @@ class PlayState extends MusicBeatState
 		#else
 		FlxG.log.warn('Platform not supported!');
 		startAndEnd();
+		return;
+		#end
+	}
+	
+	public function playVideo(name:String)
+	{
+		#if VIDEOS_ALLOWED
+		
+		var filepath:String = Paths.video(name);
+		#if sys
+		if(!FileSystem.exists(filepath))
+		#else
+		if(!OpenFlAssets.exists(filepath))
+		#end
+		{
+			FlxG.log.warn('Couldnt find video file: ' + name);
+			//startAndEnd();
+			return;
+		}
+
+		var video:MP4Handler = new MP4Handler();
+		#if (hxCodec < "3.0.0")
+		video.playVideo(filepath);
+		video.finishCallback = function()
+		{
+			//startAndEnd();
+			return;
+		}
+		#else
+		video.play(filepath);
+		video.onEndReached.add(function(){
+			video.dispose();
+			//startAndEnd();
+			return;
+		});
+		#end
+		#else
+		FlxG.log.warn('Platform not supported!');
+		//startAndEnd();
 		return;
 		#end
 	}
@@ -5559,6 +5599,62 @@ class PlayState extends MusicBeatState
 		script.runScript(hxsdata);
 		}
 	}
+	public function onAddScript()
+	{
+	    var HscriptShit:Array<String> = [
+		'hx',
+		'hxs',
+		'hscript',
+		'hsc'
+	];
+		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
+		//var curStageFolder:String = curStage;
+		
+
+		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
+		
+		var pathscript:String = Paths.modFolders('scripts/' + scriptname + '.hx');
+		
+		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
+		
+
+		var hxdata:String = "";
+		
+		var hx:String = "";
+		
+		var hxsdata:String = "";
+		
+		script = new Script();
+		
+		
+		script.setVariable("addHscript", function(name:String)
+		{
+		scriptname = name;
+		});
+
+		if (FileSystem.exists(path))
+			hxdata = File.getContent(path);
+		
+		if (FileSystem.exists(stagepath))
+			hxsdata = File.getContent(stagepath);
+			
+		if (FileSystem.exists(pathscript))
+			hx = File.getContent(pathscript);
+			
+		if (hx != "")
+		{
+		startHScript();
+		script.runScript(hx);
+		}
+
+		if (hxdata != "" || hxsdata != "")
+		{
+		startHScript();	
+		script.runScript(hxdata);
+		script.runScript(hxsdata);
+		}
+	}
+	
 	public function startHScript()
 	{
 	        script = new Script();
@@ -5647,6 +5743,11 @@ class PlayState extends MusicBeatState
 				return runLuaCode(code);
 			});
 			
+			script.setVariable("add", function(obj:FlxObject)
+			{
+				addBehindGF(obj);
+			});
+			
 			script.setVariable("addScript", function(scriptNames:String)
 		    {
 			
@@ -5680,7 +5781,6 @@ class PlayState extends MusicBeatState
 			script.setVariable("Main", Main);
 			script.setVariable("ShaderFilter", ShaderFilter);
 			script.setVariable("FlxRuntimeShader", FlxRuntimeShader);
-			script.setVariable("MP4Handler", MP4Handler);
 			script.setVariable("BitmapFilter", BitmapFilter);
 			script.setVariable("Conductor", Conductor);
 			script.setVariable("Std", Std);
