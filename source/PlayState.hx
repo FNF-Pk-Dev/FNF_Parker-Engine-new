@@ -1666,7 +1666,7 @@ class PlayState extends MusicBeatState
 		#end
 	}
 	
-	public function playVideo(tag:MP4Handler, name:String, cam:String, end:String)
+	public function playVideo(tag:MP4Handler, name:String, cam:String = '', end:String)
 	{
 		#if VIDEOS_ALLOWED
 		
@@ -1689,7 +1689,7 @@ class PlayState extends MusicBeatState
 		tag.finishCallback = function()
 		{
 		    callOnLuas('onVideofinishCallback', [end]);
-		    tag.dispose();
+		    //tag.dispose(); bug
 			//startAndEnd();
 			return;
 		}
