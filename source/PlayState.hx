@@ -1666,7 +1666,7 @@ class PlayState extends MusicBeatState
 		#end
 	}
 	
-	public function playVideo(tag:MP4Handler, name:String, end:String)
+	public function playVideo(tag:MP4Handler, name:String, cam:String, end:String)
 	{
 		#if VIDEOS_ALLOWED
 		
@@ -1683,6 +1683,7 @@ class PlayState extends MusicBeatState
 		}
 
 		tag = new MP4Handler();
+		tag.cameras = [cam];
 		#if (hxCodec < "3.0.0")
 		tag.playVideo(filepath);
 		tag.finishCallback = function()

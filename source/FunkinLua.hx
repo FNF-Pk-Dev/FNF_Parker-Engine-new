@@ -2202,10 +2202,10 @@ class FunkinLua {
 			#end
 		});
 		
-		Lua_helper.add_callback(lua, "playVideo", function(tag:MP4Handler, videoFile:String, end:String) {
+		Lua_helper.add_callback(lua, "playVideo", function(tag:MP4Handler, videoFile:String, cam:String, end:String) {
 			#if VIDEOS_ALLOWED
 			if(FileSystem.exists(Paths.video(videoFile))) {
-				PlayState.instance.playVideo(tag, videoFile, end);
+				PlayState.instance.playVideo(tag, videoFile, cam, end);
 				return true;
 			} else {
 			luaTrace('playVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
