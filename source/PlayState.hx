@@ -220,6 +220,7 @@ class PlayState extends MusicBeatState
 	public var iconP1:HealthIcon;
 	public var iconP2:HealthIcon;
 	public var camHUD:FlxCamera;
+	public var camVideo:FlxCamera;
 	public var camGame:FlxCamera;
 	public var camOther:FlxCamera;
 	public var cameraSpeed:Float = 1;
@@ -403,12 +404,15 @@ class PlayState extends MusicBeatState
 
 		// var gameCam:FlxCamera = FlxG.camera;
 		camGame = new FlxCamera();
+		camVideo = new FlxCamera();
 		camHUD = new FlxCamera();
 		camOther = new FlxCamera();
+		camVideo.bgColor.alpha = 0;
 		camHUD.bgColor.alpha = 0;
 		camOther.bgColor.alpha = 0;
 
 		FlxG.cameras.reset(camGame);
+		FlxG.cameras.add(camVideo, false);
 		FlxG.cameras.add(camHUD, false);
 		FlxG.cameras.add(camOther, false);
 		grpNoteSplashes = new FlxTypedGroup<NoteSplash>();
@@ -1633,6 +1637,7 @@ class PlayState extends MusicBeatState
 			cutVid.finishCallback = function()
 			{
 			startAndEnd();
+			bg.alpha = 0;
 			}
 		#end
 	}
@@ -1664,6 +1669,7 @@ class PlayState extends MusicBeatState
 	
 	function cameraFromString(cam:String):FlxCamera {
 		switch(cam.toLowerCase()) {
+		    case 'camvideo' | 'video': return camVideo;
 			case 'camhud' | 'hud': return camHUD;
 			case 'camother' | 'other': return camOther;
 		}
