@@ -1642,7 +1642,7 @@ class PlayState extends MusicBeatState
 		#end
 	}
 	var hi:VideoSprite;
-	public function playVideo(tag:String, name:String, cam:String = '')
+	public function playVideo(name:String, cam:String = '')
 	{
 		#if VIDEOS_ALLOWED
 		
@@ -1653,7 +1653,7 @@ class PlayState extends MusicBeatState
 		hi.finishCallback = function()
 		{
 		hi.destroy();
-		callOnLuas('onVideoCompleted', [tag]);
+		callOnLuas('onVideoCompleted', []);
 		}
 		add(hi);
 		#end
@@ -2885,7 +2885,7 @@ class PlayState extends MusicBeatState
 				DiscordClient.changePresence(detailsText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 			}
 			#end
-			hi.active = true;
+		
 		}
 
 		super.closeSubState();
