@@ -1649,6 +1649,7 @@ class PlayState extends MusicBeatState
 		var filepath:String = Paths.video(name);
 		hi = new VideoSprite();
 		hi.playVideo(filepath);
+		hi.canSkip = false;
 		hi.cameras = [cameraFromString(cam)];
 		hi.finishCallback = function()
 		{
@@ -2834,7 +2835,7 @@ class PlayState extends MusicBeatState
 			for (timer in modchartTimers) {
 				timer.active = false;
 			}
-			
+			hi.stop();
 //			hi.active = false;
 		}
 
@@ -2885,7 +2886,7 @@ class PlayState extends MusicBeatState
 				DiscordClient.changePresence(detailsText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 			}
 			#end
-		
+		hi.start();
 		}
 
 		super.closeSubState();
