@@ -1648,7 +1648,6 @@ class PlayState extends MusicBeatState
 		
 		var filepath:String = Paths.video(name);
 		hi = new VideoSprite();
-		hi.volume = 1;
 		hi.playVideo(filepath);
 		hi.cameras = [cameraFromString(cam)];
 		hi.finishCallback = function()
@@ -2808,7 +2807,7 @@ class PlayState extends MusicBeatState
 		{
 			if (FlxG.sound.music != null)
 			{
-			    hi.pause();
+			    //hi.pause();
 				FlxG.sound.music.pause();
 				vocals.pause();
 			}
@@ -2930,7 +2929,7 @@ class PlayState extends MusicBeatState
 		vocals.pause();
 
 		FlxG.sound.music.play();
-		hi.play();
+		//hi.play();
 		FlxG.sound.music.pitch = playbackRate;
 		Conductor.songPosition = FlxG.sound.music.time;
 		if (Conductor.songPosition <= vocals.length)
