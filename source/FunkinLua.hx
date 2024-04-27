@@ -2196,8 +2196,9 @@ class FunkinLua {
 				PlayState.instance.playVideo(tag, videoFile);
 				return true;
 			} else {
-				luaTrace('playVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
+			luaTrace('playVideo: Video file not found: ' + videoFile, false, false, FlxColor.RED);
 			}
+			return false;
 			#end
 		});
 

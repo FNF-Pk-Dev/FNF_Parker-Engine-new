@@ -1666,7 +1666,7 @@ class PlayState extends MusicBeatState
 		#end
 	}
 	
-	public function playVideo(tag:String, name:String)
+	public function playVideo(tag:MP4Handler, name:String, end:String)
 	{
 		#if VIDEOS_ALLOWED
 		
@@ -1687,8 +1687,8 @@ class PlayState extends MusicBeatState
 		tag.playVideo(filepath);
 		tag.finishCallback = function()
 		{
-		    callOnLuas('onVideofinishCallback', [tag]);
-		    remove(tag);
+		    callOnLuas('onVideofinishCallback', [end]);
+		    remove(end);
 			//startAndEnd();
 			return;
 		}
@@ -1696,8 +1696,8 @@ class PlayState extends MusicBeatState
 		tag.play(filepath);
 		tag.onEndReached.add(function(){
 			tag.dispose();
-			callOnLuas('onVideofinishCallback', [tag]);
-			remove(tag);
+			callOnLuas('onVideofinishCallback', [end]);
+			remove(end);
 			//startAndEnd();
 			return;
 		});
