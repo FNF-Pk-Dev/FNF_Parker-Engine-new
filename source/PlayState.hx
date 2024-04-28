@@ -2895,7 +2895,7 @@ class PlayState extends MusicBeatState
 				DiscordClient.changePresence(detailsText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 			}
 			#end
-		#if VIDEOS_ALLOWED if (hi != null) hi.bitmap.pause(); #end
+		#if VIDEOS_ALLOWED if (hi != null) hi.bitmap.resume(); #end
 		}
 
 		super.closeSubState();
