@@ -1654,10 +1654,17 @@ class PlayState extends MusicBeatState
 		hi.finishCallback = function()
 		{
 		hi.destroy();
-		callOnLuas('onVideoCompleted', []);
+		callOnLuas('onVideoCompleted', [name]);
 		}
 		add(hi);
 		#end
+	}
+	
+	public function EndVideo()
+	{
+	#if VIDEOS_ALLOWED
+	if (hi != null) hi.destroy();
+	#end
 	}
 
 	function startAndEnd()
@@ -2835,7 +2842,9 @@ class PlayState extends MusicBeatState
 			for (timer in modchartTimers) {
 				timer.active = false;
 			}
+			#if VIDEOS_ALLOWED
 			if (hi != null) hi.bitmap.pause();
+			#end
 //			hi.active = false;
 		}
 
@@ -2886,7 +2895,7 @@ class PlayState extends MusicBeatState
 				DiscordClient.changePresence(detailsText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 			}
 			#end
-		if (hi != null) hi.bitmap.play();
+		#if VIDEOS_ALLOWED if (hi != null) hi.bitmap.pause(); #end
 		}
 
 		super.closeSubState();
