@@ -2835,7 +2835,7 @@ class PlayState extends MusicBeatState
 			for (timer in modchartTimers) {
 				timer.active = false;
 			}
-			if (hi != null) hi.bitmap.stop();
+			if (hi != null) hi.bitmap.pause();
 //			hi.active = false;
 		}
 
@@ -2886,7 +2886,7 @@ class PlayState extends MusicBeatState
 				DiscordClient.changePresence(detailsText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 			}
 			#end
-		if (hi != null) hi.bitmap.start();
+		if (hi != null) hi.bitmap.play();
 		}
 
 		super.closeSubState();
