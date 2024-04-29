@@ -2843,7 +2843,7 @@ class PlayState extends MusicBeatState
 				timer.active = false;
 			}
 			#if VIDEOS_ALLOWED
-			if (hi != null) {hi.bitmap.pause(); hi.bitmap.active = false;}
+			if (hi != null) {hi.bitmap.pause(); hi.active = false;}
 			#end			
 		}
 
@@ -2894,7 +2894,7 @@ class PlayState extends MusicBeatState
 				DiscordClient.changePresence(detailsText, SONG.song + " (" + storyDifficultyText + ")", iconP2.getCharacter());
 			}
 			#end
-		#if VIDEOS_ALLOWED if (hi != null) {hi.bitmap.resume(); hi.bitmap.active = true;} #end
+		#if VIDEOS_ALLOWED if (hi != null) {hi.bitmap.resume(); hi.active = true;} #end
 		}
 
 		super.closeSubState();
