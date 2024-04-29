@@ -4781,11 +4781,13 @@ class PlayState extends MusicBeatState
 		callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 		if (script != null)
 		{
+		    /*
 			script.setVariable("notes.members.indexOf(note)", notes.members.indexOf(note));
 			script.setVariable("note.noteData", note.noteData);
 			script.setVariable("note.noteType", note.noteType);
 			script.setVariable("note.isSustainNote", note.isSustainNote);
-			script.executeFunc("opponentNoteHit");
+			*/
+			script.executeFunc("opponentNoteHit", [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
 		}
 		if (!note.isSustainNote)
 		{
@@ -4899,10 +4901,12 @@ class PlayState extends MusicBeatState
 			callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
 			if (script != null)
 		{
-			script.executeFunc("goodNoteHit");
+			script.executeFunc("goodNoteHit", [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
+			/*
 			script.setVariable("note.noteData", note.noteData);
 			script.setVariable("note.noteType", note.noteType);
 			script.setVariable("note.isSustainNote", note.isSustainNote);
+			*/
 		}
 
 
