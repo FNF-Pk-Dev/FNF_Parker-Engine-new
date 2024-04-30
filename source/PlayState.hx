@@ -5599,9 +5599,9 @@ class PlayState extends MusicBeatState
 			{
 				for (file in FileSystem.readDirectory(folder))
 				{
-					if(file.endsWith('.lua') && !filesPushed.contains(file))
+					if(file.endsWith('.hx') && !filesPushed.contains(file))
 					{
-						hxArray.push(new Script(folder + file));
+						//hxArray.push(new Script(folder + file));
 						hxssdata = File.getContent(folder + file);
 						filesPushed.push(file);
 					}
