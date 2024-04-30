@@ -29,13 +29,13 @@ jobs:
         uses: nttld/setup-ndk@main
         id: setup-ndk
         with:
-          ndk-version: r15c
+          ndk-version: r21e
 
       - name: Setup Java JDK
         uses: actions/setup-java@main
         with:
           distribution: 'zulu'
-          java-version: 11
+          java-version: 18
 
      # - name: Setup Android SDK
     #  uses: android-actions/setup-android@main
@@ -43,19 +43,19 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1.2.0
         with:
-          haxe-version: 4.2.0
+          haxe-version: 4.3.0
 
       - name: Install Haxelib
         run: |
           haxelib setup ~/haxelib
           haxelib install hxcpp 4.2.1 > /dev/null
-          haxelib install lime 7.9.0
-          haxelib install openfl 9.1.0
-          haxelib --never install flixel 4.11.0
+          haxelib install lime 8.0.1
+          haxelib install openfl 9.2.1
+          haxelib --never install flixel 5.2.2
           haxelib run lime setup flixel
           haxelib install flixel-tools
           haxelib install flixel-ui
-          haxelib install flixel-addons 2.11.0
+          haxelib install flixel-addons 3.0.2
           haxelib install tjson
           haxelib install hxjsonast
           haxelib install hscript
@@ -74,10 +74,10 @@ jobs:
           haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_HOME
           haxelib run lime config JAVA_HOME $JAVA_HOME
           haxelib run lime config ANDROID_SETUP true
-          haxelib set lime 7.9.0
-          haxelib set openfl 9.1.0
-          haxelib set flixel 4.11.0
-          haxelib set flixel-addons 2.11.0
+          haxelib set lime 8.0.1
+          haxelib set openfl 9.2.1
+          haxelib set flixel 5.2.2
+          haxelib set flixel-addons 3.0.2
           haxelib set hxcpp 4.2.1
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
