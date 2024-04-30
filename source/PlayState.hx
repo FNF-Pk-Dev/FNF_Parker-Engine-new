@@ -4749,7 +4749,7 @@ class PlayState extends MusicBeatState
 		callOnLuas('noteMissPress', [direction]);
 		if (script != null)
 		{
-			script.executeFunc("noteMissPress", [direction])
+			script.executeFunc("noteMissPress", [direction]);
 		}
 	}
 
@@ -5153,7 +5153,7 @@ class PlayState extends MusicBeatState
 		}
 		if (script != null)
 		{
-			script.executeFunc("onDestroy")
+			script.executeFunc("onDestroy");
 		}
 		luaArray = [];
 
