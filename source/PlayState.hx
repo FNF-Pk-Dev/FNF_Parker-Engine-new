@@ -1387,8 +1387,9 @@ class PlayState extends MusicBeatState
 		callOnLuas('onCreatePost', []);
 		if (script != null)
 		{
+			script.executeFunc("onCreate")
 			script.executeFunc("onCreate");
-			script.executeFunc("onCreatePost");
+			script.executeFunc("onLoad");
 		}
 
 		super.create();
@@ -3465,6 +3466,10 @@ class PlayState extends MusicBeatState
 		if (((skipHealthCheck && instakillOnMiss) || health <= 0) && !practiceMode && !isDead)
 		{
 			var ret:Dynamic = callOnLuas('onGameOver', [], false);
+			if (script != null)
+		{
+			script.executeFunc("onGameOver");
+		}
 			if(ret != FunkinLua.Function_Stop) {
 				boyfriend.stunned = true;
 				deathCounter++;
@@ -4687,6 +4692,15 @@ class PlayState extends MusicBeatState
 		}
 
 		callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
+		if (script != null)
+		{
+			script.executeFunc("noteMiss", [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
+			/*
+			script.setVariable("note.noteData", note.noteData);
+			script.setVariable("note.noteType", note.noteType);
+			script.setVariable("note.isSustainNote", note.isSustainNote);
+			*/
+		}
 	}
 
 	function noteMissPress(direction:Int = 1):Void //You pressed a key when there was no notes to press for this key
@@ -4733,6 +4747,10 @@ class PlayState extends MusicBeatState
 			vocals.volume = 0;
 		}
 		callOnLuas('noteMissPress', [direction]);
+		if (script != null)
+		{
+			script.executeFunc("noteMissPress", [direction])
+		}
 	}
 
 	function opponentNoteHit(note:Note):Void
@@ -5133,6 +5151,10 @@ class PlayState extends MusicBeatState
 			lua.call('onDestroy', []);
 			lua.stop();
 		}
+		if (script != null)
+		{
+			script.executeFunc("onDestroy")
+		}
 		luaArray = [];
 
 		#if hscript
@@ -5524,6 +5546,7 @@ class PlayState extends MusicBeatState
 	var curLight:Int = -1;
 	var curLightEvent:Int = -1;
 	
+	public var hxArray:Array<Script> = [];
 	var scriptname:String = "";
 	public function startScript()
 	{
@@ -5550,6 +5573,8 @@ class PlayState extends MusicBeatState
 		
 		var hxsdata:String = "";
 		
+		var hxssdata:String = "";
+		
 		script = new Script();
 		
 		
@@ -5557,6 +5582,32 @@ class PlayState extends MusicBeatState
 		{
 		scriptname = name;
 		});
+		
+		var filesPushed:Array<String> = [];
+		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('data/' + Paths.formatToSongPath(SONG.song) + '/')];
+
+		foldersToCheck.insert(0, Paths.mods('data/' + Paths.formatToSongPath(SONG.song) + '/'));
+		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/data/' + Paths.formatToSongPath(SONG.song) + '/'));
+
+		for(mod in Paths.getGlobalMods())
+			foldersToCheck.insert(0, Paths.mods(mod + '/data/' + Paths.formatToSongPath(SONG.song) + '/' ));
+			
+			for (folder in foldersToCheck)
+		{
+			if(FileSystem.exists(folder))
+			{
+				for (file in FileSystem.readDirectory(folder))
+				{
+					if(file.endsWith('.lua') && !filesPushed.contains(file))
+					{
+						hxArray.push(new Script(folder + file));
+						hxssdata = File.getContent(folder + file);
+						filesPushed.push(file);
+					}
+				}
+			}
+		}
 
 		if (FileSystem.exists(path))
 			hxdata = File.getContent(path);
@@ -5573,10 +5624,11 @@ class PlayState extends MusicBeatState
 		script.runScript(hx);
 		}
 
-		if (hxdata != "" || hxsdata != "")
+		if (hxdata != "" || hxsdata != "" || hxssdata != "")
 		{
 		startHScript();	
 		script.runScript(hxdata);
+		script.runScript(hxssdata);
 		script.runScript(hxsdata);
 		}
 	}
@@ -5648,7 +5700,7 @@ class PlayState extends MusicBeatState
 			{
 			});
 
-			script.setVariable("destroy", function()
+			script.setVariable("onDestroy", function()
 			{
 			});
 
@@ -5673,6 +5725,22 @@ class PlayState extends MusicBeatState
 			});
 			
 			script.setVariable("onBeatHit", function()
+			{
+			});
+			
+			script.setVariable("noteMissPress", function()
+			{
+			});
+			
+			script.setVariable("noteMiss", function()
+			{
+			});
+			
+			script.setVariable("onLoad", function()
+			{
+			});
+			
+			script.setVariable("onGameOver", function()
 			{
 			});
 
@@ -5702,6 +5770,14 @@ class PlayState extends MusicBeatState
 			});
 
 			script.setVariable("import", function(lib:String, ?as:Null<String>) // Does this even work?
+			{
+				if (lib != null && Type.resolveClass(lib) != null)
+				{
+					script.setVariable(as != null ? as : lib, Type.resolveClass(lib));
+				}
+			});
+			
+			script.setVariable("addHaxeLibrary", function(lib:String, ?as:Null<String>) // Does this even work?
 			{
 				if (lib != null && Type.resolveClass(lib) != null)
 				{
@@ -5748,6 +5824,7 @@ class PlayState extends MusicBeatState
 
 			// PRESET CLASSES
 			script.setVariable("PlayState", instance);
+			script.setVariable("PlayState.instance", instance);
 			script.setVariable("game", instance);
 			script.setVariable("FlxTween", FlxTween);
 			script.setVariable("VideoSprite", VideoSprite);
