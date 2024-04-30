@@ -1387,7 +1387,7 @@ class PlayState extends MusicBeatState
 		callOnLuas('onCreatePost', []);
 		if (script != null)
 		{
-			script.executeFunc("onCreate")
+			script.executeFunc("onCreatePost");
 			script.executeFunc("onCreate");
 			script.executeFunc("onLoad");
 		}
