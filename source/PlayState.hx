@@ -5783,7 +5783,7 @@ class PlayState extends MusicBeatState
 				if(libPackage.length > 0)
 					str = libPackage + '.';
 					
-					script.setVariable(lib, Type.resolveClass(str + libName));
+					script.setVariable(lib, Type.resolveClass(str + lib));
 			});
 
 			script.setVariable("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
