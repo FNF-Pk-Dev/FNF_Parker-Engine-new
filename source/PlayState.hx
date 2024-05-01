@@ -5777,6 +5777,11 @@ class PlayState extends MusicBeatState
 				}
 			});
 			
+			script.setVariable("HaxeLibrary", function(lib:String, libPackage:String) // Of course it works.
+			{
+					script.setVariable(lib, libPackage);
+			});
+			
 			script.setVariable("addHaxeLibrary", function(lib:String, ?libPackage:String = '') // Of course it works.
 			{
 			    var str:String = '';
