@@ -12,62 +12,24 @@ class Script extends FlxBasic
 {
 	public var hscript:Interp;
 
-	public var interacter:Interact;
-	public var variables(get, null):Map<String, Dynamic>;
 
 	public override function new()
 	{
 		super();
 		hscript = new Interp();
-		interacter = new Interact(this);
 
 		
-		set("import", function(path:String, ?as:Null<String>)
+		set("addHaxeLibrary", function(lib:String, ?libPackage:String = '')
 		{
 			try
 			{
-				if (path == null || path == "")
-				{
-					error("Path Not Specified!", '${name}:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Import Error!');
-					return;
-				}
-
-				var clas = Type.resolveClass(path);
-
-				if (clas == null)
-				{
-					error('Class Not Found!\nPath: ${path}', '${name}:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Import Error!');
-					return;
-				}
-
-				var stringName:String = "";
-
-				if (as != null)
-					stringName = as;
-				else
-				{
-					var arr = Std.string(clas).split(".");
-					stringName = arr[arr.length - 1];
-				}
-
-				@:privateAccess
-				if (!variables.exists(stringName) && !hscript.locals.exists(stringName))
-				{
-					set(stringName, clas);
-
-					if (interacter.presetVars != [])
-						interacter.presetVars.push(stringName);
-				}
-				else
-				{
-					error('$stringName is alreadly a variable in the script, please change the variable to a different name!',
-						'${name}:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Import Error!');
-				}
+                         var str:String = '';
+				if(libPackage.length > 0)
+					str =  + '.';
+					
+				hscript.variables.set(lib, Type.resolveClass(str + lib));
 			}
-			catch (e)
-			{
-				error('${e}', '${name}:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Import Error!');
-			}
+			
 		});
 	}
 
