@@ -5779,12 +5779,16 @@ class PlayState extends MusicBeatState
 			
 			script.setVariable("addHaxeLibrary", function(lib:String, val:Dynamic) // Of course it works.
 			{
-					script.setVariable(lib, val);
+				    script.setVariable(lib, val);
 			});
 			
-			/*
+			script.setVariable("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
+			{
+				return FlxColor.fromRGB(Red, Green, Blue, Alpha);
+			});
+			
 		
-			script.setVariable("addHaxeLibrary", function(lib:String, ?libPackage:String = '') // no Of course it works.
+			script.setVariable("addHaxeLibrarys", function(lib:String, ?libPackage:String = '') // no Of course it works.
 			{
 			try{
 			    var str:String = '';
@@ -5796,10 +5800,7 @@ class PlayState extends MusicBeatState
 			});
 			
 
-			script.setVariable("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
-			{
-				return FlxColor.fromRGB(Red, Green, Blue, Alpha);
-			});
+			
 			/*
 			script.setVariable("addCharacterToList", function(name:String, type:String)
 			{
@@ -5862,6 +5863,7 @@ class PlayState extends MusicBeatState
 			script.setVariable("BitmapFilter", BitmapFilter);
 			script.setVariable("Conductor", Conductor);
 			script.setVariable("Std", Std);
+			script.setVariable("FlxColor", flixel.util.FlxColor);
 			script.setVariable("precacheList", precacheList);
 			script.setVariable("CoolUtil", CoolUtil);
 		//	script.setVariable("note", note);
