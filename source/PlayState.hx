@@ -5863,7 +5863,7 @@ class PlayState extends MusicBeatState
 			script.setVariable("BitmapFilter", BitmapFilter);
 			script.setVariable("Conductor", Conductor);
 			script.setVariable("Std", Std);
-			script.setVariable("FlxColor", flixel.util.FlxColor);
+			//script.setVariable("FlxColor", flixel.util.FlxColor);
 			script.setVariable("precacheList", precacheList);
 			script.setVariable("CoolUtil", CoolUtil);
 		//	script.setVariable("note", note);
