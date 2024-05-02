@@ -25,7 +25,7 @@ class Script extends FlxBasic
 			{
                          var str:String = '';
 				if(libPackage.length > 0)
-					str =  + '.';
+				str = libPackage + '.';
 					
 				hscript.variables.set(lib, Type.resolveClass(str + lib));
 			}
