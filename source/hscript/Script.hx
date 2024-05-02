@@ -19,18 +19,7 @@ class Script extends FlxBasic
 		hscript = new Interp();
 
 		
-		set("addHaxeLibrary", function(lib:String, ?libPackage:String = '')
-		{
-			try
-			{
-                         var str:String = '';
-				if(libPackage.length > 0)
-				str = libPackage + '.';
-					
-				hscript.variables.set(lib, Type.resolveClass(str + lib));
-			}
-			
-		});
+	
 	}
 
 	public function runScript(script:String)
