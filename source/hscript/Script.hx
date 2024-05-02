@@ -1,6 +1,8 @@
 package hscript;
 
+import Type;
 import flixel.FlxBasic;
+import haxe.CallStack;
 import hscript.Expr;
 import hscript.Interp;
 import hscript.Parser;
