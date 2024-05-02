@@ -5777,19 +5777,24 @@ class PlayState extends MusicBeatState
 				}
 			});
 			
-			script.setVariable("HaxeLibrary", function(lib:String, libPackage:String) // Of course it works.
+			script.setVariable("addHaxeLibrary", function(lib:String, val:Dynamic) // Of course it works.
 			{
-					script.setVariable(lib, libPackage);
+					script.setVariable(lib, val);
 			});
 			
-			script.setVariable("addHaxeLibrary", function(lib:String, ?libPackage:String = '') // Of course it works.
+			/*
+		
+			script.setVariable("addHaxeLibrary", function(lib:String, ?libPackage:String = '') // no Of course it works.
 			{
+			try{
 			    var str:String = '';
 				if(libPackage.length > 0)
 					str = libPackage + '.';
 					
 					script.setVariable(lib, Type.resolveClass(str + lib));
+				}
 			});
+			
 
 			script.setVariable("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
 			{
@@ -5810,13 +5815,21 @@ class PlayState extends MusicBeatState
 			{
 				addBehindGF(obj);
 			});
-			
-			script.setVariable("addScript", function(scriptNames:String)
+			/*
+			script.setVariable("addScript", function(tag:String, scriptNames:String)
 		    {
+			var pathscript:String = Paths.modFolders(scriptname + '.hx');
 			
-				return scriptname = scriptNames;
+			if (FileSystem.exists(pathscript))
+			hx = File.getContent(pathscript);
+			if (tag != "")
+		    {
+		    startHScript();
+		    script.runScript(tag);
+		    }
 
 		    });
+		    */
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
