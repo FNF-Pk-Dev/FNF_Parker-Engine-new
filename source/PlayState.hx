@@ -5627,20 +5627,12 @@ class PlayState extends MusicBeatState
 		script.runScript(hx);
 		}
 
-		if (hxdata != "")
+		if (hxdata != "" || hxsdata != "" || hxssdata != "")
 		{
 		startHScript();	
 		script.runScript(hxdata);
-		}
-		if (hxsdata != "")
-		{
-		startHScript();	
-		script.runScript(hxsdata);
-		}
-		if (hxssdata != "")
-		{
-		startHScript();	
 		script.runScript(hxssdata);
+		script.runScript(hxsdata);
 		}
 	}
 	public function onAddScript()
