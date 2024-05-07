@@ -76,6 +76,9 @@ import sys.io.File;
 #if VIDEOS_ALLOWED
 import VideoHandler;
 import VideoSprite;
+import hxvlc.flixel.FlxVideo;
+import hxvlc.flixel.FlxVideoSprite;
+import hxvlc.util.Handle;
 #end
 
 using StringTools;
@@ -5624,12 +5627,20 @@ class PlayState extends MusicBeatState
 		script.runScript(hx);
 		}
 
-		if (hxdata != "" || hxsdata != "" || hxssdata != "")
+		if (hxdata != "")
 		{
 		startHScript();	
 		script.runScript(hxdata);
-		script.runScript(hxssdata);
+		}
+		if (hxsdata != "")
+		{
+		startHScript();	
 		script.runScript(hxsdata);
+		}
+		if (hxssdata != "")
+		{
+		startHScript();	
+		script.runScript(hxssdata);
 		}
 	}
 	public function onAddScript()
