@@ -5847,7 +5847,7 @@ class PlayState extends MusicBeatState
 			script.setVariable("PlayState.instance", instance);
 			script.setVariable("game", instance);
 			script.setVariable("FlxTween", FlxTween);
-			script.setVariable("VideoSprite", VideoSprite);
+			//script.setVariable("VideoSprite", VideoSprite);
 			script.setVariable("VideoHandler", VideoHandler);
 			script.setVariable("FlxEase", FlxEase);
 			script.setVariable("FlxSprite", FlxSprite);
