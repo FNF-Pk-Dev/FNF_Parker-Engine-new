@@ -76,9 +76,6 @@ import sys.io.File;
 #if VIDEOS_ALLOWED
 import VideoHandler;
 import VideoSprite;
-import hxvlc.flixel.FlxVideo;
-import hxvlc.flixel.FlxVideoSprite;
-import hxvlc.util.Handle;
 #end
 
 using StringTools;
