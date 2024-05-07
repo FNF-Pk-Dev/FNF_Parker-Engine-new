@@ -5816,21 +5816,21 @@ class PlayState extends MusicBeatState
 			{
 				addBehindGF(obj);
 			});
-			/*
-			script.setVariable("addScript", function(tag:String, scriptNames:String)
+			
+			script.setVariable("addScript", function(tag:String, hxs:String = '', scriptNames:String)
 		    {
-			var pathscript:String = Paths.modFolders(scriptname + '.hx');
+			var pathscript:String = Paths.modFolders(scriptNames + '.hx');
 			
 			if (FileSystem.exists(pathscript))
-			hx = File.getContent(pathscript);
-			if (tag != "")
+			hxs = File.getContent(pathscript);
+			
+			if (hxs != "")
 		    {
 		    startHScript();
 		    script.runScript(tag);
 		    }
-
 		    });
-		    */
+		    
 
 			script.setVariable("curStep", curStep);
 			script.setVariable("curBeat", curBeat);
