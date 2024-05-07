@@ -43,7 +43,7 @@ class Paths
 		'videos',
 		'images',
 		'stages',
-		'states'
+		'states',
 		'weeks',
 		'fonts',
 		'scripts',
