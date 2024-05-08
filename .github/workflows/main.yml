@@ -29,7 +29,7 @@ jobs:
         uses: nttld/setup-ndk@main
         id: setup-ndk
         with:
-          ndk-version: r15c
+          ndk-version: r21c
 
       - name: Setup Java JDK
         uses: actions/setup-java@main
@@ -43,7 +43,7 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1.2.0
         with:
-          haxe-version: 4.2.0
+          haxe-version: 4.2.4
 
       - name: Install Haxelib
         run: |
@@ -59,7 +59,7 @@ jobs:
           haxelib install tjson
           haxelib install hxjsonast
           haxelib install hscript
-          haxelib install flxgif
+          haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec.git
           haxelib git linc_luajit https://github.com/Sirox228/linc_luajit
           haxelib git extension-androidtools https://github.com/MaysLastPlay77/extension-androidtools
