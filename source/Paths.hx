@@ -241,6 +241,13 @@ class Paths
 		return returnAsset;
 	}
 
+	inline static public function gif(key:String, ?library:String):FlxGraphic
+	{
+		// streamlined the assets process more
+		var returnAsset:FlxGraphic = returnGraphic(key, library);
+		return returnAsset;
+	}
+
 	static public function getTextFromFile(key:String, ?ignoreMods:Bool = false):String
 	{
 		#if MODS_ALLOWED
