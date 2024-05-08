@@ -49,7 +49,7 @@ class FPS extends TextField
 		currentFPS = 0;
 		selectable = false;
 		mouseEnabled = false;
-		defaultTextFormat = new TextFormat("NamelessCat.ttf", 14, color);
+		defaultTextFormat = new TextFormat("NamelessCat.ttf", 22, color);
 		autoSize = LEFT;
 		multiline = true;
 		text = "FPS: ";
@@ -59,7 +59,7 @@ class FPS extends TextField
 		currentTime = 0;
 		times = [];
 
-                pkEngineVersion = "v0.5.2";
+                pkEngineVersion = "v0.5.3";
         
 		#if flash
 		addEventListener(Event.ENTER_FRAME, function(e)
