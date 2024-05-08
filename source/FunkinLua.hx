@@ -47,6 +47,7 @@ import sys.io.File;
 import Type.ValueType;
 import Controls;
 import DialogueBoxPsych;
+import MusicBeatState;
 
 #if hscript
 import hscript.Parser;
@@ -1533,6 +1534,14 @@ class FunkinLua {
 			PlayState.instance.startCountdown();
 			return true;
 		});
+		
+		#if android
+		Lua_helper.add_callback(lua, "addVirtualPad", function(Dpad:String, Full:String) {
+		    addVirtualPad(Dpad, Full);
+			return true;
+		});
+		#end
+		
 		Lua_helper.add_callback(lua, "endSong", function() {
 			PlayState.instance.KillNotes();
 			PlayState.instance.endSong();
