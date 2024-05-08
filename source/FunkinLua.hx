@@ -20,7 +20,7 @@ import flixel.math.FlxPoint;
 import flixel.system.FlxSound;
 import flixel.util.FlxTimer;
 import flixel.FlxSprite;
-import flxgif.FlxGifSprite;
+//import flxgif.FlxGifSprite;
 import flixel.FlxCamera;
 import flixel.util.FlxColor;
 import flixel.FlxBasic;
@@ -1731,7 +1731,7 @@ class FunkinLua {
 			PlayState.instance.modchartSprites.set(tag, leSprite);
 			leSprite.active = true;
 		});
-		
+		/*
 		Lua_helper.add_callback(lua, "makeLuaGifSprite", function(tag:String, gif:String, x:Float, y:Float) {
 			tag = tag.replace('.', '');
 			resetSpriteTag(tag);
@@ -1744,6 +1744,7 @@ class FunkinLua {
 			PlayState.instance.modchartSprites.set(tag, leSprite);
 			leSprite.active = true;
 		});
+		*/
 		Lua_helper.add_callback(lua, "makeAnimatedLuaSprite", function(tag:String, image:String, x:Float, y:Float, ?spriteType:String = "sparrow") {
 			tag = tag.replace('.', '');
 			resetSpriteTag(tag);
@@ -3345,7 +3346,7 @@ class ModchartSprite extends FlxSprite
 		antialiasing = ClientPrefs.globalAntialiasing;
 	}
 }
-
+/*
 class ModcharGiftSprite extends FlxGifSprite
 {
 	//public var wasAdded:Bool = false;
@@ -3358,7 +3359,7 @@ class ModcharGiftSprite extends FlxGifSprite
 		antialiasing = ClientPrefs.globalAntialiasing;
 	}
 }
-
+*/
 class ModchartText extends FlxText
 {
 	public var wasAdded:Bool = false;
