@@ -1159,6 +1159,16 @@ class FunkinLua {
 				luaTrace('doTweenZoom: Couldnt find object: ' + vars, false, false, FlxColor.RED);
 			}
 		});
+		Lua_helper.add_callback(lua, "doTweenShaderFloat", function(tag:String, vars:String, floatvars:String, value:String, value1:Dynamic, value2:Dynamic, duration:Float, ease:String) {
+			var penisExam:Dynamic = tweenShit(tag, PlayState.instance.variables.get(vars));
+			if(penisExam != null) {
+				PlayState.instance.modchartTweens.set(tag, FlxTween.num(value1, value2, duration, {ease: getFlxEaseByString(ease)}, function(val:Float) {
+            penisExam.setFloat(floatvars,val);
+                   }));
+			} else {
+				luaTrace('doTweenShaderFloat: Couldnt find object: ' + vars, false, false, FlxColor.RED);
+			}
+		});
 		Lua_helper.add_callback(lua, "doTweenColor", function(tag:String, vars:String, targetColor:String, duration:Float, ease:String) {
 			var penisExam:Dynamic = tweenShit(tag, vars);
 			if(penisExam != null) {
