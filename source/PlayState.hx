@@ -313,6 +313,10 @@ class PlayState extends MusicBeatState
 	public var script:Script;
 	public var scriptArray:Array<String> = [];
 	public static final extns:Array<String> = [".hx", ".hscript", ".hsc", ".hxs"];
+	public var funkyScripts:Array<FunkinScript> = [];
+	public var hscriptArray:Array<FunkinHScript> = [];
+	public var notetypeScripts:Map<String, FunkinHScript> = []; // custom notetypes for scriptVer '1'
+	public var eventScripts:Map<String, FunkinHScript> = []; // custom events for scriptVer '1'
 
 	// Lua shit
 	public static var instance:PlayState;
@@ -1203,7 +1207,7 @@ class PlayState extends MusicBeatState
 			botplayTxt.y = timeBarBG.y - 78;
 		}
 
-		strumLineNotes.cameras = [camHUD];
+		strumLineNotes.cameras = [camHUD];	
 		grpNoteSplashes.cameras = [camHUD];
 		notes.cameras = [camHUD];
 		healthBar.cameras = [camHUD];
@@ -5827,7 +5831,14 @@ class PlayState extends MusicBeatState
 			只能用game.addCharacterToList了 */ 
 			script.setVariable("runLuaCode", function(code:String)
 			{
-				return runLuaCode(code);
+			    var retVal:Dynamic = null;
+			    
+				try {
+				retVal = FunkinLua.executeLua(code);
+			    }
+				
+				if(retVal != null && !isOfTypes(retVal, [Bool, Int, Float, String, Array])) retVal = null;
+			    return retVal;
 			});
 			
 			script.setVariable("add", function(obj:FlxObject)

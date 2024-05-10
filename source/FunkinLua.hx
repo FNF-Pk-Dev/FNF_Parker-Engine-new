@@ -1159,7 +1159,7 @@ class FunkinLua {
 				luaTrace('doTweenZoom: Couldnt find object: ' + vars, false, false, FlxColor.RED);
 			}
 		});
-		Lua_helper.add_callback(lua, "doTweenShaderFloat", function(tag:String, vars:String, floatvars:String, value:String, value1:Dynamic, value2:Dynamic, duration:Float, ease:String) {
+		Lua_helper.add_callback(lua, "doTweenShaderFloat", function(tag:String, vars:String, floatvars:String, value1:Dynamic, value2:Dynamic, duration:Float, ease:String) {
 			var penisExam:Dynamic = tweenShit(tag, PlayState.instance.variables.get(vars));
 			if(penisExam != null) {
 				PlayState.instance.modchartTweens.set(tag, FlxTween.num(value1, value2, duration, {ease: getFlxEaseByString(ease)}, function(val:Float) {
@@ -3504,6 +3504,14 @@ class HScript
 			return false;
 		});
 	}
+	
+
+public function executeLua(codeToRun:String):Dynamic
+{
+    LuaL.dofile(lua, codeToRun);
+    return result;
+}
+
 
 	public function execute(codeToRun:String):Dynamic
 	{
