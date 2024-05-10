@@ -5831,13 +5831,14 @@ class PlayState extends MusicBeatState
 			只能用game.addCharacterToList了 */ 
 			script.setVariable("runLuaCode", function(code:String)
 			{
+			    var Lua = new FunkinLua();
 			    var retVal:Dynamic = null;
 			    
 				try {
-				retVal = FunkinLua.executeLua(code);
+				retVal = Lua.executeLua(code);
 			    }
 				
-				if(retVal != null && !isOfTypes(retVal, [Bool, Int, Float, String, Array])) retVal = null;
+				if(retVal != null && !Lua.isOfTypes(retVal, [Bool, Int, Float, String, Array])) retVal = null;
 			    return retVal;
 			});
 			

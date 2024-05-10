@@ -3355,8 +3355,8 @@ class FunkinLua {
 	public function executeLua(codeToRun:String):Dynamic
     {
     LuaL.dofile(lua, codeToRun);
-    return result;
-    }
+    return;
+  }
 }
 
 class ModchartSprite extends FlxSprite
