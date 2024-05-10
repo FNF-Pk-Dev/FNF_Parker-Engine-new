@@ -5829,10 +5829,12 @@ class PlayState extends MusicBeatState
 				return addCharacterToList(name, type);
 			});
 			只能用game.addCharacterToList了 */ 
+			/*
 			script.setVariable("runLuaCode", function(code:String)
 			{
 				return FunkinLua.executeLua(code);
 			});
+			*/
 			
 			script.setVariable("add", function(obj:FlxObject)
 			{
