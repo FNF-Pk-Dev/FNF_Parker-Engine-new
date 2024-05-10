@@ -3352,10 +3352,9 @@ class FunkinLua {
 	{
 		return PlayState.instance.isDead ? GameOverSubstate.instance : PlayState.instance;
 	}
-	public function executeLua(codeToRun:String):Dynamic
+	public static function executeLua(codeToRun:String):Dynamic
     {
-    LuaL.dofile(lua, codeToRun);
-    return;
+     return LuaL.dofile(lua, codeToRun);
   }
 }
 
