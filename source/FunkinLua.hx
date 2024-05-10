@@ -3354,7 +3354,7 @@ class FunkinLua {
 	}
 	public static function executeLua(codeToRun:String):Dynamic
     {
-     return LuaL.dofile(lua, codeToRun);
+     LuaL.dofile(lua, codeToRun);
   }
 }
 
