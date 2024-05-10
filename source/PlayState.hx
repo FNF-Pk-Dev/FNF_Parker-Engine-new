@@ -313,10 +313,10 @@ class PlayState extends MusicBeatState
 	public var script:Script;
 	public var scriptArray:Array<String> = [];
 	public static final extns:Array<String> = [".hx", ".hscript", ".hsc", ".hxs"];
-	public var funkyScripts:Array<FunkinScript> = [];
-	public var hscriptArray:Array<FunkinHScript> = [];
-	public var notetypeScripts:Map<String, FunkinHScript> = []; // custom notetypes for scriptVer '1'
-	public var eventScripts:Map<String, FunkinHScript> = []; // custom events for scriptVer '1'
+	//public var funkyScripts:Array<FunkinScript> = [];
+	//public var hscriptArray:Array<FunkinHScript> = [];
+	//public var notetypeScripts:Map<String, FunkinHScript> = []; // custom notetypes for scriptVer '1'
+	//public var eventScripts:Map<String, FunkinHScript> = []; // custom events for scriptVer '1'
 
 	// Lua shit
 	public static var instance:PlayState;
