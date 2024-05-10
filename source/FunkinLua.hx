@@ -3352,6 +3352,11 @@ class FunkinLua {
 	{
 		return PlayState.instance.isDead ? GameOverSubstate.instance : PlayState.instance;
 	}
+	public function executeLua(codeToRun:String):Dynamic
+    {
+    LuaL.dofile(lua, codeToRun);
+    return result;
+    }
 }
 
 class ModchartSprite extends FlxSprite
@@ -3504,13 +3509,6 @@ class HScript
 			return false;
 		});
 	}
-	
-
-public function executeLua(codeToRun:String):Dynamic
-{
-    LuaL.dofile(lua, codeToRun);
-    return result;
-}
 
 
 	public function execute(codeToRun:String):Dynamic
