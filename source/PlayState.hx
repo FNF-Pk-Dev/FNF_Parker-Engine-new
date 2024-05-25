@@ -5523,7 +5523,7 @@ class PlayState extends MusicBeatState
 
 		if (FileSystem.exists(Paths.modFolders("scripts/global")))
 		{
-			for (_ in ScriptUtil.findScriptsInDir(Paths.modFolders("assets/scripts/global")))
+			for (_ in ScriptUtil.findScriptsInDir(Paths.modFolders("scripts/global")))
 				files.push(_);
 		}
 
