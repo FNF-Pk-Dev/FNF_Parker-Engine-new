@@ -10,6 +10,7 @@ import openfl.system.System;
 import flixel.FlxG;
 import flixel.graphics.frames.FlxAtlasFrames;
 import openfl.display3D.textures.RectangleTexture;
+import openfl.display3D.textures.Texture;
 import openfl.utils.AssetType;
 import openfl.utils.Assets as OpenFlAssets;
 import lime.utils.Assets;
@@ -77,8 +78,18 @@ class Paths
 					FlxG.bitmap._cache.remove(key);
 					obj.destroy();
 					currentTrackedAssets.remove(key);
+                    trace("removing " + key);
+                    if (uniqueRAMImages.contains(key))uniqueRAMImages.remove(key);
+                    if (uniqueVRMImages.contains(key))uniqueVRMImages.remove(key);
 				}
 			}
+			trace("--images in RAM after memory clear--");
+		for (shit in uniqueRAMImages)
+            trace(shit);
+
+		trace("--images in VRAM after memory clear--");
+		for (shit in uniqueVRMImages)
+			trace(shit);
 		}
 		// run the garbage collector for good measure lmfao
 		System.gc();
@@ -96,6 +107,8 @@ class Paths
 				openfl.Assets.cache.removeBitmapData(key);
 				FlxG.bitmap._cache.remove(key);
 				obj.destroy();
+				if (uniqueRAMImages.contains(key))uniqueRAMImages.remove(key);
+                if (uniqueVRMImages.contains(key))uniqueVRMImages.remove(key);
 			}
 		}
 
@@ -361,6 +374,36 @@ class Paths
 		var path = invalidChars.split(path.replace(' ', '-')).join("-");
 		return hideChars.split(path).join("").toLowerCase();
 	}
+	
+	public static var uniqueRAMImages:Array<String> = [];
+    public static var uniqueVRMImages:Array<String> = [];
+    
+	public static var expectedMemoryBytes:Float = 0;
+
+    static function getExpectedMemory(){
+        if(Main.debug){
+            expectedMemoryBytes = 0;
+
+            var processed:Array<FlxGraphic> =[];
+
+            @:privateAccess
+            for (key in FlxG.bitmap._cache.keys())
+            {
+                var obj = FlxG.bitmap._cache.get(key);
+                if (processed.contains(obj) || uniqueVRMImages.contains(key))continue;
+                expectedMemoryBytes += obj.width * obj.height * 4;
+                processed.push(obj);
+            }
+            for (key in currentTrackedAssets.keys())
+            {
+                var obj = currentTrackedAssets.get(key);
+                if (processed.contains(obj) || uniqueVRMImages.contains(key))continue;
+                expectedMemoryBytes += obj.width * obj.height * 4;
+                processed.push(obj);
+            }
+            processed = null;
+        }
+    }
 
 	// completely rewritten asset loading? fuck!
 	public static var currentTrackedAssets:Map<String, FlxGraphic> = [];
