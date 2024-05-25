@@ -430,7 +430,6 @@ class Paths
 			getExpectedMemory();
 			return grafic;
         }
-		}
 		trace('oh no its returning null NOOOO');
 		return null;
 	}
