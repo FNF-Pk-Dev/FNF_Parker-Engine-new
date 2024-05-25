@@ -62,6 +62,8 @@ import DialogueBoxPsych;
 import Conductor.Rating;
 import flixel.system.FlxAssets.FlxShader;
 import hscript.Script;
+import hscript.ScriptGroup;
+import hscript.ScriptUtil;
 
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
@@ -291,7 +293,9 @@ class PlayState extends MusicBeatState
 
 	public var inCutscene:Bool = false;
 	public var skipCountdown:Bool = false;
+	private var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 	var songLength:Float = 0;
+	public static var comboOffset:Array<Int> = [0, 0, 0, 0];
 
 	public var boyfriendCameraOffset:Array<Float> = null;
 	public var opponentCameraOffset:Array<Float> = null;
@@ -309,15 +313,9 @@ class PlayState extends MusicBeatState
 	var boyfriendIdleTime:Float = 0.0;
 	var boyfriendIdled:Bool = false;
 	
-	// Hscript
-	public var script:Script;
-	public var scriptArray:Array<String> = [];
-	public static final extns:Array<String> = [".hx", ".hscript", ".hsc", ".hxs"];
-	//public var funkyScripts:Array<FunkinScript> = [];
-	//public var hscriptArray:Array<FunkinHScript> = [];
-	//public var notetypeScripts:Map<String, FunkinHScript> = []; // custom notetypes for scriptVer '1'
-	//public var eventScripts:Map<String, FunkinHScript> = []; // custom events for scriptVer '1'
-
+	// Hscript shit
+	public var scripts:ScriptGroup;
+	
 	// Lua shit
 	public static var instance:PlayState;
 	public var luaArray:Array<FunkinLua> = [];
@@ -349,6 +347,10 @@ class PlayState extends MusicBeatState
 
 		// for lua
 		instance = this;
+		
+		scripts = new ScriptGroup();
+		scripts.onAddScript.push(onAddScript);
+		Character.onCreate = initCharScript
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -1088,7 +1090,10 @@ class PlayState extends MusicBeatState
 		opponentStrums = new FlxTypedGroup<StrumNote>();
 		playerStrums = new FlxTypedGroup<StrumNote>();
 		
-		startScript();
+		initScripts();
+		initSongEvents();
+
+		scripts.executeAllFunc("onCreate");
 
 		// startCountdown();
 
@@ -1283,6 +1288,7 @@ class PlayState extends MusicBeatState
 			}
 		}
 		#end
+		
 
 		var daSong:String = Paths.formatToSongPath(curSong);
 		if (isStoryMode && !seenCutscene)
@@ -1389,12 +1395,9 @@ class PlayState extends MusicBeatState
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 		}
 		callOnLuas('onCreatePost', []);
-		if (script != null)
-		{
-			script.executeFunc("onCreatePost");
-			script.executeFunc("onCreate");
-			script.executeFunc("onLoad");
-		}
+
+		scripts.executeAllFunc("onCreatePost");
+		scripts.executeAllFunc("onLoad");
 
 		super.create();
 
@@ -2395,6 +2398,7 @@ class PlayState extends MusicBeatState
 			});
 		}
 		callOnLuas('onUpdateScore', [miss]);
+		scripts.executeAllFunc("onUpdateScore", [miss]);
 	}
 
 	public function setSongTime(time:Float)
@@ -2967,10 +2971,10 @@ class PlayState extends MusicBeatState
 			iconP1.swapOldIcon();
 		}*/
 		callOnLuas('onUpdate', [elapsed]);
-		if (script != null)
+		if (scripts != null)
 		{
-			script.setVariable("elapsed", elapsed);
-			script.executeFunc("onUpdate", [elapsed]);
+			scripts.update(elapsed);
+			scripts.executeAllFunc("onUpdate", [elapsed]);
 		}
 
 		switch (curStage)
@@ -3437,11 +3441,10 @@ class PlayState extends MusicBeatState
 		setOnLuas('cameraY', camFollowPos.y);
 		setOnLuas('botPlay', cpuControlled);
 		callOnLuas('onUpdatePost', [elapsed]);
-		if (script != null)
-		{
-			script.setVariable("elapsed", elapsed);
-			script.executeFunc("onUpdatePost", [elapsed]);
-		}
+		
+		if (scripts != null)
+			scripts.executeAllFunc("onUpdatePost", [elapsed]);
+			
 	}
 
 	function openPauseMenu()
@@ -3488,10 +3491,7 @@ class PlayState extends MusicBeatState
 		if (((skipHealthCheck && instakillOnMiss) || health <= 0) && !practiceMode && !isDead)
 		{
 			var ret:Dynamic = callOnLuas('onGameOver', [], false);
-			if (script != null)
-		{
-			script.executeFunc("onGameOver");
-		}
+			scripts.executeAllFunc("onGameOver");
 			if(ret != FunkinLua.Function_Stop) {
 				boyfriend.stunned = true;
 				deathCounter++;
@@ -3930,13 +3930,7 @@ class PlayState extends MusicBeatState
 				}
 		}
 		callOnLuas('onEvent', [eventName, value1, value2]);
-		if (script != null)
-		{
-			script.setVariable("eventName", eventName);
-			script.setVariable("value1", value1);
-			script.setVariable("value2", value2);
-			script.executeFunc("onEvent", [eventName, value1, value2]);
-		}
+		scripts.executeAllFunc("onEvent", [eventName, value1, value2]);
 	}
 
 	function moveCameraSection():Void {
@@ -3949,11 +3943,8 @@ class PlayState extends MusicBeatState
 			camFollow.y += gf.cameraPosition[1] + girlfriendCameraOffset[1];
 			tweenCamIn();
 			callOnLuas('onMoveCamera', ['gf']);
-			if (script != null)
-		{
-			script.setVariable("gf", gf);
-			script.executeFunc("onMoveCamera", [gf]);
-		}
+			scripts.executeAllFunc("onMoveCamera", [gf]);
+		
 			return;
 		}
 
@@ -3961,21 +3952,13 @@ class PlayState extends MusicBeatState
 		{
 			moveCamera(true);
 			callOnLuas('onMoveCamera', ['dad']);
-			if (script != null)
-		{
-			script.setVariable("dad", dad);
-			script.executeFunc("onMoveCamera", [dad]);
-		}
+			scripts.executeAllFunc("onMoveCamera", [dad]);
 		}
 		else
 		{
 			moveCamera(false);
 			callOnLuas('onMoveCamera', ['boyfriend']);
-			if (script != null)
-		{
-			script.setVariable("boyfriend", boyfriend);
-			script.executeFunc("onMoveCamera", [boyfriend]);
-		}
+			scripts.executeAllFunc("onMoveCamera", [boyfriend]);
 		}
 	}
 
@@ -4092,10 +4075,7 @@ class PlayState extends MusicBeatState
 		#end
 
 		var ret:Dynamic = callOnLuas('onEndSong', [], false);
-		if (script != null)
-		{
-			script.executeFunc("onEndSong");
-		}
+		scripts.executeAllFunc("onEndSong");
 		if(ret != FunkinLua.Function_Stop && !transitioning) {
 			if (SONG.validScore)
 			{
@@ -4314,8 +4294,12 @@ class PlayState extends MusicBeatState
 		if (ClientPrefs.comboHUD == 'camHUD')
 		{
 		rating.cameras = [camHUD];
+		rating.x += ClientPrefs.comboOffset[0];
+		rating.y -= ClientPrefs.comboOffset[1];
 		}else{
 		rating.cameras = [camGame];
+		rating.x += comboOffset[0];
+		rating.y -= comboOffset[1];
 		}
 		rating.screenCenter();
 		rating.x = coolText.x - 40;
@@ -4324,23 +4308,23 @@ class PlayState extends MusicBeatState
 		rating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
 		rating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
 		rating.visible = (!ClientPrefs.hideHud && showRating);
-		rating.x += ClientPrefs.comboOffset[0];
-		rating.y -= ClientPrefs.comboOffset[1];
 
 		var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'combo' + pixelShitPart2));
 		if (ClientPrefs.comboHUD == 'camHUD')
 		{
 		comboSpr.cameras = [camHUD];
+		comboSpr.x += ClientPrefs.comboOffset[0];
+		comboSpr.y -= ClientPrefs.comboOffset[1];
 		}else{
 		comboSpr.cameras = [camGame];
+		comboSpr.x += comboOffset[0];
+		comboSpr.y -= comboOffset[1];
 		}
 		comboSpr.screenCenter();
 		comboSpr.x = coolText.x;
 		comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 		comboSpr.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 		comboSpr.visible = (!ClientPrefs.hideHud && showCombo);
-		comboSpr.x += ClientPrefs.comboOffset[0];
-		comboSpr.y -= ClientPrefs.comboOffset[1];
 		comboSpr.y += 60;
 		comboSpr.velocity.x += FlxG.random.int(1, 10) * playbackRate;
 
@@ -4402,15 +4386,17 @@ class PlayState extends MusicBeatState
 			if (ClientPrefs.comboHUD == 'camHUD')
     		{
     		numScore.cameras = [camHUD];
+    		numScore.x += ClientPrefs.comboOffset[2];
+			numScore.y -= ClientPrefs.comboOffset[3];
     		}else{
     		numScore.cameras = [camGame];
+    		numScore.x += comboOffset[2];
+			numScore.y -= comboOffset[3];
     		}
 			numScore.screenCenter();
 			numScore.x = coolText.x + (43 * daLoop) - 90;
 			numScore.y += 80;
 
-			numScore.x += ClientPrefs.comboOffset[2];
-			numScore.y -= ClientPrefs.comboOffset[3];
 			
 			if (!ClientPrefs.comboStacking)
 				lastScore.push(numScore);
@@ -4818,16 +4804,7 @@ class PlayState extends MusicBeatState
 		note.hitByOpponent = true;
 
 		callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-		if (script != null)
-		{
-		    /*
-			script.setVariable("notes.members.indexOf(note)", notes.members.indexOf(note));
-			script.setVariable("note.noteData", note.noteData);
-			script.setVariable("note.noteType", note.noteType);
-			script.setVariable("note.isSustainNote", note.isSustainNote);
-			*/
-			script.executeFunc("opponentNoteHit", [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-		}
+		scripts.executeAllFunc("opponentNoteHit", [note]);
 		if (!note.isSustainNote)
 		{
 			note.kill();
@@ -4938,15 +4915,7 @@ class PlayState extends MusicBeatState
 			var leData:Int = Math.round(Math.abs(note.noteData));
 			var leType:String = note.noteType;
 			callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
-			if (script != null)
-		{
-			script.executeFunc("goodNoteHit", [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-			/*
-			script.setVariable("note.noteData", note.noteData);
-			script.setVariable("note.noteType", note.noteType);
-			script.setVariable("note.isSustainNote", note.isSustainNote);
-			*/
-		}
+			scripts.executeAllFunc("goodNoteHit", [note]);
 
 
 			if(!cpuControlled)
@@ -5217,11 +5186,9 @@ class PlayState extends MusicBeatState
 		lastStepHit = curStep;
 		setOnLuas('curStep', curStep);
 		callOnLuas('onStepHit', []);
-		if (script != null)
-		{
-			script.setVariable("curStep", curStep);
-			script.executeFunc("onStepHit");
-		}
+		
+		scripts.setAll("curStep", curStep);
+		scripts.executeAllFunc("onStepHit", [curStep]);
 	}
 
 	var lightningStrikeBeat:Int = 0;
@@ -5324,11 +5291,8 @@ class PlayState extends MusicBeatState
 
 		setOnLuas('curBeat', curBeat); //DAWGG?????
 		callOnLuas('onBeatHit', []);
-		if (script != null)
-		{
-			script.setVariable("curBeat", curBeat);
-			script.executeFunc("onBeatHit");
-		}
+		scripts.setAll("curBeat", curBeat);
+		scripts.executeAllFunc("beatHit", [beatHit]);
 	}
 
 	override function sectionHit()
@@ -5362,6 +5326,8 @@ class PlayState extends MusicBeatState
 		
 		setOnLuas('curSection', curSection);
 		callOnLuas('onSectionHit', []);
+		scripts.setAll("curSection", curSection);
+		scripts.executeAllFunc("onSectionHit", [curSection]);
 	}
 
 	#if LUA_ALLOWED
@@ -5568,338 +5534,279 @@ class PlayState extends MusicBeatState
 	var curLight:Int = -1;
 	var curLightEvent:Int = -1;
 	
-	public var hxArray:Array<Script> = [];
-	var scriptname:String = "";
-	public function startScript()
+	function initScripts()
 	{
-	    var HscriptShit:Array<String> = [
-		'hx',
-		'hxs',
-		'hscript',
-		'hsc'
-	];
-		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
-		//var curStageFolder:String = curStage;
-		
+		if (scripts == null)
+			return;
 
-		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
-		
-		var pathscript:String = Paths.modFolders('scripts/' + scriptname + '.hx');
-		
-		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
-		
+		var scriptData:Map<String, String> = [];
 
-		var hxdata:String = "";
-		
-		var hx:String = "";
-		
-		var hxsdata:String = "";
-		
-		var hxssdata:String = "";
-		
-		script = new Script();
-		
-		
-		script.setVariable("addHscript", function(name:String)
+		// SONG && GLOBAL SCRIPTS
+		var files:Array<String> = SONG.song == null ? [] : ScriptUtil.findScriptsInDir(Paths.modFolders("data/" + Paths.formatToSongPath(SONG.song)));
+
+		if (FileSystem.exists(Paths.modFolders("scripts/global")))
 		{
-		scriptname = name;
-		});
-		
-		var filesPushed:Array<String> = [];
-		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('data/' + Paths.formatToSongPath(SONG.song) + '/')];
+			for (_ in ScriptUtil.findScriptsInDir(Paths.modFolders("assets/scripts/global")))
+				files.push(_);
+		}
 
-		foldersToCheck.insert(0, Paths.mods('data/' + Paths.formatToSongPath(SONG.song) + '/'));
-		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/data/' + Paths.formatToSongPath(SONG.song) + '/'));
-
-		for(mod in Paths.getGlobalMods())
-			foldersToCheck.insert(0, Paths.mods(mod + '/data/' + Paths.formatToSongPath(SONG.song) + '/' ));
-			
-			for (folder in foldersToCheck)
+		for (file in files)
 		{
-			if(FileSystem.exists(folder))
+			var hx:Null<String> = null;
+
+			if (FileSystem.exists(file))
+				hx = File.getContent(file);
+
+			if (hx != null)
 			{
-				for (file in FileSystem.readDirectory(folder))
+				var scriptName:String = CoolUtil.getFileStringFromPath(file);
+
+				if (!scriptData.exists(scriptName))
 				{
-					if(file.endsWith('.hx') && !filesPushed.contains(file))
-					{
-						//hxArray.push(new Script(folder + file));
-						hxssdata = File.getContent(folder + file);
-						filesPushed.push(file);
-					}
+					scriptData.set(scriptName, hx);
 				}
 			}
 		}
 
-		if (FileSystem.exists(path))
-			hxdata = File.getContent(path);
-		
-		if (FileSystem.exists(stagepath))
-			hxsdata = File.getContent(stagepath);
-			
-		if (FileSystem.exists(pathscript))
-			hx = File.getContent(pathscript);
-			
-		if (hx != "")
+		// STAGE SCRIPTS
+		if (SONG.stage != null)
 		{
-		startHScript();
-		script.runScript(hx);
-		}
+			var hx:Null<String> = null;
 
-		if (hxdata != "" || hxsdata != "" || hxssdata != "")
-		{
-		startHScript();	
-		script.runScript(hxdata);
-		script.runScript(hxssdata);
-		script.runScript(hxsdata);
-		}
-	}
-	public function onAddScript()
-	{
-	    var HscriptShit:Array<String> = [
-		'hx',
-		'hxs',
-		'hscript',
-		'hsc'
-	];
-		var formattedFolder:String = Paths.formatToSongPath(SONG.song);
-		//var curStageFolder:String = curStage;
-		
+			for (extn in ScriptUtil.extns)
+			{
+				var path:String = Paths.modFolders('stages/' + SONG.stage + '.$extn');
 
-		var path:String = Paths.modFolders('data/' + formattedFolder + '/script.hx');
-		
-		var pathscript:String = Paths.modFolders('scripts/' + scriptname + '.hx');
-		
-		var stagepath:String = Paths.modFolders('stages/' + curStage + '.hx');
-		
-
-		var hxdata:String = "";
-		
-		var hx:String = "";
-		
-		var hxsdata:String = "";
-		
-		script = new Script();
-		
-		
-		script.setVariable("addHscript", function(name:String)
-		{
-		scriptname = name;
-		});
-
-		if (FileSystem.exists(path))
-			hxdata = File.getContent(path);
-		
-		if (FileSystem.exists(stagepath))
-			hxsdata = File.getContent(stagepath);
-			
-		if (FileSystem.exists(pathscript))
-			hx = File.getContent(pathscript);
-			
-		if (hx != "")
-		{
-		startHScript();
-		script.runScript(hx);
-		}
-
-		if (hxdata != "" || hxsdata != "")
-		{
-		startHScript();	
-		script.runScript(hxdata);
-		script.runScript(hxsdata);
-		}
-	}
-	
-	public function startHScript()
-	{
-	        script = new Script();
-
-			script.setVariable("onSongStart", function()
-			{
-			});
-			
-			script.setVariable("onEndSong", function()
-			{
-			});
-
-			script.setVariable("onDestroy", function()
-			{
-			});
-
-			script.setVariable("onCreate", function()
-			{
-			});
-			
-			script.setVariable("onCreatePost", function()
-			{
-			});
-
-			script.setVariable("onStartCountdown", function()
-			{
-			});
-
-			script.setVariable("onStepHit", function()
-			{
-			});
-			
-			script.setVariable("onEvent", function(?event:String, ?val1:Dynamic, ?val2:Dynamic)
-			{
-			});
-			
-			script.setVariable("onBeatHit", function()
-			{
-			});
-			
-			script.setVariable("noteMissPress", function()
-			{
-			});
-			
-			script.setVariable("noteMiss", function()
-			{
-			});
-			
-			script.setVariable("onLoad", function()
-			{
-			});
-			
-			script.setVariable("onGameOver", function()
-			{
-			});
-
-			script.setVariable("onUpdate", function(?elapsed:Float)
-			{
-			});
-			
-			script.setVariable("onUpdatePost", function(?elapsed:Float)
-			{
-			});
-			
-			script.setVariable("onMoveCamera", function(?focus:String)
-			{
-			});
-			
-			script.setVariable("goodNoteHit", function(?note:Note)
-			{
-			});
-			
-			script.setVariable("opponentNoteHit", function(?note:Note)
-			{
-			});
-			
-			script.setVariable("addHscript", function(name:String)
-			{
-			      scriptname = name;
-			});
-
-			script.setVariable("import", function(lib:String, ?as:Null<String>) // Does this even work?
-			{
-				if (lib != null && Type.resolveClass(lib) != null)
+				if (FileSystem.exists(path))
 				{
-					script.setVariable(as != null ? as : lib, Type.resolveClass(lib));
+					hx = File.getContent(path);
+					break;
 				}
-			});
-			
-			script.setVariable("addHaxeLibrary", function(lib:String, val:Dynamic) // Of course it works.
+			}
+
+			if (hx != null)
 			{
-				    script.setVariable(lib, val);
-			});
-			
-			script.setVariable("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
+				if (!scriptData.exists("stage"))
+					scriptData.set("stage", hx);
+			}
+		}
+
+		for (scriptName => hx in scriptData)
+		{
+			if (scripts.getScriptByTag(scriptName) == null)
+				scripts.addScript(scriptName).executeString(hx);
+			else
 			{
-				return FlxColor.fromRGB(Red, Green, Blue, Alpha);
-			});
-			
-		
-			script.setVariable("addHaxeLibrarys", function(lib:String, ?libPackage:String = '') // no Of course it works.
+				scripts.getScriptByTag(scriptName).error("Duplacite Script Error!", '$scriptName: Duplicate Script');
+			}
+		}
+	}
+
+	private var eventsPushed:Array<Dynamic> = [];
+
+	public function initSongEvents()
+	{
+		if (!FileSystem.exists(Paths.modFolders("scripts/events")))
+			return;
+
+		var jsonFiles:Array<String> = CoolUtil.findFilesInPath(Paths.modFolders("scripts/events"), ["json"], true, false);
+
+		var hxFiles:Map<String, String> = [];
+
+		if (FileSystem.exists(Paths.modFolders('scripts/events/${Paths.formatToSongPath(SONG.song)}')))
+		{
+			for (file in CoolUtil.findFilesInPath(Paths.modFolders('scripts/events/${Paths.formatToSongPath(SONG.song)}'), ["json"], true, true))
+				jsonFiles.push(file);
+		}
+
+		for (file in jsonFiles)
+		{
+			var json:{val1:String, val2:String} = {val1: null, val2: null};
+			if (FileSystem.exists(file))
 			{
-			try{
-			    var str:String = '';
-				if(libPackage.length > 0)
-					str = libPackage + '.';
-					
-					script.setVariable(lib, Type.resolveClass(str + lib));
+				try
+				{
+					json = cast Json.parse(File.getContent(file));
 				}
-			});
-			
+				catch (e)
+				{
+					trace(e);
+				}
+			}
 
-			
-			/*
-			script.setVariable("addCharacterToList", function(name:String, type:String)
+			var eventName:String = CoolUtil.getFileStringFromPath(file);
+
+			eventsPushed.push([eventName, '${json.val1}\n${json.val2}']);
+			ChartingState.eventStuff.push([eventName, '${json.val1}\n${json.val2}']);
+
+			for (extn in ScriptUtil.extns)
 			{
-				return addCharacterToList(name, type);
-			});
-			只能用game.addCharacterToList了 */ 
-			/*
-			script.setVariable("runLuaCode", function(code:String)
+				var path:String = file.replace(".json", '.$extn');
+				if (FileSystem.exists(path))
+				{
+					hxFiles.set(CoolUtil.getFileStringFromPath(path), File.getContent(path));
+					break;
+				}
+			}
+		}
+
+		for (scriptName => hxData in hxFiles)
+		{
+			if (scripts.getScriptByTag(scriptName) == null)
+				scripts.addScript(scriptName).executeString(hxData);
+			else
 			{
-				return FunkinLua.executeLua(code);
-			});
-			*/
-			
-			script.setVariable("add", function(obj:FlxObject)
+				scripts.getScriptByTag(scriptName).error("Duplacite Script Error!", '$scriptName: Duplicate Script');
+			}
+		}
+	}
+
+	function initEventScript(name:String) {}
+
+	function initCharScript(char:Character)
+	{
+		if (char == null || scripts == null)
+			return;
+
+		var name:String = char.curCharacter;
+		var hx:Null<String> = null;
+
+		for (extn in ScriptUtil.extns)
+		{
+			var path = Paths.modFolders('characters/' + name + '.$extn');
+
+			if (FileSystem.exists(path))
 			{
-				addBehindGF(obj);
-			});
-			
-			script.setVariable("addScript", function(tag:String, hxs:String = '', scriptNames:String)
-		    {
-			var pathscript:String = Paths.modFolders(scriptNames + '.hx');
-			
-			if (FileSystem.exists(pathscript))
-			hxs = File.getContent(pathscript);
-			
-			if (hxs != "")
-		    {
-		    startHScript();
-		    script.runScript(tag);
-		    }
-		    });
-		    
+				hx = File.getContent(path);
+				break;
+			}
+		}
 
-			script.setVariable("curStep", curStep);
-			script.setVariable("curBeat", curBeat);
-		/*	script.setVariable("note.noteData", Note.noteData);
-			script.setVariable("note.noteType", Note.noteType);
-			script.setVariable("note.isSustainNote", Note.isSustainNote);
-			script.setVariable("daNote.noteData", daNote.noteData);
-			script.setVariable("daNote.noteType", daNote.noteType);
-			script.setVariable("daNote.isSustainNote", daNote.isSustainNote); */
-			script.setVariable("bpm", SONG.bpm);
+		if (hx != null)
+		{
+			if (scripts.getScriptByTag(name) == null)
+				scripts.addScript(name).executeString(hx);
+			else
+			{
+				scripts.getScriptByTag(name).error("Duplacite Script Error!", '$name: Duplicate Script');
+			}
+		}
+	}
 
-			// PRESET CLASSES
-			script.setVariable("PlayState", instance);
-			script.setVariable("PlayState.instance", instance);
-			script.setVariable("game", instance);
-			script.setVariable("FlxTween", FlxTween);
-			//script.setVariable("VideoSprite", VideoSprite);
-			script.setVariable("VideoHandler", VideoHandler);
-			script.setVariable("FlxEase", FlxEase);
-			script.setVariable("FlxSprite", FlxSprite);
-			script.setVariable("Math", Math);
-			script.setVariable("FlxG", FlxG);
-			script.setVariable("ClientPrefs", ClientPrefs);
-			script.setVariable("Note", Note);
-			script.setVariable("FlxG.camera", FlxG.camera);
-			script.setVariable("FlxTimer", FlxTimer);
-			script.setVariable("Main", Main);
-			script.setVariable("ShaderFilter", ShaderFilter);
-			script.setVariable("FlxRuntimeShader", FlxRuntimeShader);
-			script.setVariable("BitmapFilter", BitmapFilter);
-			script.setVariable("Conductor", Conductor);
-			script.setVariable("Std", Std);
-			//script.setVariable("FlxColor", flixel.util.FlxColor);
-			script.setVariable("precacheList", precacheList);
-			script.setVariable("CoolUtil", CoolUtil);
-		//	script.setVariable("note", note);
-		//	script.setVariable("daNote", daNote);
-			script.setVariable("mustHitSection", SONG.notes[curSection].mustHitSection);
-			script.setVariable("curSection", SONG.notes[curSection]);
-			script.setVariable("FlxTextBorderStyle", FlxTextBorderStyle);
-			script.setVariable("Paths", Paths);
-			script.setVariable("CENTER", FlxTextAlign.CENTER);
-			script.setVariable("FlxTextFormat", FlxTextFormat);
-			script.setVariable("InputFormatter", InputFormatter);
-			script.setVariable("FlxTextFormatMarkerPair", FlxTextFormatMarkerPair);
+	function onAddScript(script:Script)
+	{
+		script.set("PlayState", PlayState);
+		script.set("game", PlayState.instance);
 
+		// FUNCTIONS
+
+		//  CREATION FUNCTIONS
+		script.set("onLoad", function() {});
+		script.set("onCreate", function() {});
+		//script.set("createStage", function(?stage:String) {}); // ! HAS PAUSE sb
+		script.set("onCreatePost", function() {});
+
+		//  COUNTDOWN
+		script.set("countdown", function() {});
+		script.set("countTick", function(?tick:Int) {});
+
+		//  SONG FUNCTIONS
+		script.set("onSongStart", function() {}); // ! HAS PAUSE
+		script.set("onEndSong", function() {}); // ! HAS PAUSE
+		script.set("onBeatHit", function(?beat:Int) {});
+		script.set("onStepHit", function(?step:Int) {});
+
+		//  NOTE FUNCTIONS
+		script.set("spawnNote", function(?note:Note) {}); // ! HAS PAUSE
+		script.set("goodNoteHit", function(?note:Note) {});
+		script.set("opponentNoteHit", function(?note:Note) {});
+		script.set("noteMiss", function(?note:Note) {});
+
+		script.set("notesUpdate", function() {}); // ! HAS PAUSE
+
+		script.set("ghostTap", function(?direction:Int) {});
+
+		//  EVENT FUNCTIONS
+		script.set("onEvent", function(?event:String, ?val1:Dynamic, ?val2:Dynamic) {}); // ! HAS PAUSE
+		script.set("earlyEvent", function(event:String) {});
+
+		//  PAUSING / RESUMING
+		script.set("pause", function() {}); // ! HAS PAUSE
+		script.set("resume", function() {}); // ! HAS PAUSE
+
+		//  GAMEOVER
+		script.set("onGameOver", function() {}); // ! HAS PAUSE
+
+		//  MISC
+		script.set("onUpdate", function(?elapsed:Float) {});
+		script.set("onUpdatePost", function(?elapsed:Float) {});
+		script.set("onMoveCamera", function(event:String) {});
+		script.set("recalcRating", function(?badHit:Bool = false) {}); // ! HAS PAUSE
+		script.set("updateScore", function(?miss:Bool = false) {}); // ! HAS PAUSE
+
+		// VARIABLES
+
+		script.set("curStep", 0);
+		script.set("curBeat", 0);
+		script.set("bpm", 0);
+
+		// OBJECTS
+		script.set("camGame", camGame);
+		script.set("camHUD", camHUD);
+		script.set("camOther", camOther);
+
+		script.set("camFollow", camFollow);
+		script.set("camFollowPos", camFollowPos);
+
+		// CHARACTERS
+		script.set("boyfriend", boyfriend);
+		script.set("dad", dad);
+		script.set("gf", gf);
+
+		script.set("boyfriendGroup", boyfriendGroup);
+		script.set("dadGroup", dadGroup);
+		script.set("gfGroup", gfGroup);
+
+		// NOTES
+		script.set("notes", notes);
+		script.set("strumLineNotes", strumLineNotes);
+		script.set("playerStrums", playerStrums);
+		script.set("opponentStrums", opponentStrums);
+
+		script.set("unspawnNotes", unspawnNotes);
+
+		// MISC
+		script.set("add", function(obj:FlxBasic, ?front:Bool = false)
+		{
+			if (front)
+			{
+				getInstance().add(obj);
+			}
+			else
+			{
+				if (PlayState.instance.isDead)
+				{
+					GameOverSubstate.instance.insert(GameOverSubstate.instance.members.indexOf(GameOverSubstate.instance.boyfriend), obj);
+				}
+				else
+				{
+					var position:Int = PlayState.instance.members.indexOf(PlayState.instance.gfGroup);
+					if (PlayState.instance.members.indexOf(PlayState.instance.boyfriendGroup) < position)
+					{
+						position = PlayState.instance.members.indexOf(PlayState.instance.boyfriendGroup);
+					}
+					else if (PlayState.instance.members.indexOf(PlayState.instance.dadGroup) < position)
+					{
+						position = PlayState.instance.members.indexOf(PlayState.instance.dadGroup);
+					}
+					PlayState.instance.insert(position, obj);
+				}
+			}
+		});
+	}
+
+	public static inline function getInstance()
+	{
+		return PlayState.instance.isDead ? GameOverSubstate.instance : PlayState.instance;
 	}
 }
