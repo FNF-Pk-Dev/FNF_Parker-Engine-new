@@ -289,7 +289,6 @@ class PlayState extends MusicBeatState
 
 	// how big to stretch the pixel art assets
 	public static var daPixelZoom:Float = 6;
-	private var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 
 	public var inCutscene:Bool = false;
 	public var skipCountdown:Bool = false;
@@ -350,7 +349,7 @@ class PlayState extends MusicBeatState
 		
 		scripts = new ScriptGroup();
 		scripts.onAddScript.push(onAddScript);
-		Character.onCreate = initCharScript;
+		//Character.onCreate = initCharScript;
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -2314,7 +2313,7 @@ class PlayState extends MusicBeatState
 					}
 				});
 				callOnLuas('onCountdownTick', [swagCounter]);
-			    script.executeFunc("onCountdownTick", [swagCounter]);
+			    scripts.executeAllFunc("onCountdownTick", [swagCounter]);
 
 				swagCounter += 1;
 				// generateSong('fresh');
@@ -4690,7 +4689,7 @@ class PlayState extends MusicBeatState
 		}
 
 		callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
-		scripts.executeAllFunc('noteMiss', [note]);
+		scripts.executeAllFunc('noteMiss', [daNote]);
 	}
 
 	function noteMissPress(direction:Int = 1):Void //You pressed a key when there was no notes to press for this key
@@ -5611,7 +5610,7 @@ class PlayState extends MusicBeatState
 					trace(e);
 				}
 			}
-
+/*
 			var eventName:String = CoolUtil.getFileStringFromPath(file);
 
 			eventsPushed.push([eventName, '${json.val1}\n${json.val2}']);
@@ -5627,7 +5626,7 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
-
+*/
 		for (scriptName => hxData in hxFiles)
 		{
 			if (scripts.getScriptByTag(scriptName) == null)
