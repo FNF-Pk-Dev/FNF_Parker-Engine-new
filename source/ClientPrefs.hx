@@ -37,6 +37,7 @@ class ClientPrefs {
 	public static var checkForUpdates:Bool = true;
 	public static var gamerting:Bool = true;
 	public static var comboStacking = true;
+	public static var useGPUCaching:Bool = true;
 	public var hitboxPT = true;
 	public var hitboxLocation:String = 'Space';
 	public static var comboHUD:String = 'camGame';
@@ -109,6 +110,7 @@ class ClientPrefs {
 		FlxG.save.data.middleScroll = middleScroll;
 		FlxG.save.data.opponentStrums = opponentStrums;
 		FlxG.save.data.showFPS = showFPS;
+		FlxG.save.data.useGPUCaching = useGPUCaching;
 		FlxG.save.data.flashing = flashing;
 		FlxG.save.data.globalAntialiasing = globalAntialiasing;
 		FlxG.save.data.noteSplashes = noteSplashes;
@@ -203,6 +205,9 @@ class ClientPrefs {
 		}
 		if(FlxG.save.data.rainbowFPS != null) {
 			rainbowFPS = FlxG.save.data.rainbowFPS;
+		}
+		if(FlxG.save.data.useGPUCaching != null) {
+			useGPUCaching = FlxG.save.data.useGPUCaching;
 		}
 		if(FlxG.save.data.comboHUD != null) {
 			comboHUD = FlxG.save.data.comboHUD;
