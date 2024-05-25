@@ -144,6 +144,59 @@ class CoolUtil
 		#end
 	}
 
+	public static final formatNotAllowedChars:Array<String> = ["~", "%", "&", ";", ":", '/', '"', "'", "<", ">", "?", "#", " ", "!"];
+
+	public static function formatBindString(str:String):String
+	{
+		var finalStr = str;
+
+		for (notAllowed in formatNotAllowedChars)
+		{
+			finalStr = StringTools.replace(finalStr, notAllowed, "");
+		}
+
+		return finalStr.toLowerCase();
+	}
+
+	public static function findFilesInPath(path:String, extns:Array<String>, ?filePath:Bool = false, ?deepSearch:Bool = true):Array<String>
+	{
+		var files:Array<String> = [];
+
+		if (FileSystem.exists(path))
+		{
+			for (file in FileSystem.readDirectory(path))
+			{
+				var path = haxe.io.Path.join([path, file]);
+				if (!FileSystem.isDirectory(path))
+				{
+					for (extn in extns)
+					{
+						if (file.endsWith(extn))
+						{
+							if (filePath)
+								files.push(path);
+							else
+								files.push(file);
+						}
+					}
+				}
+				else if (deepSearch) // ! YAY !!!! -lunar
+				{
+					var pathsFiles:Array<String> = findFilesInPath(path, extns);
+
+					for (_ in pathsFiles)
+						files.push(_);
+				}
+			}
+		}
+		return files;
+	}
+	
+	public static inline function getFileStringFromPath(file:String):String
+	{
+		return Path.withoutDirectory(Path.withoutExtension(file));
+	}
+
 	/** Quick Function to Fix Save Files for Flixel 5
 		if you are making a mod, you are gonna wanna change "ShadowMario" to something else
 		so Base Psych saves won't conflict with yours
