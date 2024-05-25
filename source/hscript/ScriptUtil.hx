@@ -28,7 +28,7 @@ import StrumNote;
 import openfl.Lib;
 import openfl.filters.ShaderFilter;
 import openfl.system.Capabilities;
-import script.Script.ScriptReturn;
+import hscript.Script.ScriptReturn;
 import flixel.addons.display.FlxRuntimeShader;
 import Conductor;
 import Section;
