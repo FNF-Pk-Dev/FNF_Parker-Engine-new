@@ -403,7 +403,7 @@ class Paths
 		var path = getPath('images/$key.png', IMAGE, library);
 		//trace(path);
 		if (OpenFlAssets.exists(path, IMAGE)) {
-			ifif(throwToGPU){
+			if(throwToGPU){
 				// based on what smokey learnt + my own research
 				// should be fine? idk lole
 				var tex:Texture = FlxG.stage.context3D.createTexture(bitmap.width, bitmap.height, BGRA, false);
