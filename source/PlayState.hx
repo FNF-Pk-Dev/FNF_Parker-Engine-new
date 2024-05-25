@@ -2155,10 +2155,7 @@ class PlayState extends MusicBeatState
 	{
 		if(startedCountdown) {
 			callOnLuas('onStartCountdown', []);
-			if (script != null)
-		{
-			script.executeFunc("onStartCountdown");
-		}
+			scripts.executeAllFunc("onStartCountdown");
 			return;
 		}
 
@@ -2317,11 +2314,7 @@ class PlayState extends MusicBeatState
 					}
 				});
 				callOnLuas('onCountdownTick', [swagCounter]);
-				if (script != null)
-		{
-			script.setVariable("swagCounter", swagCounter);
-			script.executeFunc("onCountdownTick");
-		}
+			    script.executeFunc("onCountdownTick", [swagCounter]);
 
 				swagCounter += 1;
 				// generateSong('fresh');
@@ -2480,10 +2473,7 @@ class PlayState extends MusicBeatState
 		#end
 		setOnLuas('songLength', songLength);
 		callOnLuas('onSongStart', []);
-		if (script != null)
-		{
-			script.executeFunc("onSongStart");
-		}
+		scripts.executeAllFunc('onSongStart');
 	}
 
 	var debugNum:Int = 0;
@@ -2974,7 +2964,7 @@ class PlayState extends MusicBeatState
 		if (scripts != null)
 		{
 			scripts.update(elapsed);
-			scripts.executeAllFunc("onUpdate", [elapsed]);
+			//scripts.executeAllFunc("onUpdate", [elapsed]); old
 		}
 
 		switch (curStage)
@@ -4700,15 +4690,7 @@ class PlayState extends MusicBeatState
 		}
 
 		callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
-		if (script != null)
-		{
-			script.executeFunc("noteMiss", [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
-			/*
-			script.setVariable("note.noteData", note.noteData);
-			script.setVariable("note.noteType", note.noteType);
-			script.setVariable("note.isSustainNote", note.isSustainNote);
-			*/
-		}
+		scripts.executeAllFunc('noteMiss', [note]);
 	}
 
 	function noteMissPress(direction:Int = 1):Void //You pressed a key when there was no notes to press for this key
@@ -4755,10 +4737,8 @@ class PlayState extends MusicBeatState
 			vocals.volume = 0;
 		}
 		callOnLuas('noteMissPress', [direction]);
-		if (script != null)
-		{
-			script.executeFunc("noteMissPress", [direction]);
-		}
+		scripts.executeAllFunc("noteMissPress", [direction]);
+		
 	}
 
 	function opponentNoteHit(note:Note):Void
@@ -5142,10 +5122,8 @@ class PlayState extends MusicBeatState
 			lua.call('onDestroy', []);
 			lua.stop();
 		}
-		if (script != null)
-		{
-			script.executeFunc("onDestroy");
-		}
+			scripts.executeAllFunc("onDestroy");
+
 		luaArray = [];
 
 		#if hscript
@@ -5705,10 +5683,11 @@ class PlayState extends MusicBeatState
 		script.set("onCreate", function() {});
 		//script.set("createStage", function(?stage:String) {}); // ! HAS PAUSE sb
 		script.set("onCreatePost", function() {});
+		script.set("onDestroy", function() {});
 
 		//  COUNTDOWN
-		script.set("countdown", function() {});
-		script.set("countTick", function(?tick:Int) {});
+		script.set("onStartCountdown", function() {});
+		script.set("onCountdownTick", function(?tick:Int) {});
 
 		//  SONG FUNCTIONS
 		script.set("onSongStart", function() {}); // ! HAS PAUSE
@@ -5724,7 +5703,7 @@ class PlayState extends MusicBeatState
 
 		script.set("notesUpdate", function() {}); // ! HAS PAUSE
 
-		script.set("ghostTap", function(?direction:Int) {});
+		script.set("noteMissPress", function(?direction:Int) {});
 
 		//  EVENT FUNCTIONS
 		script.set("onEvent", function(?event:String, ?val1:Dynamic, ?val2:Dynamic) {}); // ! HAS PAUSE
@@ -5738,9 +5717,9 @@ class PlayState extends MusicBeatState
 		script.set("onGameOver", function() {}); // ! HAS PAUSE
 
 		//  MISC
-		script.set("onUpdate", function(?elapsed:Float) {});
+		//script.set("onUpdate", function(?elapsed:Float) {});
 		script.set("onUpdatePost", function(?elapsed:Float) {});
-		script.set("onMoveCamera", function(event:String) {});
+		script.set("onMoveCamera", function(focus:String) {});
 		script.set("recalcRating", function(?badHit:Bool = false) {}); // ! HAS PAUSE
 		script.set("updateScore", function(?miss:Bool = false) {}); // ! HAS PAUSE
 
