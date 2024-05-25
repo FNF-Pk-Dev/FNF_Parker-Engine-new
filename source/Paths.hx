@@ -9,6 +9,7 @@ import haxe.xml.Access;
 import openfl.system.System;
 import flixel.FlxG;
 import flixel.graphics.frames.FlxAtlasFrames;
+import openfl.display3D.textures.RectangleTexture;
 import openfl.utils.AssetType;
 import openfl.utils.Assets as OpenFlAssets;
 import lime.utils.Assets;
@@ -43,7 +44,6 @@ class Paths
 		'videos',
 		'images',
 		'stages',
-		'states',
 		'weeks',
 		'fonts',
 		'scripts',
@@ -234,17 +234,10 @@ class Paths
 		return inst;
 	}
 
-	inline static public function image(key:String, ?library:String):FlxGraphic
+	inline static public function image(key:String, ?library:String, ?throwToGPU:Bool = true, ?prefix:String = null):FlxGraphic
 	{
 		// streamlined the assets process more
-		var returnAsset:FlxGraphic = returnGraphic(key, library);
-		return returnAsset;
-	}
-
-	inline static public function gif(key:String, ?library:String):FlxGraphic
-	{
-		// streamlined the assets process more
-		var returnAsset:FlxGraphic = returnGraphic(key, library);
+		var returnAsset:FlxGraphic = returnGraphic(key, library, throwToGPU, prefix);
 		return returnAsset;
 	}
 
@@ -301,7 +294,7 @@ class Paths
 
 	
 	
-	inline static public function getSparrowAtlas(key:String, ?library:String)
+	inline static public function getSparrowAtlas(key:String, ?library:String, throwToGPU:Bool = true)
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = returnGraphic(key);
@@ -310,13 +303,13 @@ class Paths
 			xmlExists = true;
 		}
 
-		return FlxAtlasFrames.fromSparrow((imageLoaded != null ? imageLoaded : image(key, library)), (xmlExists ? File.getContent(modsXml(key)) : file('images/$key.xml', library)));
+		return FlxAtlasFrames.fromSparrow((imageLoaded != null ? imageLoaded : image(key, library, throwToGPU)), (xmlExists ? File.getContent(modsXml(key)) : file('images/$key.xml', library)));
 		#else
-		return FlxAtlasFrames.fromSparrow(image(key, library), file('images/$key.xml', library));
+		return FlxAtlasFrames.fromSparrow(image(key, library, throwToGPU), file('images/$key.xml', library));
 		#end
 	}
 
-	inline static public function getPackerAtlas(key:String, ?library:String)
+	inline static public function getPackerAtlas(key:String, ?library:String, throwToGPU:Bool = true)
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = returnGraphic(key);
@@ -325,13 +318,13 @@ class Paths
 			txtExists = true;
 		}
 
-		return FlxAtlasFrames.fromSpriteSheetPacker((imageLoaded != null ? imageLoaded : image(key, library)), (txtExists ? File.getContent(modsTxt(key)) : file('images/$key.txt', library)));
+		return FlxAtlasFrames.fromSpriteSheetPacker((imageLoaded != null ? imageLoaded : image(key, library, throwToGPU)), (txtExists ? File.getContent(modsTxt(key)) : file('images/$key.txt', library)));
 		#else
-		return FlxAtlasFrames.fromSpriteSheetPacker(image(key, library), file('images/$key.txt', library));
+		return FlxAtlasFrames.fromSpriteSheetPacker(image(key, library, throwToGPU), file('images/$key.txt', library));
 		#end
 	}
 	
-	inline static public function getXMLAtlas(key:String, ?library:String):FlxAtlasFrames
+	inline static public function getXMLAtlas(key:String, ?library:String, throwToGPU:Bool = true):FlxAtlasFrames
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = returnGraphic(key);
@@ -340,13 +333,13 @@ class Paths
 			xmlExists = true;
 		}
 
-		return FlxAtlasFrames.fromTexturePackerXml((imageLoaded != null ? imageLoaded : image(key, library)), (xmlExists ? File.getContent(modsXml(key)) : file('images/$key.xml', library)));
+		return FlxAtlasFrames.fromTexturePackerXml((imageLoaded != null ? imageLoaded : image(key, library, throwToGPU)), (xmlExists ? File.getContent(modsXml(key)) : file('images/$key.xml', library)));
 		#else
-		return FlxAtlasFrames.fromTexturePackerXml(image(key, library), file('images/$key.xml', library));
+		return FlxAtlasFrames.fromTexturePackerXml(image(key, library, throwToGPU), file('images/$key.xml', library));
 		#end
 	}
 
-	inline static public function getJSONAtlas(key:String, ?library:String)
+	inline static public function getJSONAtlas(key:String, ?library:String, throwToGPU:Bool = true)
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = returnGraphic(key);
@@ -355,9 +348,9 @@ class Paths
 			jsonExists = true;
 		}
 
-		return FlxAtlasFrames.fromTexturePackerJson((imageLoaded != null ? imageLoaded : image(key, library)), (jsonExists ? File.getContent(modsJsons(key)) : file('images/$key.json', library)));
+		return FlxAtlasFrames.fromTexturePackerJson((imageLoaded != null ? imageLoaded : image(key, library, throwToGPU)), (jsonExists ? File.getContent(modsJsons(key)) : file('images/$key.json', library)));
 		#else
-		return FlxAtlasFrames.fromTexturePackerJson(image(key, library), file('images/$key.json', library));
+		return FlxAtlasFrames.fromTexturePackerJson(image(key, library, throwToGPU), file('images/$key.json', library));
 		#end
 	}
 
@@ -371,7 +364,10 @@ class Paths
 
 	// completely rewritten asset loading? fuck!
 	public static var currentTrackedAssets:Map<String, FlxGraphic> = [];
-	public static function returnGraphic(key:String, ?library:String) {
+	public static function returnGraphic(key:String, ?library:String, throwToGPU:Bool = true) {
+	if (!ClientPrefs.useGPUCaching)
+	throwToGPU = false;
+	
 		#if MODS_ALLOWED
 		var modKey:String = modsImages(key);
 		if(FileSystem.exists(modKey)) {
@@ -380,22 +376,60 @@ class Paths
 				var newGraphic:FlxGraphic = FlxGraphic.fromBitmapData(newBitmap, false, modKey);
 				newGraphic.persist = true;
 				currentTrackedAssets.set(modKey, newGraphic);
-			}
-			localTrackedAssets.push(modKey);
+				if (throwToGPU && !uniqueVRMImages.contains(modKey)){
+				if (!localTrackedAssets.contains(modKey) && !dumpExclusions.contains(modKey))
+				{
+					// get rid of it
+					var obj = currentTrackedAssets.get(modKey);
+					@:privateAccess
+					if (obj != null)
+					{
+						openfl.Assets.cache.removeBitmapData(modKey);
+						FlxG.bitmap._cache.remove(modKey);
+						obj.destroy();
+						currentTrackedAssets.remove(modKey);
+						if (uniqueRAMImages.contains(path))uniqueRAMImages.remove(path);
+                        if (uniqueVRMImages.contains(path))uniqueVRMImages.remove(path);
+					}
+				}
+            }else{
+            localTrackedAssets.push(modKey);
 			return currentTrackedAssets.get(modKey);
+			}
+			}
 		}
 		#end
 
 		var path = getPath('images/$key.png', IMAGE, library);
 		//trace(path);
 		if (OpenFlAssets.exists(path, IMAGE)) {
-			if(!currentTrackedAssets.exists(path)) {
-				var newGraphic:FlxGraphic = FlxG.bitmap.add(path, false, path);
-				newGraphic.persist = true;
-				currentTrackedAssets.set(path, newGraphic);
-			}
+			ifif(throwToGPU){
+				// based on what smokey learnt + my own research
+				// should be fine? idk lole
+				var tex:Texture = FlxG.stage.context3D.createTexture(bitmap.width, bitmap.height, BGRA, false);
+				tex.uploadFromBitmapData(bitmap);
+				// free mem
+				bitmap.dispose();
+				bitmap.disposeImage();
+                // push shit
+				bitmap = BitmapData.fromTexture(tex);
+                if (!uniqueVRMImages.contains(path))uniqueVRMImages.push(path);
+				uniqueRAMImages.remove(path);
+            }else{
+				if (!uniqueRAMImages.contains(path))uniqueRAMImages.push(path);
+                
+				uniqueVRMImages.remove(path);
+            }
+
+			@:privateAccess
+			var grafic = FlxGraphic.createGraphic(bitmap, key, false, false);
+			grafic.persist = true;
+			grafic.destroyOnNoUse = false;
 			localTrackedAssets.push(path);
-			return currentTrackedAssets.get(path);
+			currentTrackedAssets.set(path, grafic);
+			getExpectedMemory();
+			return grafic;
+        }
 		}
 		trace('oh no its returning null NOOOO');
 		return null;
