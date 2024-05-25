@@ -201,10 +201,6 @@ class PlayState extends MusicBeatState
 	public var goods:Int = 0;
 	public var bads:Int = 0;
 	public var shits:Int = 0;
-	//666
-	public var rating:FlxSprite;
-	public var comboSpr:FlxSprite;
-	public var numScore:FlxSprite;
 
 	private var generatedMusic:Bool = false;
 	public var endingSong:Bool = false;
@@ -298,6 +294,7 @@ class PlayState extends MusicBeatState
 	public var skipCountdown:Bool = false;
 	private var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 	var songLength:Float = 0;
+	public var ratingOffsets:Array<Int> = [0, 0, 0, 0];
 
 	public var boyfriendCameraOffset:Array<Float> = null;
 	public var opponentCameraOffset:Array<Float> = null;
@@ -3941,7 +3938,7 @@ class PlayState extends MusicBeatState
 		coolText.x = FlxG.width * 0.35;
 		//
 
-		rating = new FlxSprite();
+		var rating:FlxSprite = new FlxSprite();
 		var score:Int = 350;
 
 		//tryna do MS based judgment due to popular demand
@@ -3985,8 +3982,8 @@ class PlayState extends MusicBeatState
 		rating.y -= ClientPrefs.comboOffset[1];
 		}else{
 		rating.cameras = [camGame];
-		rating.x += 0;
-		rating.y -= 0;
+		rating.x += ratingOffsets[0];
+		rating.y -= ratingOffsets[1];
 		}
 		rating.screenCenter();
 		rating.x = coolText.x - 40;
@@ -3996,7 +3993,7 @@ class PlayState extends MusicBeatState
 		rating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
 		rating.visible = (!ClientPrefs.hideHud && showRating);
 
-		comboSpr = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'combo' + pixelShitPart2));
+		var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'combo' + pixelShitPart2));
 		if (ClientPrefs.comboHUD == 'camHUD')
 		{
 		comboSpr.cameras = [camHUD];
@@ -4004,8 +4001,8 @@ class PlayState extends MusicBeatState
 		comboSpr.y -= ClientPrefs.comboOffset[1];
 		}else{
 		comboSpr.cameras = [camGame];
-		comboSpr.x += 0;
-		comboSpr.y -= 0;
+		comboSpr.x += ratingOffsets[0];
+		comboSpr.y -= ratingOffsets[1];
 		}
 		comboSpr.screenCenter();
 		comboSpr.x = coolText.x;
@@ -4069,7 +4066,7 @@ class PlayState extends MusicBeatState
 		}
 		for (i in seperatedScore)
 		{
-			numScore = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'num' + Std.int(i) + pixelShitPart2));
+			var numScore:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'num' + Std.int(i) + pixelShitPart2));
 			if (ClientPrefs.comboHUD == 'camHUD')
     		{
     		numScore.cameras = [camHUD];
@@ -4077,8 +4074,8 @@ class PlayState extends MusicBeatState
 			numScore.y -= ClientPrefs.comboOffset[3];
     		}else{
     		numScore.cameras = [camGame];
-    		numScore.x += 0;
-			numScore.y -= 0;
+    		numScore.x += ratingOffsets[2];
+			numScore.y -= ratingOffsets[3];
     		}
 			numScore.screenCenter();
 			numScore.x = coolText.x + (43 * daLoop) - 90;
