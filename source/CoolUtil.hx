@@ -3,6 +3,8 @@ package;
 import flixel.util.FlxSave;
 import flixel.FlxG;
 import openfl.utils.Assets;
+import haxe.display.Display.Package;
+import haxe.io.Path;
 import lime.utils.Assets as LimeAssets;
 import lime.utils.AssetLibrary;
 import lime.utils.AssetManifest;
