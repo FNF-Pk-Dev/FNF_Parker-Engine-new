@@ -349,7 +349,7 @@ class PlayState extends MusicBeatState
 		
 		scripts = new ScriptGroup();
 		scripts.onAddScript.push(onAddScript);
-		//Character.onCreate = initCharScript;
+		Character.onCreate = initCharScript;
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -2576,6 +2576,7 @@ class PlayState extends MusicBeatState
 			}
 			paused = false;
 			callOnLuas('onResume', []);
+			scripts.executeAllFunc("onResume", []);
 
 			#if desktop
 			if (startTimer != null && startTimer.finished)
@@ -2816,7 +2817,7 @@ class PlayState extends MusicBeatState
 
 		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause)
 		{
-			var ret:Dynamic = callOnLuas('onPause', [], false);
+			var ret:Dynamic = callOnLuas('onPause', [], false) || scripts.executeAllFunc("onPause", []);
 			if(ret != FunkinLua.Function_Stop) {
 				openPauseMenu();
 			}
@@ -2958,6 +2959,7 @@ class PlayState extends MusicBeatState
 				notes.insert(0, dunceNote);
 				dunceNote.spawned=true;
 				callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote]);
+				scripts.executeAllFunc("onSpawnNote", [dunceNote]);
 
 				var index:Int = unspawnNotes.indexOf(dunceNote);
 				unspawnNotes.splice(index, 1);
@@ -3174,8 +3176,8 @@ class PlayState extends MusicBeatState
 	function doDeathCheck(?skipHealthCheck:Bool = false) {
 		if (((skipHealthCheck && instakillOnMiss) || health <= 0) && !practiceMode && !isDead)
 		{
-			var ret:Dynamic = callOnLuas('onGameOver', [], false);
-			scripts.executeAllFunc("onGameOver");
+			var ret:Dynamic = callOnLuas('onGameOver', [], false) || scripts.executeAllFunc("onGameOver");
+			
 			if(ret != FunkinLua.Function_Stop) {
 				boyfriend.stunned = true;
 				deathCounter++;
@@ -4964,7 +4966,7 @@ class PlayState extends MusicBeatState
 		setOnLuas('curBeat', curBeat); //DAWGG?????
 		callOnLuas('onBeatHit', []);
 		scripts.setAll("curBeat", curBeat);
-		scripts.executeAllFunc("beatHit", [beatHit]);
+		scripts.executeAllFunc("onBeatHit", [beatHit]);
 	}
 
 	override function sectionHit()
@@ -5389,9 +5391,10 @@ class PlayState extends MusicBeatState
 		script.set("onEndSong", function() {}); // ! HAS PAUSE
 		script.set("onBeatHit", function(?beat:Int) {});
 		script.set("onStepHit", function(?step:Int) {});
+		script.set("onSectionHit", function(?section:Int) {});
 
 		//  NOTE FUNCTIONS
-		script.set("spawnNote", function(?note:Note) {}); // ! HAS PAUSE
+		script.set("onSpawnNote", function(?dunceNote:Note) {}); // ! HAS PAUSE
 		script.set("goodNoteHit", function(?note:Note) {});
 		script.set("opponentNoteHit", function(?note:Note) {});
 		script.set("noteMiss", function(?note:Note) {});
@@ -5405,8 +5408,8 @@ class PlayState extends MusicBeatState
 		script.set("earlyEvent", function(event:String) {});
 
 		//  PAUSING / RESUMING
-		script.set("pause", function() {}); // ! HAS PAUSE
-		script.set("resume", function() {}); // ! HAS PAUSE
+		script.set("onPause", function() {}); // ! HAS PAUSE
+		script.set("onResume", function() {}); // ! HAS PAUSE
 
 		//  GAMEOVER
 		script.set("onGameOver", function() {}); // ! HAS PAUSE
@@ -5421,6 +5424,7 @@ class PlayState extends MusicBeatState
 		// VARIABLES
 
 		script.set("curStep", 0);
+		script.set("curSection", 0);
 		script.set("curBeat", 0);
 		script.set("bpm", 0);
 
