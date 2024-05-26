@@ -47,8 +47,10 @@
     },
     {
       "name": "hxCodec",
-      "type": "haxelib",
-      "version": "2.5.1"
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/hxCodec"
     },
     {
       "name": "hscript",
