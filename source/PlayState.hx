@@ -2817,8 +2817,9 @@ class PlayState extends MusicBeatState
 
 		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause)
 		{
-			var ret:Dynamic = callOnLuas('onPause', [], false) || scripts.executeAllFunc("onPause", []);
-			if(ret != FunkinLua.Function_Stop) {
+			var ret:Dynamic = callOnLuas('onPause', [], false);
+			var retH:Dynamic = scripts.executeAllFunc("onPause", []);
+			if(ret != FunkinLua.Function_Stop || retH != FunkinLua.Function_Stop) {
 				openPauseMenu();
 			}
 		}
@@ -3176,9 +3177,9 @@ class PlayState extends MusicBeatState
 	function doDeathCheck(?skipHealthCheck:Bool = false) {
 		if (((skipHealthCheck && instakillOnMiss) || health <= 0) && !practiceMode && !isDead)
 		{
-			var ret:Dynamic = callOnLuas('onGameOver', [], false) || scripts.executeAllFunc("onGameOver");
-			
-			if(ret != FunkinLua.Function_Stop) {
+			var ret:Dynamic = callOnLuas('onGameOver', [], false);
+			var retH:Dynamic = scripts.executeAllFunc("onGameOver", [])
+			if(ret != FunkinLua.Function_Stop || retH != FunkinLua.Function_Stop) {
 				boyfriend.stunned = true;
 				deathCounter++;
 
