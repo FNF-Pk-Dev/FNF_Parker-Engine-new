@@ -76,7 +76,7 @@ Apk will be generated in this path (path to source)\export\release\android\bin\a
 
 ## particular thanks
 * luuan - Hscript
-
+* qqqeb(tchcfhvgd) - Video Mp4 (hxCodec)
 
 ## Psych Engine Original Credits:
 * Shadow Mario - Programmer
