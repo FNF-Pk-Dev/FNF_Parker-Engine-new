@@ -3178,7 +3178,7 @@ class PlayState extends MusicBeatState
 		if (((skipHealthCheck && instakillOnMiss) || health <= 0) && !practiceMode && !isDead)
 		{
 			var ret:Dynamic = callOnLuas('onGameOver', [], false);
-			var retH:Dynamic = scripts.executeAllFunc("onGameOver", [])
+			var retH:Dynamic = scripts.executeAllFunc("onGameOver", []);
 			if(ret != FunkinLua.Function_Stop || retH != FunkinLua.Function_Stop) {
 				boyfriend.stunned = true;
 				deathCounter++;
