@@ -189,11 +189,11 @@ class Script extends FlxBasic
 		{
 		PlayState.instance.variables.set(varName, value);
 		return value;		
-		}
+		});
 		set("getVar", function(varName:String)
 		{
 		return PlayState.instance.variables.get(varName);
-		}
+		});
 
 		set("ScriptReturn", ScriptReturn);
 	}
