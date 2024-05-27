@@ -955,6 +955,7 @@ class PlayState extends MusicBeatState
 			gf.scrollFactor.set(0.95, 0.95);
 			gfGroup.add(gf);
 			startCharacterLua(gf.curCharacter);
+			initCharScript(gf.curCharacter);
 
 			if(gfVersion == 'pico-speaker')
 			{
@@ -982,11 +983,13 @@ class PlayState extends MusicBeatState
 		startCharacterPos(dad, true);
 		dadGroup.add(dad);
 		startCharacterLua(dad.curCharacter);
+		initCharScript(dad.curCharacter);
 
 		boyfriend = new Boyfriend(0, 0, SONG.player1);
 		startCharacterPos(boyfriend);
 		boyfriendGroup.add(boyfriend);
 		startCharacterLua(boyfriend.curCharacter);
+		initCharScript(boyfriend.curCharacter);
 
 		var camPos:FlxPoint = new FlxPoint(girlfriendCameraOffset[0], girlfriendCameraOffset[1]);
 		if(gf != null)
@@ -1555,6 +1558,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newBoyfriend);
 					newBoyfriend.alpha = 0.00001;
 					startCharacterLua(newBoyfriend.curCharacter);
+					initCharScript(newBoyfriend.curCharacter);
 				}
 
 			case 1:
@@ -1565,6 +1569,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newDad, true);
 					newDad.alpha = 0.00001;
 					startCharacterLua(newDad.curCharacter);
+					initCharScript(newDad.curCharacter);
 				}
 
 			case 2:
@@ -1576,6 +1581,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newGf);
 					newGf.alpha = 0.00001;
 					startCharacterLua(newGf.curCharacter);
+					initCharScript(newGf.curCharacter);
 				}
 		}
 	}
@@ -5335,16 +5341,14 @@ class PlayState extends MusicBeatState
 			}
 		}
 	}
-	}
 
 	function initEventScript(name:String) {}
 
-	function initCharScript(char:Character)
+	function initCharScript(name:String)
 	{
-		if (char == null || scripts == null)
+		if (scripts == null)
 			return;
 
-		var name:String = char.curCharacter;
 		var hx:Null<String> = null;
 
 		for (extn in ScriptUtil.extns)
