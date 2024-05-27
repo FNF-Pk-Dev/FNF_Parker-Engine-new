@@ -5341,6 +5341,7 @@ class PlayState extends MusicBeatState
 			}
 		}
 	}
+	}
 
 	function initEventScript(name:String) {}
 
