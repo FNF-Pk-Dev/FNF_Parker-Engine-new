@@ -12,6 +12,8 @@ import hscript.Parser;
 import openfl.Lib;
 import sys.FileSystem;
 import sys.io.File;
+import PlayState;
+import Paths;
 
 using StringTools;
 
@@ -124,7 +126,7 @@ class Script extends FlxBasic
 
 			for (extn in ScriptUtil.extns)
 			{
-				var path:String = 'assets/scripts/$scriptName.$extn';
+				var path:String = Paths.modFolders('scripts/$scriptName.$extn');
 
 				if (FileSystem.exists(path))
 				{
@@ -182,6 +184,16 @@ class Script extends FlxBasic
 				return null;
 			}
 		});
+		
+		set("setVar", function(varName:String, value:Dynamic)
+		{
+		PlayState.instance.variables.set(varName, value);
+		return value;		
+		}
+		set("getVar", function(varName:String)
+		{
+		return PlayState.instance.variables.get(varName);
+		}
 
 		set("ScriptReturn", ScriptReturn);
 	}
@@ -255,7 +267,7 @@ class Script extends FlxBasic
 	{
 		interacter.upadteObjs();
 
-		executeFunc("update", [elapsed]);
+		executeFunc("onUpdate", [elapsed]);
 
 		super.update(elapsed);
 	}
@@ -267,7 +279,7 @@ class Script extends FlxBasic
 			interacter.loadPresetVars();
 
 			var val = _interp.execute(ast);
-			executeFunc("new");
+			executeFunc("onNew");
 
 			interacter.upadteObjs();
 
