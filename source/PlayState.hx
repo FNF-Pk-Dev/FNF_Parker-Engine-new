@@ -349,7 +349,7 @@ class PlayState extends MusicBeatState
 		
 		scripts = new ScriptGroup();
 		scripts.onAddScript.push(onAddScript);
-		Character.onCreate = initCharScript;
+		//Character.onCreate = initCharScript;
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
