@@ -4969,7 +4969,7 @@ class PlayState extends MusicBeatState
 		setOnLuas('curBeat', curBeat); //DAWGG?????
 		callOnLuas('onBeatHit', []);
 		scripts.setAll("curBeat", curBeat);
-		scripts.executeAllFunc("onBeatHit", [beatHit]);
+		scripts.executeAllFunc("onBeatHit", [curBeat]);
 	}
 
 	override function sectionHit()
@@ -5252,15 +5252,21 @@ class PlayState extends MusicBeatState
 		// NOTES
 		for (notetype in noteTypeMap.keys())
 		{
-		//var hx:Null<String> = null;
+		var hx:Null<String> = null;
 		for (extn in ScriptUtil.extns)
 			{
 				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
 
 				if (FileSystem.exists(path))
 				{
-					scriptData.set(notetype, File.getContent(path));
+					hx = File.getContent(path);
+					break;
 				}
+			}
+			if (hx != null)
+			{
+				if (!scriptData.exists("notetypes"))
+					scriptData.set("notetypes", hx);
 			}
 		}
 
