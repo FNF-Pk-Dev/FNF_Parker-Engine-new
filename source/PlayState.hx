@@ -5256,13 +5256,14 @@ class PlayState extends MusicBeatState
 		// NOTES
 		for (notetype in noteTypeMap.keys())
 		{
+		//var hx:Null<String> = null;
 		for (extn in ScriptUtil.extns)
 			{
 				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
 
 				if (FileSystem.exists(path))
 				{
-					scriptData.set("notetypes", hx);
+					scriptData.set(notetypes, File.getContent(path));
 				}
 			}
 		}
@@ -5286,7 +5287,7 @@ class PlayState extends MusicBeatState
 			if (hx != null)
 			{
 				if (!scriptData.exists("stage"))
-					
+					scriptData.set("stage", hx);
 			}
 		}
 
