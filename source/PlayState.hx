@@ -5046,7 +5046,7 @@ class PlayState extends MusicBeatState
 		return false;
 	}
 	#end
-    public function callOnHscript(name:String, ?args:Array<Any>):Array<Dynamic>
+    public function callOnHscript(name:String, ?args:Array<Dynamic>):Dynamic
     {
     scripts.executeAllFunc(name, args); 
     }
