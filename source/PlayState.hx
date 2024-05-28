@@ -5252,19 +5252,24 @@ class PlayState extends MusicBeatState
 		// NOTES
 		for (notetype in noteTypeMap.keys())
 		{
-		var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
+		//var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
 		var hx:Null<String> = null;
 		for (extn in ScriptUtil.extns)
 			{
-				if (FileSystem.exists(path))
-					hx = File.getContent(path);
-				    break;
+			    if (FileSystem.exists(Paths.modFolders('custom_notetypes/' + notetype + '.$extn')))
+		    {
+			    for (_ in ScriptUtil.findScriptsInDir(Paths.modFolders('custom_notetypes/' + notetype + '.$extn')))
+				files.push(_);
+		    }
+				if (FileSystem.exists(files))
+					hx = File.getContent(files);
+				    
 			}
 			if (hx != null)
 			{
-			    var scriptName:String = CoolUtil.getFileStringFromPath(path);
-				if (!scriptData.exists(notetype))
-					scriptData.set(notetype, hx);
+			    var scriptName:String = CoolUtil.getFileStringFromPath(files);
+				if (!scriptData.exists(scriptName))
+					scriptData.set(scriptName, hx);
 			}
 		}
 
