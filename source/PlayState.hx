@@ -5263,7 +5263,7 @@ class PlayState extends MusicBeatState
 
 				if (FileSystem.exists(path))
 				{
-					scriptData.set(notetypes, File.getContent(path));
+					scriptData.set(notetype, File.getContent(path));
 				}
 			}
 		}
