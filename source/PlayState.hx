@@ -5046,9 +5046,9 @@ class PlayState extends MusicBeatState
 		return false;
 	}
 	#end
-    public function callOnHscript(name:String, ?args:Array<Dynamic>):Dynamic
+    public function callOnHscript(name:String, ?args:Array<Any>):Array<Dynamic>
     {
-    scripts.executeAllFunc(name, args); 
+    return scripts.executeAllFunc(name, args); 
     }
 
 	public function callOnLuas(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
