@@ -126,7 +126,7 @@ class Script extends FlxBasic
 
 			for (extn in ScriptUtil.extns)
 			{
-				var path:String = Paths.modFolders('scripts/$scriptName.$extn');
+				var path:String = Paths.modFolders('$scriptName.$extn');
 
 				if (FileSystem.exists(path))
 				{
