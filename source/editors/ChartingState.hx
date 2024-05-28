@@ -973,7 +973,7 @@ class ChartingState extends MusicBeatState
 			if(FileSystem.exists(directory)) {
 				for (file in FileSystem.readDirectory(directory)) {
 					var path = haxe.io.Path.join([directory, file]);
-					if (!FileSystem.isDirectory(path) && file.endsWith('.lua') && file.endsWith('.$extn')) {
+					if (!FileSystem.isDirectory(path) && file.endsWith('.lua') || !FileSystem.isDirectory(path) && file.endsWith('.$extn')) {
 						var fileToCheck:String = file.substr(0, file.length - 4);
 						if(!noteTypeMap.exists(fileToCheck)) {
 							displayNameList.push(fileToCheck);
