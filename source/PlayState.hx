@@ -1233,11 +1233,7 @@ class PlayState extends MusicBeatState
 		androidc.visible = false;
 		#end
 
-		// if (SONG.song == 'South')
-		// FlxG.camera.alpha = 0.7;
-		// UI_camera.zoom = 1;
 
-		// cameras = [FlxG.cameras.list[1]];
 		startingSong = true;
 		
 		#if LUA_ALLOWED
@@ -5046,7 +5042,7 @@ class PlayState extends MusicBeatState
 		return false;
 	}
 	#end
-    public function callOnHscript(name:String, ?args:Array<Any>):Array<Dynamic>
+    public function callOnHScripts(name:String, ?args:Array<Any>):Array<Dynamic>
     {
     return scripts.executeAllFunc(name, args); 
     }
