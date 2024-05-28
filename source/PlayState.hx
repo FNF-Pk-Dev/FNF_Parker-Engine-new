@@ -5256,17 +5256,14 @@ class PlayState extends MusicBeatState
 		for (extn in ScriptUtil.extns)
 			{
 				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
-
 				if (FileSystem.exists(path))
-				{
 					hx = File.getContent(path);
-					break;
-				}
+				
 			}
 			if (hx != null)
 			{
-				if (!scriptData.exists("notetypes"))
-					scriptData.set("notetypes", hx);
+				if (!scriptData.exists(notetype))
+					scriptData.set(notetype, hx);
 			}
 		}
 
