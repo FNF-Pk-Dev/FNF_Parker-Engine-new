@@ -5046,6 +5046,10 @@ class PlayState extends MusicBeatState
 		return false;
 	}
 	#end
+    public function callOnHscript(name:String, ?args:Array<Any>):Array<Dynamic>
+    {
+    scripts.executeAllFunc(name, args); 
+    }
 
 	public function callOnLuas(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
 		var returnVal = FunkinLua.Function_Continue;
@@ -5246,6 +5250,27 @@ class PlayState extends MusicBeatState
 				{
 					scriptData.set(scriptName, hx);
 				}
+			}
+		}
+		
+		// NOTES
+		for (notetype in noteTypeMap.keys())
+		{
+		var hx:Null<String> = null;
+		for (extn in ScriptUtil.extns)
+			{
+				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
+
+				if (FileSystem.exists(path))
+				{
+					hx = File.getContent(path);
+					break;
+				}
+			}
+			if (hx != null)
+			{
+				if (!scriptData.exists("note"))
+					scriptData.set("note", hx);
 			}
 		}
 
