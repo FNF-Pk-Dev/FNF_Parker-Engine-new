@@ -50,7 +50,7 @@ import openfl.media.Sound;
 import openfl.net.FileReference;
 import openfl.utils.Assets as OpenFlAssets;
 import openfl.utils.ByteArray;
-
+import hscript.ScriptUtil;
 using StringTools;
 #if sys
 import flash.media.Sound;
@@ -967,13 +967,13 @@ class ChartingState extends MusicBeatState
 		for(mod in Paths.getGlobalMods())
 			directories.push(Paths.mods(mod + '/custom_notetypes/'));
 		#end
-
+        for (extn in ScriptUtil.extns){
 		for (i in 0...directories.length) {
 			var directory:String =  directories[i];
 			if(FileSystem.exists(directory)) {
 				for (file in FileSystem.readDirectory(directory)) {
 					var path = haxe.io.Path.join([directory, file]);
-					if (!FileSystem.isDirectory(path) && file.endsWith('.lua')) {
+					if (!FileSystem.isDirectory(path) && file.endsWith('.lua') && file.endsWith('.$extn')) {
 						var fileToCheck:String = file.substr(0, file.length - 4);
 						if(!noteTypeMap.exists(fileToCheck)) {
 							displayNameList.push(fileToCheck);
@@ -985,7 +985,8 @@ class ChartingState extends MusicBeatState
 				}
 			}
 		}
-		#end
+	}
+	#end
 
 		for (i in 1...displayNameList.length) {
 			displayNameList[i] = i + '. ' + displayNameList[i];
