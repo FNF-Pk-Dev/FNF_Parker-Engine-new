@@ -1118,6 +1118,18 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
+		for (notetype in noteTypeMap.keys())
+		{
+		var hx:Null<String> = null;
+		for (extn in ScriptUtil.extns)
+			{
+				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
+				if (FileSystem.exists(path))
+					hx = File.getContent(path);
+					scripts.onAddScript.push(hx);
+				    break;
+			}
+		}
 		for (event in eventPushedMap.keys())
 		{
 			var luaToLoad:String = Paths.modFolders('custom_events/' + event + '.lua');
@@ -5249,29 +5261,6 @@ class PlayState extends MusicBeatState
 			}
 		}
 		
-		// NOTES
-		for (notetype in noteTypeMap.keys())
-		{
-		//var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
-		var hx:Null<String> = null;
-		for (extn in ScriptUtil.extns)
-			{
-			    if (FileSystem.exists(Paths.modFolders('custom_notetypes/' + notetype + '.$extn')))
-		    {
-			    for (_ in ScriptUtil.findScriptsInDir(Paths.modFolders('custom_notetypes/' + notetype + '.$extn')))
-				files.push(_);
-		    }
-				if (FileSystem.exists(files))
-					hx = File.getContent(files);
-				    
-			}
-			if (hx != null)
-			{
-			    var scriptName:String = CoolUtil.getFileStringFromPath(files);
-				if (!scriptData.exists(scriptName))
-					scriptData.set(scriptName, hx);
-			}
-		}
 
 		// STAGE SCRIPTS
 		if (SONG.stage != null)
