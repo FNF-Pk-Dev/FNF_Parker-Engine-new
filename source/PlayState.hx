@@ -1120,7 +1120,7 @@ class PlayState extends MusicBeatState
 		}
 		for (notetype in noteTypeMap.keys())
 		{
-		var hx:Null<String> = null;
+		var hx:String = '';
 		for (extn in ScriptUtil.extns)
 			{
 				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
