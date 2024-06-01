@@ -1118,18 +1118,6 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
-		for (notetype in noteTypeMap.keys())
-		{
-		var hx:String = '';
-		for (extn in ScriptUtil.extns)
-			{
-				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
-				if (FileSystem.exists(path))
-					hx = File.getContent(path);
-					scripts.onAddScript.push(hx);
-				    break;
-			}
-		}
 		for (event in eventPushedMap.keys())
 		{
 			var luaToLoad:String = Paths.modFolders('custom_events/' + event + '.lua');
@@ -4549,9 +4537,8 @@ class PlayState extends MusicBeatState
 				popUpScore(note);
 			}
 			if (!cpuControlled)
-			{
 			health += note.hitHealth * healthGain;
-			}
+			
 			
 
 			if(!note.noAnimation) {
@@ -4629,6 +4616,7 @@ class PlayState extends MusicBeatState
 
 	public function spawnNoteSplash(x:Float, y:Float, data:Int, ?note:Note = null) {
 		var skin:String = 'noteSplashes';
+		scripts.executeAllFunc("SkinNoteSplash", [skin]);
 		if(PlayState.SONG.splashSkin != null && PlayState.SONG.splashSkin.length > 0) skin = PlayState.SONG.splashSkin;
 
 		var hue:Float = 0;
@@ -5119,7 +5107,7 @@ class PlayState extends MusicBeatState
 			else
 			{
 				// Rating Percent
-				ratingPercent = Math.min(1, Math.max(0, totalNotesHit / totalPlayed));
+				ratingPercent = totalNotesHit / totalPlayed;
 				//trace((totalNotesHit / totalPlayed) + ', Total: ' + totalPlayed + ', notes hit: ' + totalNotesHit);
 
 				// Rating Name
@@ -5260,8 +5248,29 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
+		for (notetype in noteTypeMap.keys())
+		{
+		var hx:Null<String> = null;
+		for (extn in ScriptUtil.extns)
+			{
+				var path:String = Paths.modFolders('custom_notetypes/' + notetype + '.$extn');
+				if (FileSystem.exists(path))
+					hx = File.getContent(path);
+					scripts.onAddScript.push(hx);
+				    break;
+			}
+			if (FileSystem.exists(path))
+				{
+					hx = File.getContent(path);
+					break;
+				}
+				if (hx != null)
+			{
+				if (!scriptData.exists("stage"))
+					scriptData.set("stage", hx);
+			}
+			}
 		
-
 		// STAGE SCRIPTS
 		if (SONG.stage != null)
 		{
@@ -5434,7 +5443,6 @@ class PlayState extends MusicBeatState
 		script.set("onGameOver", function() {}); // ! HAS PAUSE
 
 		//  MISC
-		//script.set("onUpdate", function(?elapsed:Float) {});
 		script.set("onUpdatePost", function(?elapsed:Float) {});
 		script.set("onMoveCamera", function(focus:String) {});
 		script.set("recalcRating", function(?badHit:Bool = false) {}); // ! HAS PAUSE
