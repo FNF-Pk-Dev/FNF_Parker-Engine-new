@@ -54,7 +54,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option('GPU Cache', //Name
-			'Used to load the cache.\On the GPU.', //Description
+			'Used to load the cache.\n the GPU.', //Description
 			'cacheOnGPU', //Save data variable name
 			'bool', //Variable type
 			true); //Default value
