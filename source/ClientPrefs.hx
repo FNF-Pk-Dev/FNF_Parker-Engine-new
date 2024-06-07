@@ -35,7 +35,6 @@ class ClientPrefs {
 	public static var hitsoundVolume:Float = 0;
 	public static var pauseMusic:String = 'Peace';
 	public static var checkForUpdates:Bool = true;
-	public static var gamerting:Bool = true;
 	public static var comboStacking = true;
 	public static var cacheOnGPU:Bool = true;
 	public var hitboxPT = true;
@@ -66,7 +65,7 @@ class ClientPrefs {
 		'opponentplay' => false
 	];
 
-	public static var comboOffset:Array<Int> = [0, 0, 0, 0];
+	//public static var comboOffset:Array<Int> = [0, 0, 0, 0];
 	public static var ratingOffset:Int = 0;
 	public static var sickWindow:Int = 45;
 	public static var goodWindow:Int = 90;
@@ -110,7 +109,7 @@ class ClientPrefs {
 		FlxG.save.data.middleScroll = middleScroll;
 		FlxG.save.data.opponentStrums = opponentStrums;
 		FlxG.save.data.showFPS = showFPS;
-		FlxG.save.data.useGPUCaching = useGPUCaching;
+		FlxG.save.data.cacheOnGPU = cacheOnGPU;
 		FlxG.save.data.flashing = flashing;
 		FlxG.save.data.globalAntialiasing = globalAntialiasing;
 		FlxG.save.data.noteSplashes = noteSplashes;
@@ -130,7 +129,6 @@ class ClientPrefs {
 		FlxG.save.data.scoreZoom = scoreZoom;
 		FlxG.save.data.noReset = noReset;
 		FlxG.save.data.healthBarAlpha = healthBarAlpha;
-		FlxG.save.data.comboOffset = comboOffset;
 		FlxG.save.data.achievementsMap = Achievements.achievementsMap;
 		FlxG.save.data.henchmenDeath = Achievements.henchmenDeath;
 
@@ -206,8 +204,8 @@ class ClientPrefs {
 		if(FlxG.save.data.rainbowFPS != null) {
 			rainbowFPS = FlxG.save.data.rainbowFPS;
 		}
-		if(FlxG.save.data.useGPUCaching != null) {
-			useGPUCaching = FlxG.save.data.useGPUCaching;
+		if(FlxG.save.data.cacheOnGPU != null) {
+			cacheOnGPU = FlxG.save.data.cacheOnGPU;
 		}
 		if(FlxG.save.data.comboHUD != null) {
 			comboHUD = FlxG.save.data.comboHUD;
@@ -247,9 +245,6 @@ class ClientPrefs {
 		}
 		if(FlxG.save.data.healthBarAlpha != null) {
 			healthBarAlpha = FlxG.save.data.healthBarAlpha;
-		}
-		if(FlxG.save.data.comboOffset != null) {
-			comboOffset = FlxG.save.data.comboOffset;
 		}
 		
 		if(FlxG.save.data.ratingOffset != null) {
