@@ -37,7 +37,7 @@ class ClientPrefs {
 	public static var checkForUpdates:Bool = true;
 	public static var gamerting:Bool = true;
 	public static var comboStacking = true;
-	public static var useGPUCaching:Bool = true;
+	public static var cacheOnGPU:Bool = true;
 	public var hitboxPT = true;
 	public var hitboxLocation:String = 'Space';
 	public static var comboHUD:String = 'camGame';
