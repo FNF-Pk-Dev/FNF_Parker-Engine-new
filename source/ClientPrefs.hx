@@ -39,7 +39,6 @@ class ClientPrefs {
 	public static var cacheOnGPU:Bool = true;
 	public var hitboxPT = true;
 	public var hitboxLocation:String = 'Space';
-	public static var comboHUD:String = 'camGame';
 	public static var hitboxmode:String = 'New';  //starting new way to change between hitboxes yay
 	public static var hitboxalpha:Float = 0.2; //someone request this lol
 	public static var virtualPadAlpha:Float = 0.5;
@@ -143,8 +142,6 @@ class ClientPrefs {
 		FlxG.save.data.pauseMusic = pauseMusic;
 		FlxG.save.data.checkForUpdates = checkForUpdates;
 		FlxG.save.data.comboStacking = comboStacking;
-		FlxG.save.data.gamerting = gamerting;
-		FlxG.save.data.comboHUD = comboHUD;
 		FlxG.save.data.hitboxmode = hitboxmode;
 		FlxG.save.data.hitboxalpha = hitboxalpha;
 		FlxG.save.data.virtualPadAlpha = virtualPadAlpha;
@@ -206,9 +203,6 @@ class ClientPrefs {
 		}
 		if(FlxG.save.data.cacheOnGPU != null) {
 			cacheOnGPU = FlxG.save.data.cacheOnGPU;
-		}
-		if(FlxG.save.data.comboHUD != null) {
-			comboHUD = FlxG.save.data.comboHUD;
 		}
 		/*if(FlxG.save.data.cursing != null) {
 			cursing = FlxG.save.data.cursing;
