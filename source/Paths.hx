@@ -274,7 +274,7 @@ class Paths
 		return null;
 	}
 	
-	inline static public function cacheBitmap(file:String, ?bitmap:BitmapData = null, ?allowGPU:Bool = true)
+	static public function cacheBitmap(file:String, ?bitmap:BitmapData = null, ?allowGPU:Bool = true)
 	{
 		if(bitmap == null)
 		{
