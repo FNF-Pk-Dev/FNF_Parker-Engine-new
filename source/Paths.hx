@@ -307,14 +307,14 @@ class Paths
 		currentTrackedAssets.set(file, newGraphic);
 		return newGraphic;
 	}
-
+/*
 	inline static public function gif(key:String, ?library:String):FlxGraphic
 	{
 		// streamlined the assets process more
 		var returnAsset:FlxGraphic = returnGraphic(key, library);
 		return returnAsset;
 	}
-
+*/
 	static public function getTextFromFile(key:String, ?ignoreMods:Bool = false):String
 	{
 		#if MODS_ALLOWED
@@ -368,7 +368,7 @@ class Paths
 
 	
 	
-	inline static public function getSparrowAtlas(key:String, ?library:String)
+	inline static public function getSparrowAtlas(key:String, ?library:String, ?allowGPU:Bool = true)
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = image(key, library, allowGPU);
@@ -383,7 +383,7 @@ class Paths
 		#end
 	}
 
-	inline static public function getPackerAtlas(key:String, ?library:String)
+	inline static public function getPackerAtlas(key:String, ?library:String, ?allowGPU:Bool = true)
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = image(key, library, allowGPU);
@@ -398,7 +398,7 @@ class Paths
 		#end
 	}
 	
-	inline static public function getXMLAtlas(key:String, ?library:String):FlxAtlasFrames
+	inline static public function getXMLAtlas(key:String, ?library:String, ?allowGPU:Bool = true):FlxAtlasFrames
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = image(key, library, allowGPU);
@@ -413,7 +413,7 @@ class Paths
 		#end
 	}
 
-	inline static public function getJSONAtlas(key:String, ?library:String)
+	inline static public function getJSONAtlas(key:String, ?library:String, ?allowGPU:Bool = true)
 	{
 		#if MODS_ALLOWED
 		var imageLoaded:FlxGraphic = image(key, library, allowGPU);

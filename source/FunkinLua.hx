@@ -1523,8 +1523,8 @@ class FunkinLua {
 			}
 			PlayState.instance.addCharacterToList(name, charType);
 		});
-		Lua_helper.add_callback(lua, "precacheImage", function(name:String) {
-			Paths.returnGraphic(name);
+		Lua_helper.add_callback(lua, "precacheImage", function(name:String, ?library:String, ?allowGPU:Bool = true) {
+			Paths.image(key, library, allowGPU);
 		});
 		Lua_helper.add_callback(lua, "precacheSound", function(name:String) {
 			CoolUtil.precacheSound(name);
@@ -3357,7 +3357,7 @@ class FunkinLua {
     {
      LuaL.dofile(lua, codeToRun);
   }
-  */
+  /
 }
 
 class ModchartSprite extends FlxSprite
