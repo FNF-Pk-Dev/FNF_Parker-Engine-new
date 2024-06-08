@@ -3357,7 +3357,7 @@ class FunkinLua {
     {
      LuaL.dofile(lua, codeToRun);
   }
-  /
+  */
 }
 
 class ModchartSprite extends FlxSprite
