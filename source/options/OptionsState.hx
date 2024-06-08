@@ -31,7 +31,7 @@ using StringTools;
 
 class OptionsState extends MusicBeatState
 {
-	var options:Array<String> = ['Note Colors', 'Controls', 'Graphics', 'Visuals and UI', 'Gameplay'];
+	var options:Array<String> = ['Note Colors', 'Controls', 'Adjust Delay', 'Graphics', 'Visuals and UI', 'Gameplay'];
 	var HUDwrinText:FlxText;
 	private var grpOptions:FlxTypedGroup<Alphabet>;
 	private static var curSelected:Int = 0;
@@ -65,9 +65,8 @@ class OptionsState extends MusicBeatState
 				#end
 				openSubState(new options.GameplaySettingsSubState());
 				//放心吧 ，没用了
-			case 'Adjust Delay and Combo':
-				if (ClientPrefs.comboHUD == 'camHUD')
-				{LoadingState.loadAndSwitchState(new options.NoteOffsetState());}
+			case 'Adjust Delay':
+				LoadingState.loadAndSwitchState(new options.NoteOffsetState());
 		}
 	}
 
