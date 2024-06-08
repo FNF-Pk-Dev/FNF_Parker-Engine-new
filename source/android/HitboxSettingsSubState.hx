@@ -46,6 +46,21 @@ class HitboxSettingsSubState extends BaseOptionsMenu
 			'Classic',
 			['Classic', 'New']);
 		  addOption(option);
+
+		var option:Option = new Option('NewHitbox Mode:',
+			"Choose your NewHitbox Space and None!",
+			'hitboxLocation',
+			'string',
+			'None',
+			['None', 'Space']);
+		  addOption(option);
+
+		var option:Option = new Option('Space NewHitbox Mode:',
+			"Choose your Space NewHitbox Up and Down!",
+			'hitboxPT',
+			'bool',
+			 false);
+		  addOption(option);
 		  
 		var option:Option = new Option('Hitbox Opacity', //mariomaster was here again
 			'Changes opacity',
