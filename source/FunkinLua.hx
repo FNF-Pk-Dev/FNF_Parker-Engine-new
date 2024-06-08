@@ -1524,7 +1524,7 @@ class FunkinLua {
 			PlayState.instance.addCharacterToList(name, charType);
 		});
 		Lua_helper.add_callback(lua, "precacheImage", function(name:String, ?library:String, ?allowGPU:Bool = true) {
-			Paths.image(key, library, allowGPU);
+			Paths.image(name, library, allowGPU);
 		});
 		Lua_helper.add_callback(lua, "precacheSound", function(name:String) {
 			CoolUtil.precacheSound(name);
