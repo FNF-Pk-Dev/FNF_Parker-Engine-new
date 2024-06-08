@@ -40,8 +40,8 @@ class FlxNewHitbox extends FlxSpriteGroup
         /*if (widghtScreen == null)
             widghtScreen = FlxG.width;*/
 
-        final offsetFir:Int = (FlxG.save.data.mechsInputVariants ? Std.int(FlxG.height / 4) * 3 : 0);
-		final offsetSec:Int = (FlxG.save.data.mechsInputVariants ? 0 : Std.int(FlxG.height / 4));
+        final offsetFir:Int = (ClientPrefs.hitboxPT ? Std.int(FlxG.height / 4) * 3 : 0);
+		final offsetSec:Int = (ClientPrefs.hitboxPT ? 0 : Std.int(FlxG.height / 4));
 		
         //add graphic
         hitbox = new FlxSpriteGroup();
