@@ -138,7 +138,6 @@ class NoteOffsetState extends MusicBeatState
 		add(dumbTexts);
 		createTexts();
 
-		repositionCombo();
 
 		// Note delay stuff
 		
@@ -179,6 +178,8 @@ class NoteOffsetState extends MusicBeatState
 		add(timeBarBG);
 		add(timeBar);
 		add(timeTxt);
+		
+		updateMode();
 
 		///////////////////////
 
@@ -199,7 +200,7 @@ class NoteOffsetState extends MusicBeatState
 		FlxG.sound.playMusic(Paths.music('offsetSong'), 1, true);
 
 		#if android
-		addVirtualPad(FULL, A_B_C);
+		addVirtualPad(FULL, B);
 		addPadCamera();
 		#end
 
@@ -207,7 +208,7 @@ class NoteOffsetState extends MusicBeatState
 	}
 
 	var holdTime:Float = 0;
-	var onComboMenu:Bool = true;
+	var onComboMenu:Bool = false;
 	var holdingObjectType:Null<Bool> = null;
 
 	var startMousePos:FlxPoint = new FlxPoint();
@@ -232,83 +233,14 @@ class NoteOffsetState extends MusicBeatState
 				FlxG.keys.justPressed.S
 			];
 
-			if(controlArray.contains(true))
-			{
-				for (i in 0...controlArray.length)
-				{
-					if(controlArray[i])
-					{
-						switch(i)
-						{
-							case 0:
-								ClientPrefs.comboOffset[0] -= addNum;
-							case 1:
-								ClientPrefs.comboOffset[0] += addNum;
-							case 2:
-								ClientPrefs.comboOffset[1] += addNum;
-							case 3:
-								ClientPrefs.comboOffset[1] -= addNum;
-							case 4:
-								ClientPrefs.comboOffset[2] -= addNum;
-							case 5:
-								ClientPrefs.comboOffset[2] += addNum;
-							case 6:
-								ClientPrefs.comboOffset[3] += addNum;
-							case 7:
-								ClientPrefs.comboOffset[3] -= addNum;
-						}
-					}
-				}
-				repositionCombo();
-			}
 
 			// probably there's a better way to do this but, oh well.
-			if (FlxG.mouse.justPressed)
-			{
-				holdingObjectType = null;
-				FlxG.mouse.getScreenPosition(camHUD, startMousePos);
-				if (startMousePos.x - comboNums.x >= 0 && startMousePos.x - comboNums.x <= comboNums.width &&
-					startMousePos.y - comboNums.y >= 0 && startMousePos.y - comboNums.y <= comboNums.height)
-				{
-					holdingObjectType = true;
-					startComboOffset.x = ClientPrefs.comboOffset[2];
-					startComboOffset.y = ClientPrefs.comboOffset[3];
-					//trace('yo bro');
-				}
-				else if (startMousePos.x - rating.x >= 0 && startMousePos.x - rating.x <= rating.width &&
-						 startMousePos.y - rating.y >= 0 && startMousePos.y - rating.y <= rating.height)
-				{
-					holdingObjectType = false;
-					startComboOffset.x = ClientPrefs.comboOffset[0];
-					startComboOffset.y = ClientPrefs.comboOffset[1];
-					//trace('heya');
-				}
-			}
+			
 			if(FlxG.mouse.justReleased) {
 				holdingObjectType = null;
 				//trace('dead');
 			}
 
-			if(holdingObjectType != null)
-			{
-				if(FlxG.mouse.justMoved)
-				{
-					var mousePos:FlxPoint = FlxG.mouse.getScreenPosition(camHUD);
-					var addNum:Int = holdingObjectType ? 2 : 0;
-					ClientPrefs.comboOffset[addNum + 0] = Math.round((mousePos.x - startMousePos.x) + startComboOffset.x);
-					ClientPrefs.comboOffset[addNum + 1] = -Math.round((mousePos.y - startMousePos.y) - startComboOffset.y);
-					repositionCombo();
-				}
-			}
-
-			if(controls.RESET #if android || _virtualpad.buttonC.justPressed #end)
-			{
-				for (i in 0...ClientPrefs.comboOffset.length)
-				{
-					ClientPrefs.comboOffset[i] = 0;
-				}
-				repositionCombo();
-			}
 		}
 		else
 		{
@@ -345,12 +277,6 @@ class NoteOffsetState extends MusicBeatState
 				barPercent = 0;
 				updateNoteDelay();
 			}
-		}
-
-		if(controls.ACCEPT)
-		{
-			onComboMenu = !onComboMenu;
-			updateMode();
 		}
 
 		if(controls.BACK)
@@ -411,18 +337,6 @@ class NoteOffsetState extends MusicBeatState
 		lastBeatHit = curBeat;
 	}
 
-	function repositionCombo()
-	{
-		rating.screenCenter();
-		rating.x = coolText.x - 40 + ClientPrefs.comboOffset[0];
-		rating.y -= 60 + ClientPrefs.comboOffset[1];
-
-		comboNums.screenCenter();
-		comboNums.x = coolText.x - 90 + ClientPrefs.comboOffset[2];
-		comboNums.y += 80 - ClientPrefs.comboOffset[3];
-		reloadTexts();
-	}
-
 	function createTexts()
 	{
 		for (i in 0...4)
@@ -441,20 +355,7 @@ class NoteOffsetState extends MusicBeatState
 		}
 	}
 
-	function reloadTexts()
-	{
-		for (i in 0...dumbTexts.length)
-		{
-			switch(i)
-			{
-				case 0: dumbTexts.members[i].text = 'Rating Offset:';
-				case 1: dumbTexts.members[i].text = '[' + ClientPrefs.comboOffset[0] + ', ' + ClientPrefs.comboOffset[1] + ']';
-				case 2: dumbTexts.members[i].text = 'Numbers Offset:';
-				case 3: dumbTexts.members[i].text = '[' + ClientPrefs.comboOffset[2] + ', ' + ClientPrefs.comboOffset[3] + ']';
-			}
-		}
-	}
-
+	
 	function updateNoteDelay()
 	{
 		ClientPrefs.noteOffset = Math.round(barPercent);
