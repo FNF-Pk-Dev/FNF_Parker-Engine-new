@@ -53,7 +53,7 @@ class GraphicsSettingsSubState extends BaseOptionsMenu
 		option.onChange = onChangeAntiAliasing; //Changing onChange is only needed if you want to make a special interaction after it changes the value
 		addOption(option);
 
-		var option:Option = new Option('GPU Cache', //Name
+		var option:Option = new Option('GPU Textures', //Name
 			'Used to load the cache.\n the GPU.', //Description
 			'cacheOnGPU', //Save data variable name
 			'bool', //Variable type
