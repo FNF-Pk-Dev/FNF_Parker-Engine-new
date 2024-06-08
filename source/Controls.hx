@@ -662,6 +662,7 @@ class Controls extends FlxActionSet
 			case BACK: _back;
 			case PAUSE: _pause;
 			case RESET: _reset;
+			case SPACE: _space;
 		}
 	}
 
