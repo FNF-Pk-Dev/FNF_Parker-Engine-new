@@ -90,14 +90,6 @@ class VisualsUISubState extends BaseOptionsMenu
 		option.decimals = 1;
 		addOption(option);
 
-		var option:Option = new Option('ComboHUD:',
-			"What should the ComboHUD display?",
-			'comboHUD',
-			'string',
-			'camGame',
-			['camGame', 'camHUD']);
-		addOption(option);
-
 		var option:Option = new Option('Rainbow FPS', 
 			'Rainbow FPS text', 
 			'rainbowFPS', 
