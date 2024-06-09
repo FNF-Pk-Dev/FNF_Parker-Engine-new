@@ -56,7 +56,7 @@ class FlxNewHitbox extends FlxSpriteGroup
                 hitbox.add(add(buttonDown = createhitbox(Std.int(FlxG.width / 4), 0x00FFFF, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3)));
                 hitbox.add(add(buttonUp = createhitbox(Std.int(FlxG.width / 4) * 2, 0x00FF00, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3)));
                 hitbox.add(add(buttonRight = createhitbox(Std.int(FlxG.width / 4) * 3, 0xFF0000, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height / 4) * 3)));
-                hitbox.add(add(buttonSpace = createhitbox(0, 0x636363, offsetFir, FlxG.width, Std.int(FlxG.height / 4))));
+                hitbox.add(add(buttonSpace = createhitbox(0, 0xFFFFFF00, offsetFir, FlxG.width, Std.int(FlxG.height / 4))));
        }
     }
     
@@ -88,22 +88,19 @@ class FlxNewHitbox extends FlxSpriteGroup
         	height = FlxG.height;
         }
         button.loadGraphic(createHintGraphic(Std.int(width), Std.int(height), color));
-
+        button.scrollFactor.set();
         button.alpha = 0;
-
-    
-        button.onDown.callback = function (){
-            FlxTween.num(0, ClientPrefs.hitboxalpha, .075, {ease: FlxEase.circInOut}, function (a:Float) { button.alpha = a; });
-        };
-
-        button.onUp.callback = function (){
-            FlxTween.num(ClientPrefs.hitboxalpha, 0, .1, {ease: FlxEase.circInOut}, function (a:Float) { button.alpha = a; });
-        }
         
-        button.onOut.callback = function (){
-            FlxTween.num(ClientPrefs.hitboxalpha, 0, .2, {ease: FlxEase.circInOut}, function (a:Float) { button.alpha = a; });
-        }
-
+        button.onDown.callback = button.onOver.callback = function()
+		{
+			if (button.alpha != ClientPrefs.hitboxalpha)
+				button.alpha = ClientPrefs.hitboxalpha;
+		}
+		button.onUp.callback = button.onOut.callback = function()
+		{
+			if (button.alpha != 0.00001)
+				button.alpha = 0.00001;
+		}
         return button;
     }
 
