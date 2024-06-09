@@ -142,6 +142,7 @@ class ClientPrefs {
 		FlxG.save.data.pauseMusic = pauseMusic;
 		FlxG.save.data.checkForUpdates = checkForUpdates;
 		FlxG.save.data.comboStacking = comboStacking;
+		FlxG.save.data.hitboxPT = hitboxPT;
 		FlxG.save.data.hitboxLocation = hitboxLocation;
 		FlxG.save.data.hitboxmode = hitboxmode;
 		FlxG.save.data.hitboxalpha = hitboxalpha;
@@ -265,6 +266,9 @@ class ClientPrefs {
 		}
 		if(FlxG.save.data.hitboxLocation != null) {
 			hitboxLocation = FlxG.save.data.hitboxLocation;
+		}
+		if(FlxG.save.data.hitboxPT != null) {
+			hitboxPT = FlxG.save.data.hitboxPT;
 		}
 		if(FlxG.save.data.hitboxmode != null) {
 			hitboxmode = FlxG.save.data.hitboxmode;
