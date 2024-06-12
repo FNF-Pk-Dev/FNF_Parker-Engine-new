@@ -1231,7 +1231,7 @@ class PlayState extends MusicBeatState
 		
 		comboGroup = new FlxSpriteGroup();
 		add(comboGroup);
-		comboGroup.cameras = [camHUD];
+		comboGroup.cameras = [camGame];
 
 		#if android
 		addAndroidControls();
