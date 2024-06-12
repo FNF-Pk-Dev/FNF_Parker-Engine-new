@@ -1229,10 +1229,6 @@ class PlayState extends MusicBeatState
 		timeTxt.cameras = [camHUD];
 		doof.cameras = [camHUD];
 		
-		comboGroup = new FlxSpriteGroup();
-		add(comboGroup);
-		comboGroup.cameras = [camGame];
-
 		#if android
 		addAndroidControls();
 		androidc.visible = false;
@@ -3911,9 +3907,6 @@ class PlayState extends MusicBeatState
 	public var showCombo:Bool = true;
 	public var showComboNum:Bool = true;
 	public var showRating:Bool = true;
-	
-	public var comboGroup:FlxSpriteGroup;
-	//Wtf
 
 	private function cachePopUpScore()
 	{
@@ -3988,29 +3981,26 @@ class PlayState extends MusicBeatState
 		}
 
 		rating.loadGraphic(Paths.image(pixelShitPart1 + daRating.image + pixelShitPart2));
-		rating.x += ratingOffsets[0];
-		rating.y -= ratingOffsets[1];
 		rating.screenCenter();
 		rating.x = coolText.x - 40;
 		rating.y -= 60;
 		rating.acceleration.y = 550 * playbackRate * playbackRate;
 		rating.velocity.y -= FlxG.random.int(140, 175) * playbackRate;
 		rating.velocity.x -= FlxG.random.int(0, 10) * playbackRate;
+		rating.x += ratingOffsets[0];
+		rating.y -= ratingOffsets[1];
 		rating.visible = showRating;
 
 		var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'combo' + pixelShitPart2));
-		comboSpr.x += ratingOffsets[0];
-		comboSpr.y -= ratingOffsets[1];
 		comboSpr.screenCenter();
 		comboSpr.x = coolText.x;
 		comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 		comboSpr.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 		comboSpr.visible = showCombo;
 		comboSpr.y += 60;
+		comboSpr.x += ratingOffsets[0];
+		comboSpr.y -= ratingOffsets[1];
 		comboSpr.velocity.x += FlxG.random.int(1, 10) * playbackRate;
-		
-		comboGroup.add(comboSpr);
-		comboGroup.add(rating);
 
 		insert(members.indexOf(strumLineNotes), rating);
 		
@@ -4067,8 +4057,6 @@ class PlayState extends MusicBeatState
 		for (i in seperatedScore)
 		{
 			var numScore:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'num' + Std.int(i) + pixelShitPart2));
-    		numScore.x += ratingOffsets[2];
-			numScore.y -= ratingOffsets[3];
 			numScore.screenCenter();
 			numScore.x = coolText.x + (43 * daLoop) - 90;
 			numScore.y += 80;
@@ -4091,8 +4079,9 @@ class PlayState extends MusicBeatState
 			numScore.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 			numScore.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
 			numScore.velocity.x = FlxG.random.float(-5, 5) * playbackRate;
+			numScore.x += ratingOffsets[2];
+			numScore.y -= ratingOffsets[3];
 			numScore.visible = showComboNum;
-			comboGroup.add(numScore);
 
 			//if (combo >= 10 || combo == 0)
 			if(showComboNum)
