@@ -3999,7 +3999,6 @@ class PlayState extends MusicBeatState
 		rating.visible = showRating;
 
 		var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'combo' + pixelShitPart2));
-		comboSpr.cameras = [camGame];
 		comboSpr.x += ratingOffsets[0];
 		comboSpr.y -= ratingOffsets[1];
 		comboSpr.screenCenter();
@@ -4068,7 +4067,6 @@ class PlayState extends MusicBeatState
 		for (i in seperatedScore)
 		{
 			var numScore:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'num' + Std.int(i) + pixelShitPart2));
-    		numScore.cameras = [camGame];
     		numScore.x += ratingOffsets[2];
 			numScore.y -= ratingOffsets[3];
 			numScore.screenCenter();
