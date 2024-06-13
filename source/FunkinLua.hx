@@ -66,6 +66,7 @@ import Discord;
 
 #if android
 import android.Hardware;
+import android.FlxNewHitbox;
 #end
 
 using StringTools;
@@ -1489,7 +1490,8 @@ class FunkinLua {
 				case 'back': key = PlayState.instance.getControl('BACK');
 				case 'pause': key = PlayState.instance.getControl('PAUSE');
 				case 'reset': key = PlayState.instance.getControl('RESET');
-				case 'space': key = FlxG.keys.justPressed.SPACE || if (ClientPrefs.hitboxLocation == 'Space') PlayState.instance.getControl('SPACE_P');//an extra key for convinience
+				case 'space': 
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justPressed.SPACE || PlayState.instance.getControl('SPACE_P')}else{key = FlxG.keys.justPressed.SPACE};//an extra key for convinience
 			}
 			return key;
 		});
@@ -1500,7 +1502,8 @@ class FunkinLua {
 				case 'down': key = PlayState.instance.getControl('NOTE_DOWN');
 				case 'up': key = PlayState.instance.getControl('NOTE_UP');
 				case 'right': key = PlayState.instance.getControl('NOTE_RIGHT');
-				case 'space': key = FlxG.keys.pressed.SPACE || if (ClientPrefs.hitboxLocation == 'Space') PlayState.instance.getControl('SPACE');//an extra key for convinience
+				case 'space': 
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.pressed.SPACE || PlayState.instance.getControl('SPACE')}else{key = FlxG.keys.pressed.SPACE};//an extra key for convinience
 			}
 			return key;
 		});
@@ -1511,7 +1514,8 @@ class FunkinLua {
 				case 'down': key = PlayState.instance.getControl('NOTE_DOWN_R');
 				case 'up': key = PlayState.instance.getControl('NOTE_UP_R');
 				case 'right': key = PlayState.instance.getControl('NOTE_RIGHT_R');
-				case 'space': key = FlxG.keys.justReleased.SPACE || if (ClientPrefs.hitboxLocation == 'Space') PlayState.instance.getControl('SPACE_R');//an extra key for convinience
+				case 'space':
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justReleased.SPACE || PlayState.instance.getControl('SPACE_R')}else{key = FlxG.keys.justReleased.SPACE};//an extra key for convinience
 			}
 			return key;
 		});
