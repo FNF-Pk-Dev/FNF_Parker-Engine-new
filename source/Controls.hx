@@ -317,16 +317,19 @@ class Controls extends FlxActionSet
 	public var SPACE(get, never):Bool;
 
 	inline function get_SPACE()
+	if (ClientPrefs.hitboxLocation == 'Space')
 		return _space.check();		
 	
 	public var SPACE_R(get, never):Bool;
 
 	inline function get_SPACE_R()
+	if (ClientPrefs.hitboxLocation == 'Space')
 		return _spaceR.check();		
 		
 	public var SPACE_P(get, never):Bool;
 
 	inline function get_SPACE_P()
+	if (ClientPrefs.hitboxLocation == 'Space')
 		return _spaceP.check();
 
 	#if (haxe >= "4.0.0")
@@ -362,9 +365,10 @@ class Controls extends FlxActionSet
 		add(_back);
 		add(_pause);
 		add(_reset);
-		add(_space);
+		if (ClientPrefs.hitboxLocation == 'Space')
+		{add(_space);
 		add(_spaceP);
-		add(_spaceR);
+		add(_spaceR);}
 
 		for (action in digitalActions)
 			byName[action.name] = action;
@@ -404,9 +408,10 @@ class Controls extends FlxActionSet
 		add(_back);
 		add(_pause);
 		add(_reset);
-		add(_space);
+		if (ClientPrefs.hitboxLocation == 'Space')
+		{add(_space);
 		add(_spaceP);
-		add(_spaceR);
+		add(_spaceR);}
 
 		for (action in digitalActions)
 			byName[action.name] = action;
@@ -464,7 +469,8 @@ class Controls extends FlxActionSet
 		inline forEachBound(Control.NOTE_DOWN, (action, state) -> addButtonNOTES(action, Hitbox.buttonDown, state));
 		inline forEachBound(Control.NOTE_LEFT, (action, state) -> addButtonNOTES(action, Hitbox.buttonLeft, state));
 		inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addButtonNOTES(action, Hitbox.buttonRight, state));
-		inline forEachBound(Control.SPACE, (action, state) -> addButtonUI(action, Hitbox.buttonSpace, state));
+		if (ClientPrefs.hitboxLocation == 'Space'){
+		inline forEachBound(Control.SPACE, (action, state) -> addButtonUI(action, Hitbox.buttonSpace, state));}
 	}
 	
 	public function setVirtualPadUI(virtualPad:FlxVirtualPad, ?DPad:FlxDPadMode, ?Action:FlxActionMode) 
@@ -669,7 +675,7 @@ class Controls extends FlxActionSet
 			case BACK: _back;
 			case PAUSE: _pause;
 			case RESET: _reset;
-			case SPACE: _space;
+			case SPACE: if (ClientPrefs.hitboxLocation == 'Space') _space;
 		}
 	}
 
@@ -730,9 +736,10 @@ class Controls extends FlxActionSet
 			case RESET:
 				func(_reset, JUST_PRESSED);
 			case SPACE:
+			if (ClientPrefs.hitboxLocation == 'Space'){
 				func(_space, PRESSED);
 				func(_spaceP, JUST_PRESSED);
-				func(_spaceR, JUST_RELEASED);
+				func(_spaceR, JUST_RELEASED);}
 		}
 	}
 
