@@ -317,19 +317,16 @@ class Controls extends FlxActionSet
 	public var SPACE(get, never):Bool;
 
 	inline function get_SPACE()
-	if (ClientPrefs.hitboxLocation == 'Space')
 		return _space.check();		
 	
 	public var SPACE_R(get, never):Bool;
 
 	inline function get_SPACE_R()
-	if (ClientPrefs.hitboxLocation == 'Space')
 		return _spaceR.check();		
 		
 	public var SPACE_P(get, never):Bool;
 
 	inline function get_SPACE_P()
-	if (ClientPrefs.hitboxLocation == 'Space')
 		return _spaceP.check();
 
 	#if (haxe >= "4.0.0")
