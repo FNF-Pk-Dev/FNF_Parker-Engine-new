@@ -1491,7 +1491,7 @@ class FunkinLua {
 				case 'pause': key = PlayState.instance.getControl('PAUSE');
 				case 'reset': key = PlayState.instance.getControl('RESET');
 				case 'space': 
-				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justPressed.SPACE || PlayState.instance.getControl('SPACE_P');}else{key = FlxG.keys.justPressed.SPACE};//an extra key for convinience
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justPressed.SPACE || PlayState.instance.getControl('SPACE_P');}else{key = FlxG.keys.justPressed.SPACE;};//an extra key for convinience
 			}
 			return key;
 		});
@@ -1503,7 +1503,7 @@ class FunkinLua {
 				case 'up': key = PlayState.instance.getControl('NOTE_UP');
 				case 'right': key = PlayState.instance.getControl('NOTE_RIGHT');
 				case 'space': 
-				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.pressed.SPACE || PlayState.instance.getControl('SPACE');}else{key = FlxG.keys.pressed.SPACE};//an extra key for convinience
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.pressed.SPACE || PlayState.instance.getControl('SPACE');}else{key = FlxG.keys.pressed.SPACE;};//an extra key for convinience
 			}
 			return key;
 		});
@@ -1515,7 +1515,7 @@ class FunkinLua {
 				case 'up': key = PlayState.instance.getControl('NOTE_UP_R');
 				case 'right': key = PlayState.instance.getControl('NOTE_RIGHT_R');
 				case 'space':
-				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justReleased.SPACE || PlayState.instance.getControl('SPACE_R');}else{key = FlxG.keys.justReleased.SPACE};//an extra key for convinience
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justReleased.SPACE || PlayState.instance.getControl('SPACE_R');}else{key = FlxG.keys.justReleased.SPACE;};//an extra key for convinience
 			}
 			return key;
 		});
