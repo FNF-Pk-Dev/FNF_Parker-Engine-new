@@ -672,7 +672,7 @@ class Controls extends FlxActionSet
 			case BACK: _back;
 			case PAUSE: _pause;
 			case RESET: _reset;
-			case SPACE: if (ClientPrefs.hitboxLocation == 'Space') _space;
+			case SPACE: _space;
 		}
 	}
 
