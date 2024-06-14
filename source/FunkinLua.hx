@@ -1518,7 +1518,7 @@ class FunkinLua {
 				case 'up': key = PlayState.instance.getControl('NOTE_UP_R');
 				case 'right': key = PlayState.instance.getControl('NOTE_RIGHT_R');
 				/*case 'space':
-				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justReleased.SPACE || PlayState.instance.getControl('SPACE_R');}else{key = FlxG.keys.justReleased.SPACE;};*
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justReleased.SPACE || PlayState.instance.getControl('SPACE_R');}else{key = FlxG.keys.justReleased.SPACE;};*/
 				case 'space': key = (PlayState.instance.getControl('SPACE_R') || FlxG.keys.justReleased.SPACE);///an extra key for convinience
 			}
 			return key;
