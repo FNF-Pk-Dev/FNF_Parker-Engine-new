@@ -1490,8 +1490,9 @@ class FunkinLua {
 				case 'back': key = PlayState.instance.getControl('BACK');
 				case 'pause': key = PlayState.instance.getControl('PAUSE');
 				case 'reset': key = PlayState.instance.getControl('RESET');
-				case 'space': 
-				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justPressed.SPACE || PlayState.instance.getControl('SPACE_P');}else{key = FlxG.keys.justPressed.SPACE;};//an extra key for convinience
+				case 'space': /*
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justPressed.SPACE || PlayState.instance.getControl('SPACE_P');}else{key = FlxG.keys.justPressed.SPACE;};*///an extra key for convinience
+				key = (PlayState.instance.getControl('SPACE_P') || FlxG.keys.justPressed.SPACE);
 			}
 			return key;
 		});
@@ -1502,8 +1503,10 @@ class FunkinLua {
 				case 'down': key = PlayState.instance.getControl('NOTE_DOWN');
 				case 'up': key = PlayState.instance.getControl('NOTE_UP');
 				case 'right': key = PlayState.instance.getControl('NOTE_RIGHT');
-				case 'space': 
-				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.pressed.SPACE || PlayState.instance.getControl('SPACE');}else{key = FlxG.keys.pressed.SPACE;};//an extra key for convinience
+				case 'space': /*
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.pressed.SPACE || PlayState.instance.getControl('SPACE');}else{key = FlxG.keys.pressed.SPACE;};*/
+				key = (PlayState.instance.getControl('SPACE') || FlxG.keys.pressed.SPACE);
+				//an extra key for convinience
 			}
 			return key;
 		});
@@ -1514,8 +1517,9 @@ class FunkinLua {
 				case 'down': key = PlayState.instance.getControl('NOTE_DOWN_R');
 				case 'up': key = PlayState.instance.getControl('NOTE_UP_R');
 				case 'right': key = PlayState.instance.getControl('NOTE_RIGHT_R');
-				case 'space':
-				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justReleased.SPACE || PlayState.instance.getControl('SPACE_R');}else{key = FlxG.keys.justReleased.SPACE;};//an extra key for convinience
+				/*case 'space':
+				if (ClientPrefs.hitboxLocation == 'Space'){key = FlxG.keys.justReleased.SPACE || PlayState.instance.getControl('SPACE_R');}else{key = FlxG.keys.justReleased.SPACE;};*
+				case 'space': key = (PlayState.instance.getControl('SPACE_R') || FlxG.keys.justReleased.SPACE);///an extra key for convinience
 			}
 			return key;
 		});
