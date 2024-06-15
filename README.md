@@ -62,7 +62,7 @@ haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec.git
 
 haxelib remove linc_luajit
 
-haxelib git linc_luajit https://github.com/mcagabe19/linc_luajit-legacy.git
+haxelib git linc_luajit https://github.com/Sirox228/linc_luajit.git
 
 haxelib git hxShaders https://github.com/JonnycatMeow/hxShaders.git
 
