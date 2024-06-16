@@ -1159,14 +1159,14 @@ class PlayState extends MusicBeatState
 			var luaToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.LuaEncoded');
 			if(FileSystem.exists(luaToLoad))
 			{
-				luaArray.push(new FunkinLua((luaToLoad), true);
+				luaArray.push(new FunkinLua((luaToLoad), true));
 			}
 			else
 			{
 				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.LuaEncoded');
 				if(FileSystem.exists(luaToLoad))
 				{
-					luaArray.push(new FunkinLua((luaToLoad), true);
+					luaArray.push(new FunkinLua((luaToLoad), true));
 				}
 			}
 		}
@@ -1175,14 +1175,14 @@ class PlayState extends MusicBeatState
 			var luaToLoad:String = Paths.modFolders('custom_events/' + event + '.LuaEncoded');
 			if(FileSystem.exists(luaToLoad))
 			{
-				luaArray.push(new FunkinLua((luaToLoad), true);
+				luaArray.push(new FunkinLua((luaToLoad), true));
 			}
 			else
 			{
 				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_events/' + event + '.LuaEncoded');
 				if(FileSystem.exists(luaToLoad))
 				{
-					luaArray.push(new FunkinLua((luaToLoad), true);
+					luaArray.push(new FunkinLua((luaToLoad), true));
 				}
 			}
 		}
