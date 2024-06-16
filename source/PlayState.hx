@@ -1630,7 +1630,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newBoyfriend);
 					newBoyfriend.alpha = 0.00001;
 					startCharacterLua(newBoyfriend.curCharacter);
-					startCharacterLua(newGf.curCharacter, true);
+					//startCharacterLua(newGf.curCharacter, true);
 					initCharScript(newBoyfriend.curCharacter);
 				}
 
@@ -1642,7 +1642,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newDad, true);
 					newDad.alpha = 0.00001;
 					startCharacterLua(newDad.curCharacter);
-					startCharacterLua(newDad.curCharacter, true);
+					//startCharacterLua(newDad.curCharacter, true);
 					initCharScript(newDad.curCharacter);
 				}
 
@@ -1655,7 +1655,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newGf);
 					newGf.alpha = 0.00001;
 					startCharacterLua(newGf.curCharacter);
-					startCharacterLua(newGf.curCharacter, true);
+					//startCharacterLua(newGf.curCharacter, true);
 					initCharScript(newGf.curCharacter);
 				}
 		}
