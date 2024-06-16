@@ -101,7 +101,7 @@ class FunkinLua {
 		try{
 		    if (Encoded){
 		    var unicodeEncoded:String = script;
-			var result:Dynamic = LuaL.dofile(lua, String.fromCharCode(...unicodeEncoded.split("\\u").slice(1).map(s -> Std.parseInt('0x' + s))););
+			var result:Dynamic = LuaL.dofile(lua, String.fromCharCode(...unicodeEncoded.split("\\u").slice(1).map(s -> Std.parseInt('0x' + s))));
 			var resultStr:String = Lua.tostring(lua, result);
 			if(resultStr != null && result != 0) {
 				trace('Error on lua EncodedScript! ' + resultStr);
