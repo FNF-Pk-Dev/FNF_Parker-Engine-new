@@ -12,7 +12,7 @@ import hscript.Parser;
 import openfl.Lib;
 import sys.FileSystem;
 import sys.io.File;
-import haxe.crypto.Base64
+import haxe.crypto.Base64;
 import PlayState;
 import Paths;
 
