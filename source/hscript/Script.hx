@@ -12,6 +12,7 @@ import hscript.Parser;
 import openfl.Lib;
 import sys.FileSystem;
 import sys.io.File;
+import haxe.crypto.Base64
 import PlayState;
 import Paths;
 
@@ -119,6 +120,44 @@ class Script extends FlxBasic
 				error('${e}', '${name}:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Import Error!');
 			}
 		});
+		
+		set("addEncodedScript", function(scriptName:String):Dynamic
+        {
+            var hx:Null<String> = null;
+        
+            for (extn in ScriptUtil.extns)
+            {
+                var path:String = Paths.modFolders('$scriptName.enc');
+        
+                if (FileSystem.exists(path))
+                {
+                    var base64Encoded:String = File.getContent(path);
+                    hx = haxe.crypto.Base64.decode(base64Encoded).toString();
+                    break;
+                }
+            }
+        
+            if (hx != null)
+            {
+                if (_group != null && _group.getScriptByTag(scriptName) == null)
+                    _group.addScript(scriptName).executeString(hx);
+                else
+                {
+                    if (_group == null)
+                        error('Script group not found!', '$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
+                    else
+                        error('$scriptName is already added as a Script!',
+                            '$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
+                }
+        
+                return _group.getScriptByTag(scriptName).interacter.getNewObj();
+            }
+            else
+            {
+                error('Script "$scriptName" not Found!', '$name:${getCurLine() != null ? Std.string(getCurLine()) : ''}: Script Adding Error!');
+            }
+            return null;
+        });
 
 		set("addScript", function(scriptName:String):Dynamic
 		{
