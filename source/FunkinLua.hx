@@ -88,7 +88,7 @@ class FunkinLua {
 	public static var hscript:HScript = null;
 	#end
 	
-	public function new(script:String, Encoded:Bool) {
+	public function new(script:String, ?Encoded:Bool = false) {
 		#if LUA_ALLOWED
 		lua = LuaL.newstate();
 		LuaL.openlibs(lua);
@@ -99,9 +99,14 @@ class FunkinLua {
 
 		//LuaL.dostring(lua, CLENSE);
 		try{
-		    if (Encoded){
+		    if(Encoded){
 		    var unicodeEncoded:String = script;
-			var result:Dynamic = LuaL.dofile(lua, String.fromCharCode(...unicodeEncoded.split("\\u").slice(1).map(s -> Std.parseInt('0x' + s))));
+            var chars:Array<Int> = unicodeEncoded.split("\\u").slice(1).map(s -> Std.parseInt('0x' + s));
+            var decodedString:String = '';
+            for (char in chars) {
+                decodedString += String.fromCharCode(char);
+            }
+            var result:Dynamic = LuaL.dofile(lua, decodedString);
 			var resultStr:String = Lua.tostring(lua, result);
 			if(resultStr != null && result != 0) {
 				trace('Error on lua EncodedScript! ' + resultStr);

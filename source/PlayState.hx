@@ -5060,7 +5060,7 @@ class PlayState extends MusicBeatState
 	}
 
 	#if LUA_ALLOWED
-	public function startLuasOnFolder(luaFile:String, Encoded:Bool)
+	public function startLuasOnFolder(luaFile:String, ?Encoded:Bool = false)
 	{
 		for (script in luaArray)
 		{
@@ -5069,6 +5069,7 @@ class PlayState extends MusicBeatState
 
 		#if MODS_ALLOWED
 		var luaToLoad:String = Paths.modFolders(luaFile);
+		if(!Encoded){
 		if(FileSystem.exists(luaToLoad))
 		{
 			luaArray.push(new FunkinLua(luaToLoad));
@@ -5082,8 +5083,7 @@ class PlayState extends MusicBeatState
 				luaArray.push(new FunkinLua(luaToLoad));
 				return true;
 			}
-		}
-		if(Encoded){
+		}}else{
 		if(FileSystem.exists(luaToLoad))
 		{
 			luaArray.push(new FunkinLua(luaToLoad, true));
@@ -5100,12 +5100,12 @@ class PlayState extends MusicBeatState
 		}}		
 		#elseif sys
 		var luaToLoad:String = Paths.getPreloadPath(luaFile);
+		if(!Encoded){
 		if(OpenFlAssets.exists(luaToLoad))
 		{
 			luaArray.push(new FunkinLua(luaToLoad));
 			return true;
-		}
-		if(Encoded){
+		}}else{
 		if(OpenFlAssets.exists(luaToLoad))
 		{
 			luaArray.push(new FunkinLua(luaToLoad), true);
