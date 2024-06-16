@@ -118,7 +118,7 @@ class FunkinLua {
 				lua = null;
 				return;
 			 }
-		    }
+		    }else{
 			var result:Dynamic = LuaL.dofile(lua, script);
 			var resultStr:String = Lua.tostring(lua, result);
 			if(resultStr != null && result != 0) {
@@ -130,7 +130,7 @@ class FunkinLua {
 				#end
 				lua = null;
 				return;
-			}
+			}}
 		} catch(e:Dynamic) {
 			trace(e);
 			return;
