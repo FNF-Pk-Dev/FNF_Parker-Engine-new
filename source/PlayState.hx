@@ -916,30 +916,12 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
-		// LuaEncoded
-		for (folder in foldersToCheck)
-		{
-			if(FileSystem.exists(folder))
-			{
-				for (file in FileSystem.readDirectory(folder))
-				{
-					if(file.endsWith('.LuaEncoded') && !filesPushed.contains(file))
-					{
-						luaArray.push(new FunkinLua((folder + file), true));
-						filesPushed.push(file);
-					}
-				}
-			}
-		}
 		#end
 
 
 		// STAGE SCRIPTS
 		#if (MODS_ALLOWED && LUA_ALLOWED)
 		startLuasOnFolder('stages/' + curStage + '.lua');
-		
-		// LuaEncoded
-		startLuasOnFolder('stages/' + curStage + '.lua', true);
 		#end
 
 		var gfVersion:String = SONG.gfVersion;
@@ -1137,55 +1119,6 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
-		for (event in eventPushedMap.keys())
-		{
-			var luaToLoad:String = Paths.modFolders('custom_events/' + event + '.lua');
-			if(FileSystem.exists(luaToLoad))
-			{
-				luaArray.push(new FunkinLua(luaToLoad));
-			}
-			else
-			{
-				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_events/' + event + '.lua');
-				if(FileSystem.exists(luaToLoad))
-				{
-					luaArray.push(new FunkinLua(luaToLoad));
-				}
-			}
-		}
-		// Encoded
-		for (notetype in noteTypeMap.keys())
-		{
-			var luaToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.LuaEncoded');
-			if(FileSystem.exists(luaToLoad))
-			{
-				luaArray.push(new FunkinLua((luaToLoad), true));
-			}
-			else
-			{
-				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.LuaEncoded');
-				if(FileSystem.exists(luaToLoad))
-				{
-					luaArray.push(new FunkinLua((luaToLoad), true));
-				}
-			}
-		}
-		for (event in eventPushedMap.keys())
-		{
-			var luaToLoad:String = Paths.modFolders('custom_events/' + event + '.LuaEncoded');
-			if(FileSystem.exists(luaToLoad))
-			{
-				luaArray.push(new FunkinLua((luaToLoad), true));
-			}
-			else
-			{
-				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_events/' + event + '.LuaEncoded');
-				if(FileSystem.exists(luaToLoad))
-				{
-					luaArray.push(new FunkinLua((luaToLoad), true));
-				}
-			}
-		}
 		#end
 
 		// After all characters being loaded, it makes then invisible 0.01s later so that the player won't freeze when you change characters
@@ -1297,15 +1230,6 @@ class PlayState extends MusicBeatState
 		{
 			startLuasOnFolder('custom_events/' + event + '.lua');
 		}
-		// LuaEncoded
-		for (notetype in noteTypeMap.keys())
-		{
-			startLuasOnFolder('custom_notetypes/' + notetype + '.LuaEncoded', true);
-		}
-		for (event in eventPushedMap.keys())
-		{
-			startLuasOnFolder('custom_events/' + event + '.LuaEncoded', true);
-		}
 		#end
 		noteTypeMap.clear();
 		noteTypeMap = null;
@@ -1341,21 +1265,6 @@ class PlayState extends MusicBeatState
 					if(file.endsWith('.lua') && !filesPushed.contains(file))
 					{
 						luaArray.push(new FunkinLua(folder + file));
-						filesPushed.push(file);
-					}
-				}
-			}
-		}
-		// LuaEncoded
-		for (folder in foldersToCheck)
-		{
-			if(FileSystem.exists(folder))
-			{
-				for (file in FileSystem.readDirectory(folder))
-				{
-					if(file.endsWith('.LuaEncoded') && !filesPushed.contains(file))
-					{
-						luaArray.push(new FunkinLua(folder + file, true));
 						filesPushed.push(file);
 					}
 				}
@@ -1661,15 +1570,12 @@ class PlayState extends MusicBeatState
 		}
 	}
 
-	function startCharacterLua(name:String, ?Encoded:Bool = false)
+	function startCharacterLua(name:String
 	{
 		#if LUA_ALLOWED
 		var doPush:Bool = false;
 		var luaFile:String = 'characters/' + name + '.lua';
-		// LuaEncoded
-		var luaEncodedFile:String = 'characters/' + name + '.LuaEncoded';
 		#if MODS_ALLOWED
-		if(!Encoded){
 		if(FileSystem.exists(Paths.modFolders(luaFile))) {
 			luaFile = Paths.modFolders(luaFile);
 			doPush = true;
@@ -1678,16 +1584,6 @@ class PlayState extends MusicBeatState
 			if(FileSystem.exists(luaFile)) {
 				doPush = true;
 			}
-		}}else{
-		if(FileSystem.exists(Paths.modFolders(luaFile))) {
-			luaFile = Paths.modFolders(luaEncodedFile);
-			doPush = true;
-		} else {
-			luaFile = SUtil.getPath() + Paths.getPreloadPath(luaEncodedFile);
-			if(FileSystem.exists(luaEncodedFile)) {
-				doPush = true;
-			}
-		}
 		}
 		#else
 		luaFile = Paths.getPreloadPath(luaFile);
@@ -1696,21 +1592,13 @@ class PlayState extends MusicBeatState
 		}
 		#end
 
-		if(doPush && !Encoded)
+		if(doPush)
 		{
 			for (script in luaArray)
 			{
 				if(script.scriptName == luaFile) return;
 			}
 			luaArray.push(new FunkinLua(luaFile));
-		}
-		if(doPush && Encoded)
-		{
-			for (script in luaArray)
-			{
-				if(script.scriptName == luaEncodedFile) return;
-			}
-			luaArray.push(new FunkinLua(luaEncodedFile, true));
 		}
 		#end
 	}
@@ -5084,7 +4972,7 @@ class PlayState extends MusicBeatState
 	}
 
 	#if LUA_ALLOWED
-	public function startLuasOnFolder(luaFile:String, ?Encoded:Bool = false)
+	public function startLuasOnFolder(luaFile:String)
 	{
 		for (script in luaArray)
 		{
@@ -5093,7 +4981,6 @@ class PlayState extends MusicBeatState
 
 		#if MODS_ALLOWED
 		var luaToLoad:String = Paths.modFolders(luaFile);
-		if(!Encoded){
 		if(FileSystem.exists(luaToLoad))
 		{
 			luaArray.push(new FunkinLua(luaToLoad));
@@ -5107,34 +4994,14 @@ class PlayState extends MusicBeatState
 				luaArray.push(new FunkinLua(luaToLoad));
 				return true;
 			}
-		}}else{
-		if(FileSystem.exists(luaToLoad))
-		{
-			luaArray.push(new FunkinLua(luaToLoad, true));
-			return true;
 		}
-		else
-		{
-			luaToLoad = Paths.getPreloadPath(luaFile);
-			if(FileSystem.exists(luaToLoad))
-			{
-				luaArray.push(new FunkinLua(luaToLoad, true));
-				return true;
-			}
-		}}		
 		#elseif sys
 		var luaToLoad:String = Paths.getPreloadPath(luaFile);
-		if(!Encoded){
 		if(OpenFlAssets.exists(luaToLoad))
 		{
 			luaArray.push(new FunkinLua(luaToLoad));
 			return true;
-		}}else{
-		if(OpenFlAssets.exists(luaToLoad))
-		{
-			luaArray.push(new FunkinLua(luaToLoad), true);
-			return true;
-		}}
+		}
 		#end
 		return false;
 	}

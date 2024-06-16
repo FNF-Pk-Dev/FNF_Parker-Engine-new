@@ -88,7 +88,7 @@ class FunkinLua {
 	public static var hscript:HScript = null;
 	#end
 	
-	public function new(script:String, ?Encoded:Bool = false) {
+	public function new(script:String) {
 		#if LUA_ALLOWED
 		lua = LuaL.newstate();
 		LuaL.openlibs(lua);
@@ -99,26 +99,6 @@ class FunkinLua {
 
 		//LuaL.dostring(lua, CLENSE);
 		try{
-		    if(Encoded){
-		    var unicodeEncoded:String = script;
-            var chars:Array<Int> = unicodeEncoded.split("\\u").slice(1).map(s -> Std.parseInt('0x' + s));
-            var decodedString:String = '';
-            for (char in chars) {
-                decodedString += String.fromCharCode(char);
-            }
-            var result:Dynamic = LuaL.dofile(lua, decodedString);
-			var resultStr:String = Lua.tostring(lua, result);
-			if(resultStr != null && result != 0) {
-				trace('Error on lua EncodedScript! ' + resultStr);
-				#if (windows || android)
-				lime.app.Application.current.window.alert(resultStr, 'Error on lua EncodedScript!');
-				#else
-				luaTrace('Error loading lua EncodedScript: "$script"\n' + resultStr, true, false, FlxColor.RED);
-				#end
-				lua = null;
-				return;
-			 }
-		    }else{
 			var result:Dynamic = LuaL.dofile(lua, script);
 			var resultStr:String = Lua.tostring(lua, result);
 			if(resultStr != null && result != 0) {
@@ -130,7 +110,7 @@ class FunkinLua {
 				#end
 				lua = null;
 				return;
-			}}
+			}
 		} catch(e:Dynamic) {
 			trace(e);
 			return;
