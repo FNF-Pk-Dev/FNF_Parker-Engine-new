@@ -925,7 +925,7 @@ class PlayState extends MusicBeatState
 				{
 					if(file.endsWith('.LuaEncoded') && !filesPushed.contains(file))
 					{
-						luaArray.push(new FunkinLua((folder + file), true);
+						luaArray.push(new FunkinLua((folder + file), true));
 						filesPushed.push(file);
 					}
 				}
@@ -1630,6 +1630,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newBoyfriend);
 					newBoyfriend.alpha = 0.00001;
 					startCharacterLua(newBoyfriend.curCharacter);
+					startCharacterLua(newGf.curCharacter, true);
 					initCharScript(newBoyfriend.curCharacter);
 				}
 
@@ -1641,6 +1642,7 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newDad, true);
 					newDad.alpha = 0.00001;
 					startCharacterLua(newDad.curCharacter);
+					startCharacterLua(newDad.curCharacter, true);
 					initCharScript(newDad.curCharacter);
 				}
 
@@ -1653,17 +1655,21 @@ class PlayState extends MusicBeatState
 					startCharacterPos(newGf);
 					newGf.alpha = 0.00001;
 					startCharacterLua(newGf.curCharacter);
+					startCharacterLua(newGf.curCharacter, true);
 					initCharScript(newGf.curCharacter);
 				}
 		}
 	}
 
-	function startCharacterLua(name:String)
+	function startCharacterLua(name:String, ?Encoded:Bool = false)
 	{
 		#if LUA_ALLOWED
 		var doPush:Bool = false;
 		var luaFile:String = 'characters/' + name + '.lua';
+		// LuaEncoded
+		var luaEncodedFile:String = 'characters/' + name + '.LuaEncoded';
 		#if MODS_ALLOWED
+		if(!Encoded){
 		if(FileSystem.exists(Paths.modFolders(luaFile))) {
 			luaFile = Paths.modFolders(luaFile);
 			doPush = true;
@@ -1672,6 +1678,16 @@ class PlayState extends MusicBeatState
 			if(FileSystem.exists(luaFile)) {
 				doPush = true;
 			}
+		}}else{
+		if(FileSystem.exists(Paths.modFolders(luaFile))) {
+			luaFile = Paths.modFolders(luaEncodedFile);
+			doPush = true;
+		} else {
+			luaFile = SUtil.getPath() + Paths.getPreloadPath(luaEncodedFile);
+			if(FileSystem.exists(luaEncodedFile)) {
+				doPush = true;
+			}
+		}
 		}
 		#else
 		luaFile = Paths.getPreloadPath(luaFile);
@@ -1680,13 +1696,21 @@ class PlayState extends MusicBeatState
 		}
 		#end
 
-		if(doPush)
+		if(doPush && !Encoded)
 		{
 			for (script in luaArray)
 			{
 				if(script.scriptName == luaFile) return;
 			}
 			luaArray.push(new FunkinLua(luaFile));
+		}
+		if(doPush && Encoded)
+		{
+			for (script in luaArray)
+			{
+				if(script.scriptName == luaEncodedFile) return;
+			}
+			luaArray.push(new FunkinLua(luaEncodedFile, true));
 		}
 		#end
 	}
