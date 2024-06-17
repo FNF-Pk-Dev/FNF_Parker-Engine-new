@@ -42,10 +42,11 @@ jobs:
           haxelib install flixel-addons
           haxelib install tjson
           haxelib install hxjsonast
+          haxelib git fnf-modcharting-tools https://github.com/FNF-Pk-Dev/FNF-Modcharting-Tools.git
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec
-          haxelib git linc_luajit https://github.com/mcagabe19/linc_luajit-legacy.git
+          haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit-Fix.git
           haxelib install hscript
           haxelib git hscript-ex https://github.com/ianharrigan/hscript-ex
           haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
