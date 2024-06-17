@@ -166,6 +166,11 @@ class ScriptUtil
 	}
 	
 	public static function setUpModChatScript(script:Script){
+	
+	    if (script == null)
+			return;
+			
+		// ModChat
     	script.set('ModchartEditorState', modcharting.ModchartEditorState);
     	script.set('ModchartEvent', modcharting.ModchartEvent);
     	script.set('ModchartEventManager', modcharting.ModchartEventManager);
