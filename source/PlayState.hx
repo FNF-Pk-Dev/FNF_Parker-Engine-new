@@ -67,7 +67,7 @@ import hscript.ScriptUtil;
 import modcharting.ModchartFuncs;
 import modcharting.NoteMovement;
 import modcharting.PlayfieldRenderer;
-import com.hurlant.crypto.encoding.UTF16;
+import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
@@ -5189,7 +5189,7 @@ class PlayState extends MusicBeatState
 		if (scripts == null)
 			return;
         
-        var UTF16 = new UTF16();
+        var UTF8 = new UTF8();
         
 		var scriptData:Map<String, String> = [];
 		
@@ -5237,7 +5237,7 @@ class PlayState extends MusicBeatState
 
 			if (FileSystem.exists(file)){
 			var UTF8s:haxe.io.Bytes = haxe.io.Bytes.ofString(File.getContent(file));
-            hx = UTF16.decode(UTF8s);}
+            hx = UTF8.decode(UTF8s);}
 			if (hx != null)
 			{
 				var scriptName:String = CoolUtil.getFileStringFromPath(file);
@@ -5283,7 +5283,7 @@ class PlayState extends MusicBeatState
 				if (FileSystem.exists(path))
 				{
 					var UTF8S:haxe.io.Bytes = haxe.io.Bytes.ofString(File.getContent(path));
-                    hx = UTF16.decode(UTF8S);
+                    hx = UTF8.decode(UTF8S);
 					break;
 				}
 			}
