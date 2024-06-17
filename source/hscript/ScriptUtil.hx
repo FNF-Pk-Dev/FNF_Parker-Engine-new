@@ -34,6 +34,7 @@ import Conductor;
 import Section;
 import Song;
 import PlayState;
+import modcharting.ModchartFuncs;
 import CoolUtil;
 #if sys
 import sys.FileSystem;
@@ -162,6 +163,29 @@ class ScriptUtil
 		script.set("NoteSplash", NoteSplash);
 		script.set("Character", Character);
 		script.set("Boyfriend", Boyfriend);
+	}
+	
+	public static function setUpModChatScript(script:Script){
+    	script.set('ModchartEditorState', modcharting.ModchartEditorState);
+    	script.set('ModchartEvent', modcharting.ModchartEvent);
+    	script.set('ModchartEventManager', modcharting.ModchartEventManager);
+    	script.set('ModchartFile', modcharting.ModchartFile);
+    	script.set('ModchartFuncs', modcharting.ModchartFuncs);
+    	script.set('ModchartMusicBeatState', modcharting.ModchartMusicBeatState);
+    	script.set('ModchartUtil', modcharting.ModchartUtil);
+    	for (i in ['mod', 'Modifier'])
+    	script.set(i, modcharting.Modifier);
+    	
+    	script.set('ModifierSubValue', modcharting.Modifier.ModifierSubValue);
+    	script.set('ModTable', modcharting.ModTable);
+    	script.set('NoteMovement', modcharting.NoteMovement);
+    	script.set('NotePositionData', modcharting.NotePositionData);
+    	script.set('Playfield', modcharting.Playfield);
+    	script.set('PlayfieldRenderer', modcharting.PlayfieldRenderer);
+    	script.set('SimpleQuaternion', modcharting.SimpleQuaternion);
+    	script.set('SustainStrip', modcharting.SustainStrip);
+    	
+    	modcharting.ModchartFuncs.loadHScriptFunctions(this);
 	}
 
 	public static inline function findScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String>

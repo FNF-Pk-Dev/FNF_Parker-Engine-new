@@ -310,6 +310,11 @@ class Script extends FlxBasic
 
 		super.update(elapsed);
 	}
+	
+	public function initMod(mod:modcharting.Modifier)
+    {
+    	executeFunc("initMod", [mod]);
+    }
 
 	function execute(ast:Expr):Dynamic
 	{
@@ -318,7 +323,7 @@ class Script extends FlxBasic
 			interacter.loadPresetVars();
 
 			var val = _interp.execute(ast);
-			executeFunc("onNew");
+			executeFunc("new");
 
 			interacter.upadteObjs();
 
@@ -345,7 +350,7 @@ class Script extends FlxBasic
 	{
 		super.destroy();
 
-		executeFunc("destroy");
+		executeFunc("onDestroy");
 
 		_interp = null;
 		_parser = null;
