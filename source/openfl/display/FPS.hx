@@ -59,7 +59,7 @@ class FPS extends TextField
 		currentTime = 0;
 		times = [];
 
-                pkEngineVersion = "v0.5.3";
+                pkEngineVersion = "v0.6";
         
 		#if flash
 		addEventListener(Event.ENTER_FRAME, function(e)
