@@ -5421,6 +5421,7 @@ class PlayState extends MusicBeatState
 
 	function onAddScript(script:Script)
 	{
+	    var mod:modcharting.Modifier;
 	    script.initMod(mod);
 		script.set("PlayState", PlayState);
 		script.set("game", PlayState.instance);
