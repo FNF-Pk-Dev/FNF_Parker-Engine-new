@@ -1079,16 +1079,7 @@ class PlayState extends MusicBeatState
 		add(timeBar);
 		add(timeTxt);
 		timeBarBG.sprTracker = timeBar;
-
-		strumLineNotes = new FlxTypedGroup<StrumNote>();
-		add(strumLineNotes);
 		
-		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, notes, this);
-    	playfieldRenderer.cameras = [camHUD];
-    	add(playfieldRenderer);
-    	
-		add(grpNoteSplashes);
-
 		if(ClientPrefs.timeBarType == 'Song Name')
 		{
 			timeTxt.size = 24;
@@ -1132,6 +1123,17 @@ class PlayState extends MusicBeatState
 
 		// After all characters being loaded, it makes then invisible 0.01s later so that the player won't freeze when you change characters
 		// add(strumLine);
+		
+		strumLineNotes = new FlxTypedGroup<StrumNote>();
+		add(strumLineNotes);
+		
+		for (note in notes){
+		for (i in 0...note.length){
+		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, note.members[i], this);
+    	playfieldRenderer.cameras = [camHUD];
+    	add(playfieldRenderer);
+    	}}
+		add(grpNoteSplashes);
 
 		camFollow = new FlxPoint();
 		camFollowPos = new FlxObject(0, 0, 1, 1);
