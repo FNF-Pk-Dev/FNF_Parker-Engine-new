@@ -354,7 +354,7 @@ class PlayState extends MusicBeatState
 		
 		scripts = new ScriptGroup();
 		scripts.onAddScript.push(onAddScript);
-	    ModchartFuncs.loadLuaFunctions(this);
+	    ModchartFuncs.loadLuaFunctions();
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -5421,7 +5421,7 @@ class PlayState extends MusicBeatState
 
 	function onAddScript(script:Script)
 	{
-	    script.initMod();
+	    script.initMod(mod);
 		script.set("PlayState", PlayState);
 		script.set("game", PlayState.instance);
 
