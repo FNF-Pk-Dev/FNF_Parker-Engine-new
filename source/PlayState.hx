@@ -5192,7 +5192,7 @@ class PlayState extends MusicBeatState
 
 		var scriptData:Map<String, String> = [];
 
-		// SONG && GLOBAL SCRIPTS
+		// SONG && GLOBAL SCRIPTS AND ENCODED
 		var files:Array<String> = SONG.song == null ? [] : ScriptUtil.findScriptsInDir(Paths.modFolders("data/" + Paths.formatToSongPath(SONG.song)));
 
 		if (FileSystem.exists(Paths.modFolders("scripts/global")))
@@ -5218,8 +5218,34 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
+		var scriptEncodedData:Map<String, String> = [];
+		var filesEncoded:Array<String> = SONG.song == null ? [] : ScriptUtil.findEncodedScriptsInDir(Paths.modFolders("data/" + Paths.formatToSongPath(SONG.song)));
 		
-		// STAGE SCRIPTS
+		if (FileSystem.exists(Paths.modFolders("scripts/global")))
+		{
+			for (_ in ScriptUtil.findEncodedScriptsInDir(Paths.modFolders("scripts/global")))
+				filesEncoded.push(_);
+		}
+		
+		for (file in files)
+		{
+			var hx:Null<String> = null;
+
+			if (FileSystem.exists(file))
+				hx = Sys.getFileContent(filesEncoded, haxe.io.Encoding.UTF16BE);
+
+			if (hx != null)
+			{
+				var scriptEncodedData:String = CoolUtil.getFileStringFromPath(filesEncoded);
+
+				if (!scriptEncodedData.exists(scriptName))
+				{
+					scriptEncodedData.set(scriptName, hx);
+				}
+			}
+		}
+		
+		// STAGE SCRIPTS AND ENCODED
 		if (SONG.stage != null)
 		{
 			var hx:Null<String> = null;
@@ -5241,6 +5267,28 @@ class PlayState extends MusicBeatState
 					scriptData.set("stage", hx);
 			}
 		}
+		
+		if (SONG.stage != null)
+		{
+			var hx:Null<String> = null;
+
+			for (extn in ScriptUtil.extns)
+			{
+				var path:String = Paths.modFolders('stages/' + SONG.stage + '.hxenc');
+
+				if (FileSystem.exists(path))
+				{
+					hx = Sys.getFileContent(path, haxe.io.Encoding.UTF16BE);
+					break;
+				}
+			}
+
+			if (hx != null)
+			{
+				if (!scriptEncodedData.exists("stage"))
+					scriptEncodedData.set("stage", hx);
+			}
+		}
 
 		for (scriptName => hx in scriptData)
 		{
@@ -5249,6 +5297,16 @@ class PlayState extends MusicBeatState
 			else
 			{
 				scripts.getScriptByTag(scriptName).error("Duplacite Script Error!", '$scriptName: Duplicate Script');
+			}
+		}
+		//Encoded
+		for (scriptName => hx in scriptEncodedData)
+		{
+			if (scripts.getScriptByTag(scriptName) == null)
+				scripts.addScript(scriptName).executeString(hx);
+			else
+			{
+				scripts.getScriptByTag(scriptName).error("Duplacite Script Encoded Error!", '$scriptName: Duplicate Script');
 			}
 		}
 	}
