@@ -5234,9 +5234,9 @@ class PlayState extends MusicBeatState
 		{
 			var hx:Null<String> = null;
 
-			if (FileSystem.exists(file))
-				var bytes:haxe.io.Bytes = File.getBytes(file);
-                var hx:String = bytes.getString(0, bytes.length, haxe.io.Encoding.UTF16BE);
+			if (FileSystem.exists(file)){
+			var bytes:haxe.io.Bytes = File.getBytes(file);
+            hx = bytes.getString(0, bytes.length, 'utf16');}
 			if (hx != null)
 			{
 				var scriptName:String = CoolUtil.getFileStringFromPath(file);
@@ -5282,7 +5282,7 @@ class PlayState extends MusicBeatState
 				if (FileSystem.exists(path))
 				{
 					var bytes:haxe.io.Bytes = File.getBytes(path);
-                    var hx:String = bytes.getString(0, bytes.length, haxe.io.Encoding.UTF16BE);
+                    hx = bytes.getString(0, bytes.length, 'utf16');
 					break;
 				}
 			}
