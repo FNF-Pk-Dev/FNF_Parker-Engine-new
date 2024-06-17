@@ -1128,8 +1128,8 @@ class PlayState extends MusicBeatState
 		add(strumLineNotes);
 		
 		for (note in notes){
-		for (i in 0...note.length){
-		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, note.members[i], this);
+		for (i in 0...notes.length){
+		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, notes.members[i], this);
     	playfieldRenderer.cameras = [camHUD];
     	add(playfieldRenderer);
     	}}
