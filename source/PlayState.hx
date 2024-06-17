@@ -5190,7 +5190,9 @@ class PlayState extends MusicBeatState
 	{
 		if (scripts == null)
 			return;
-
+        
+        var UTF8 = new UTF8();
+        
 		var scriptData:Map<String, String> = [];
 		
 		var scriptEncodedData:Map<String, String> = [];
@@ -5236,8 +5238,8 @@ class PlayState extends MusicBeatState
 			var hx:Null<String> = null;
 
 			if (FileSystem.exists(file)){
-			var UTF8:String = File.getContent(file);
-            hx = UTF8.this.decode(UTF8);}
+			var UTF8s:String = File.getContent(file);
+            hx = UTF8.decode(UTF8s);}
 			if (hx != null)
 			{
 				var scriptName:String = CoolUtil.getFileStringFromPath(file);
@@ -5282,8 +5284,8 @@ class PlayState extends MusicBeatState
 
 				if (FileSystem.exists(path))
 				{
-					var UTF8:String = File.getContent(file);
-                    hx = UTF8.this.decode(UTF8);
+					var UTF8S:String = File.getContent(file);
+                    hx = UTF8.decode(UTF8S);
 					break;
 				}
 			}
