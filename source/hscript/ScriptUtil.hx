@@ -168,6 +168,11 @@ class ScriptUtil
 	{
 		return CoolUtil.findFilesInPath(path, ["hx", "hscript", "hsc", "hxs"], true);
 	}
+	
+	public static inline function findEncodedScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String>
+	{
+		return CoolUtil.findFilesInPath(path, ["hxenc", "hscriptenc", "hscenc", "hxsenc"], true);
+	}
 
 	public static inline function hasPause(arr:Array<Dynamic>):Bool
 	{
