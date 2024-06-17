@@ -59,11 +59,12 @@ jobs:
           haxelib install tjson
           haxelib install hxjsonast
           haxelib install hscript
-          haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto
+          haxelib git fnf-modcharting-tools https://github.com/FNF-Pk-Dev/FNF-Modcharting-Tools.git
+          haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec.git
-          haxelib git linc_luajit https://github.com/Sirox228/linc_luajit.git
-          haxelib git extension-androidtools https://github.com/MaysLastPlay77/extension-androidtools
+          haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit-Fix.git
+          haxelib git extension-androidtools https://github.com/MaysLastPlay77/extension-androidtools.git
           haxelib install hxcpp-debug-server
           haxelib list
       - name: Create Version Tag
