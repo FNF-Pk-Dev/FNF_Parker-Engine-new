@@ -64,6 +64,7 @@ import flixel.system.FlxAssets.FlxShader;
 import hscript.Script;
 import hscript.ScriptGroup;
 import hscript.ScriptUtil;
+import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
@@ -5235,8 +5236,8 @@ class PlayState extends MusicBeatState
 			var hx:Null<String> = null;
 
 			if (FileSystem.exists(file)){
-			var bytes:haxe.io.Bytes = File.getBytes(file);
-            hx = bytes.getString(0, bytes.length, haxe.io.Encoding.UTF8);}
+			var UTF8:String = File.getContent(file);
+            hx = UTF8.this.decode(UTF8);}
 			if (hx != null)
 			{
 				var scriptName:String = CoolUtil.getFileStringFromPath(file);
@@ -5281,8 +5282,8 @@ class PlayState extends MusicBeatState
 
 				if (FileSystem.exists(path))
 				{
-					var bytes:haxe.io.Bytes = File.getBytes(path);
-                    hx = bytes.getString(0, bytes.length, haxe.io.Encoding.UTF8);
+					var UTF8:String = File.getContent(file);
+                    hx = UTF8.this.decode(UTF8);
 					break;
 				}
 			}
