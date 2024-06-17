@@ -115,7 +115,6 @@ class PlayState extends MusicBeatState
 	public var dadMap:Map<String, Character> = new Map();
 	public var gfMap:Map<String, Character> = new Map();
 	public var variables:Map<String, Dynamic> = new Map();
-	public var playfieldRenderer:PlayfieldRenderer;
 	public var modchartTweens:Map<String, FlxTween> = new Map<String, FlxTween>();
 	public var modchartSprites:Map<String, ModchartSprite> = new Map<String, ModchartSprite>();
 	public var modchartTimers:Map<String, FlxTimer> = new Map<String, FlxTimer>();
@@ -2204,23 +2203,9 @@ class PlayState extends MusicBeatState
 		FlxG.sound.list.add(vocals);
 		FlxG.sound.list.add(new FlxSound().loadEmbedded(Paths.inst(PlayState.SONG.song)));
 
-		/*
-		#if VIDEOS_ALLOWED
-		midSongVideo = new VideoSprite();
-		add(midSongVideo);
-		#end
-		*/
-
 		notes = new FlxTypedGroup<Note>();
 		add(notes);
 		
-		/*
-
-		#if VIDEOS_ALLOWED
-		cheatingVideo = new VideoSprite();
-		add(cheatingVideo);
-		#end
-		*/
 
 		var noteData:Array<SwagSection>;
 
