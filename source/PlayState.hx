@@ -5238,7 +5238,7 @@ class PlayState extends MusicBeatState
 			var hx:Null<String> = null;
 
 			if (FileSystem.exists(file)){
-			var UTF8s:String = File.getContent(file);
+			var UTF8s:haxe.io.Bytes = haxe.io.Bytes.ofString(File.getContent(file));;
             hx = UTF8.decode(UTF8s);}
 			if (hx != null)
 			{
@@ -5284,7 +5284,7 @@ class PlayState extends MusicBeatState
 
 				if (FileSystem.exists(path))
 				{
-					var UTF8S:String = File.getContent(file);
+					var UTF8S:haxe.io.Bytes = haxe.io.Bytes.ofString(File.getContent(path));;
                     hx = UTF8.decode(UTF8S);
 					break;
 				}
