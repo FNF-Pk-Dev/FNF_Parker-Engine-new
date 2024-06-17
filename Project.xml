@@ -141,6 +141,11 @@
         <haxelib name="extension-androidtools" if="android"/>
 	<haxelib name="faxe" if='switch'/>
 	
+	<!--Set this to the engine you're using!-->
+        <define name="PSYCH" />
+        <haxelib name="fnf-modcharting-tools" />
+	<define name="PSYCHVERSION" value="0.6.3h"/>
+	
 	<!--<haxelib name="polymod"/> -->
 	<haxelib name="discord_rpc" if="desktop"/>
 
