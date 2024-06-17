@@ -1389,6 +1389,8 @@ class PlayState extends MusicBeatState
 		callOnLuas('onCreatePost', []);
 
 		scripts.executeAllFunc("onCreatePost");
+		var mod:String = modcharting.Modifier;
+		scripts.executeAllFunc("initMod", [mod]);
 		scripts.executeAllFunc("onLoad");
 
 		super.create();
@@ -5421,13 +5423,13 @@ class PlayState extends MusicBeatState
 
 	function onAddScript(script:Script)
 	{
-	    var mod:modcharting.Modifier;
-	    script.initMod(mod);
 		script.set("PlayState", PlayState);
 		script.set("game", PlayState.instance);
 
 		// FUNCTIONS
-
+        
+        // MODCHAT
+        script.set("initMod", function(?mod:modcharting.Modifier) {});
 		//  CREATION FUNCTIONS
 		script.set("onLoad", function() {});
 		script.set("onCreate", function() {});
