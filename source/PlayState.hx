@@ -5191,9 +5191,13 @@ class PlayState extends MusicBeatState
 			return;
 
 		var scriptData:Map<String, String> = [];
+		
+		var scriptEncodedData:Map<String, String> = [];
 
 		// SONG && GLOBAL SCRIPTS AND ENCODED
 		var files:Array<String> = SONG.song == null ? [] : ScriptUtil.findScriptsInDir(Paths.modFolders("data/" + Paths.formatToSongPath(SONG.song)));
+		
+		var filesEncoded:Array<String> = SONG.song == null ? [] : ScriptUtil.findEncodedScriptsInDir(Paths.modFolders("data/" + Paths.formatToSongPath(SONG.song)));
 
 		if (FileSystem.exists(Paths.modFolders("scripts/global")))
 		{
@@ -5218,8 +5222,7 @@ class PlayState extends MusicBeatState
 				}
 			}
 		}
-		var scriptEncodedData:Map<String, String> = [];
-		var filesEncoded:Array<String> = SONG.song == null ? [] : ScriptUtil.findEncodedScriptsInDir(Paths.modFolders("data/" + Paths.formatToSongPath(SONG.song)));
+		
 		
 		if (FileSystem.exists(Paths.modFolders("scripts/global")))
 		{
@@ -5227,16 +5230,16 @@ class PlayState extends MusicBeatState
 				filesEncoded.push(_);
 		}
 		
-		for (file in files)
+		for (file in filesEncoded)
 		{
 			var hx:Null<String> = null;
 
 			if (FileSystem.exists(file))
-				hx = File.getContent(filesEncoded, haxe.io.Encoding.UTF16BE);
-
+				var bytes:haxe.io.Bytes = File.getBytes(file);
+                var hx:String = bytes.getString(0, bytes.length, haxe.io.Encoding.UTF16BE);
 			if (hx != null)
 			{
-				var scriptEncodedData:String = CoolUtil.getFileStringFromPath(filesEncoded);
+				var scriptName:String = CoolUtil.getFileStringFromPath(file);
 
 				if (!scriptEncodedData.exists(scriptName))
 				{
@@ -5278,7 +5281,8 @@ class PlayState extends MusicBeatState
 
 				if (FileSystem.exists(path))
 				{
-					hx = File.getContent(path, haxe.io.Encoding.UTF16BE);
+					var bytes:haxe.io.Bytes = File.getBytes(path);
+                    var hx:String = bytes.getString(0, bytes.length, haxe.io.Encoding.UTF16BE);
 					break;
 				}
 			}
