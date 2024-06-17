@@ -5189,7 +5189,7 @@ class PlayState extends MusicBeatState
 		if (scripts == null)
 			return;
         
-        var UTF8 = new UTF8();
+        var UTF16 = new UTF16();
         
 		var scriptData:Map<String, String> = [];
 		
