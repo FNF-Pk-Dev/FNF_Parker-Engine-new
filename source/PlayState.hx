@@ -64,6 +64,9 @@ import flixel.system.FlxAssets.FlxShader;
 import hscript.Script;
 import hscript.ScriptGroup;
 import hscript.ScriptUtil;
+import modcharting.ModchartFuncs;
+import modcharting.NoteMovement;
+import modcharting.PlayfieldRenderer;
 import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
@@ -351,7 +354,7 @@ class PlayState extends MusicBeatState
 		
 		scripts = new ScriptGroup();
 		scripts.onAddScript.push(onAddScript);
-		//Character.onCreate = initCharScript;
+	    ModchartFuncs.loadLuaFunctions(this);
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -1079,6 +1082,11 @@ class PlayState extends MusicBeatState
 
 		strumLineNotes = new FlxTypedGroup<StrumNote>();
 		add(strumLineNotes);
+		
+		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, notes, this);
+    	playfieldRenderer.cameras = [camHUD];
+    	add(playfieldRenderer);
+    	
 		add(grpNoteSplashes);
 
 		if(ClientPrefs.timeBarType == 'Song Name')
@@ -1853,6 +1861,8 @@ class PlayState extends MusicBeatState
 			#end
 			generateStaticArrows(0);
 			generateStaticArrows(1);
+			
+			NoteMovement.getDefaultStrumPos(this);
 			for (i in 0...playerStrums.length) {
 				setOnLuas('defaultPlayerStrumX' + i, playerStrums.members[i].x);
 				setOnLuas('defaultPlayerStrumY' + i, playerStrums.members[i].y);
@@ -5411,6 +5421,7 @@ class PlayState extends MusicBeatState
 
 	function onAddScript(script:Script)
 	{
+	    script.initMod();
 		script.set("PlayState", PlayState);
 		script.set("game", PlayState.instance);
 
