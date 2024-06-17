@@ -185,7 +185,7 @@ class ScriptUtil
     	script.set('SimpleQuaternion', modcharting.SimpleQuaternion);
     	script.set('SustainStrip', modcharting.SustainStrip);
     	
-    	modcharting.ModchartFuncs.loadHScriptFunctions(this);
+    	//modcharting.ModchartFuncs.loadHScriptFunctions(this);
 	}
 
 	public static inline function findScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String>
