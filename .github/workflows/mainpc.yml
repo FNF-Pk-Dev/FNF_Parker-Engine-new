@@ -42,7 +42,7 @@ jobs:
           haxelib install flixel-addons
           haxelib install tjson
           haxelib install hxjsonast
-          haxelib install hxvlc
+          haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec
           haxelib git linc_luajit https://github.com/mcagabe19/linc_luajit-legacy.git
