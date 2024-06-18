@@ -43,23 +43,23 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1.2.0
         with:
-          haxe-version: 4.2.5
+          haxe-version: 4.2.4
 
       - name: Install Haxelib
         run: |
           haxelib setup ~/haxelib
           haxelib install hxcpp 4.2.1 > /dev/null
-          haxelib install lime 8.0.2
-          haxelib install openfl 9.2.2
-          haxelib --never install flixel
+          haxelib install lime 8.0.1
+          haxelib install openfl 9.1.0
+          haxelib --never install flixel 5.2.2
           haxelib run lime setup flixel
           haxelib install flixel-tools
           haxelib install flixel-ui
-          haxelib install flixel-addons 3.1.1
+          haxelib install flixel-addons 2.11.0
           haxelib install tjson
           haxelib install hxjsonast
           haxelib install hscript
-          haxelib git fnf-modcharting-tools https://github.com/FNF-Pk-Dev/FNF-Modcharting-Tools.git
+          haxelib git fnf-modcharting-tools https://github.com/FNF-Pk-Dev/FNF-Modcharting-Tools-Fix
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec.git
@@ -78,8 +78,9 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME
           haxelib run lime config ANDROID_SETUP true
           haxelib set lime 8.0.2
-          haxelib set openfl 9.2.2
-          haxelib set flixel-addons 3.1.1
+          haxelib set openfl 9.1.0
+          haxelib set flixel 5.2.2
+          haxelib set flixel-addons 2.11.0
           haxelib set hxcpp 4.2.1
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
