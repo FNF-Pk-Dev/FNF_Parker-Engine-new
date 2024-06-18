@@ -5410,7 +5410,7 @@ class PlayState extends MusicBeatState
 		// FUNCTIONS
         
         // MODCHAT
-        script.set("initMod", function(?mod:modcharting.Modifier) {});
+       // script.set("initMod", function(?mod:modcharting.Modifier) {});
 		//  CREATION FUNCTIONS
 		script.set("onLoad", function() {});
 		script.set("onCreate", function() {});
