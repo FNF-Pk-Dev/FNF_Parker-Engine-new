@@ -34,7 +34,7 @@ import Conductor;
 import Section;
 import Song;
 import PlayState;
-import modcharting.ModchartFuncs;
+//import modcharting.ModchartFuncs;
 import CoolUtil;
 #if sys
 import sys.FileSystem;
