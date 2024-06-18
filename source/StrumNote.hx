@@ -1,12 +1,12 @@
 package;
 
 import flixel.FlxG;
-import flixel.addons.effects.FlxSkewedSprite;
+import flixel.FlxSprite;
 import flixel.graphics.frames.FlxAtlasFrames;
 
 using StringTools;
 
-class StrumNote extends FlxSkewedSprite
+class StrumNote extends FlxSprite
 {
 	private var colorSwap:ColorSwap;
 	public var resetAnim:Float = 0;
