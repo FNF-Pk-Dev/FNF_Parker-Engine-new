@@ -1095,11 +1095,6 @@ class PlayState extends MusicBeatState
 		opponentStrums = new FlxTypedGroup<StrumNote>();
 		playerStrums = new FlxTypedGroup<StrumNote>();
 		
-		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, notes, this);
-    	playfieldRenderer.cameras = [camHUD];
-    	add(playfieldRenderer);
-    	add(grpNoteSplashes);
-		
 		initScripts();
 		initSongEvents();
 
@@ -1157,6 +1152,11 @@ class PlayState extends MusicBeatState
 
 		FlxG.fixedTimestep = false;
 		moveCameraSection();
+		
+		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, notes, this);
+    	playfieldRenderer.cameras = [camHUD];
+    	add(playfieldRenderer);
+    	add(grpNoteSplashes);
 
 		healthBarBG = new AttachedSprite('healthBar');
 		healthBarBG.y = FlxG.height * 0.89;
