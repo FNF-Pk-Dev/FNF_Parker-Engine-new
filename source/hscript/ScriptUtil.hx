@@ -190,6 +190,49 @@ class ScriptUtil
     	script.set('SimpleQuaternion', modcharting.SimpleQuaternion);
     	script.set('SustainStrip', modcharting.SustainStrip);
     	
+    	script.set('startMod', function(name:String, modClass:String, type:String = '', pf:Int = -1){
+            modcharting.ModchartFuncs.startMod(name, modClass, type, pf);
+
+            if (PlayState.instance == FlxG.state && PlayState.instance.playfieldRenderer != null)
+            {
+                PlayState.instance.playfieldRenderer.modifierTable.reconstructTable(); //needs to be reconstructed for lua modcharts
+            }
+        });
+        
+        script.set('setMod', function(name:String, value:Float){
+            modcharting.ModchartFuncs.setMod(name, value);
+        });
+        script.set('setSubMod', function(name:String, subValName:String, value:Float){
+            modcharting.ModchartFuncs.setSubMod(name, subValName,value);
+        });
+        script.set('setModTargetLane', function(name:String, value:Int){
+            modcharting.ModchartFuncs.setModTargetLane(name, value);
+        });
+        script.set('setModPlayfield', function(name:String, value:Int){
+            modcharting.ModchartFuncs.setModPlayfield(name,value);
+        });
+        script.set('addPlayfield', function(?x:Float = 0, ?y:Float = 0, ?z:Float = 0){
+            modcharting.ModchartFuncs.addPlayfield(x,y,z);
+        });
+        script.set('removePlayfield', function(idx:Int){
+            modcharting.ModchartFuncs.removePlayfield(idx);
+        });
+        script.set('tweenModifier', function(modifier:String, val:Float, time:Float, ease:String, ?tag:String = null){
+            modcharting.ModchartFuncs.tweenModifier(modifier,val,time,ease,null,tag);
+        });
+        script.set('tweenModifierSubValue', function(modifier:String, subValue:String, val:Float, time:Float, ease:String, ?tag:String = null){
+            modcharting.ModchartFuncs.tweenModifierSubValue(modifier,subValue,val,time,ease,null,tag);
+        });
+        script.set('setModEaseFunc', function(name:String, ease:String, ?tag:String = null){
+            modcharting.ModchartFuncs.setModEaseFunc(name,ease);
+        });
+        script.set('setModValue', function(beat:Float, argsAsString:String){
+            modcharting.ModchartFuncs.set(beat, argsAsString);
+        });
+        script.set('easeModValue', function(beat:Float, time:Float, easeStr:String, argsAsString:String, ?tag:String = null){
+            modcharting.ModchartFuncs.ease(beat, time, easeStr, argsAsString, null, tag);
+        });
+    	
     	//modcharting.ModchartFuncs.loadHScriptFunctions(this);
 	}
 
