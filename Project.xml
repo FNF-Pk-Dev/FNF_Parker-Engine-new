@@ -143,7 +143,7 @@
 	
 	<!--Set this to the engine you're using!-->
         <define name="PSYCH" />
-        <haxelib name="fnf-modcharting-tools" />
+        <!--<haxelib name="fnf-modcharting-tools" />-->
 	<!--<define name="PSYCHVERSION" value="0.6.3h"/>-->
 	
 	<!--<haxelib name="polymod"/> -->
