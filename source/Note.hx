@@ -1,7 +1,7 @@
 package;
 
 import flixel.FlxG;
-import flixel.addons.effects.FlxSkewedSprite;
+import flixel.FlxSprite;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.math.FlxMath;
 import flixel.util.FlxColor;
@@ -17,9 +17,9 @@ typedef EventNote = {
 	value2:String
 }
 
-class Note extends FlxSkewedSprite
+class Note extends FlxSprite
 {
-	public var mesh:modcharting.SustainStrip = null;
+        public var mesh:modcharting.SustainStrip = null;
         public var z:Float = 0;
 	public var extraData:Map<String,Dynamic> = [];
 
