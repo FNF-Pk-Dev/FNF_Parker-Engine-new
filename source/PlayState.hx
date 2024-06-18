@@ -1385,8 +1385,8 @@ class PlayState extends MusicBeatState
 		callOnLuas('onCreatePost', []);
 
 		scripts.executeAllFunc("onCreatePost");
-		var mod:String = "modcharting.Modifier";
-		scripts.executeAllFunc("initMod", [mod]);
+		//var mod:String = "modcharting.Modifier";
+		//scripts.executeAllFunc("initMod", [mod]);
 		scripts.executeAllFunc("onLoad");
 
 		super.create();
