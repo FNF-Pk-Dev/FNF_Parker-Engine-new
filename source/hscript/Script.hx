@@ -311,11 +311,11 @@ class Script extends FlxBasic
 		super.update(elapsed);
 	}
 	
-	public function initMod(mod:modcharting.Modifier)
+	/*public function initMod(mod:modcharting.Modifier)
     {
     	executeFunc("initMod", [mod]);
     }
-
+*/
 	function execute(ast:Expr):Dynamic
 	{
 		try
