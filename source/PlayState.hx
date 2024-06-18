@@ -354,7 +354,6 @@ class PlayState extends MusicBeatState
 		
 		scripts = new ScriptGroup();
 		scripts.onAddScript.push(onAddScript);
-	    ModchartFuncs.loadLuaFunctions();
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -1386,6 +1385,7 @@ class PlayState extends MusicBeatState
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPress);
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 		}
+		ModchartFuncs.loadLuaFunctions();
 		callOnLuas('onCreatePost', []);
 
 		scripts.executeAllFunc("onCreatePost");
