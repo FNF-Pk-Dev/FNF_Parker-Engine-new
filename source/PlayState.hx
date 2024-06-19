@@ -67,6 +67,7 @@ import hscript.ScriptUtil;
 import modcharting.ModchartFuncs;
 import modcharting.NoteMovement;
 import modcharting.PlayfieldRenderer;
+import modcharting.ModchartEditorState;
 import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
@@ -2871,7 +2872,9 @@ class PlayState extends MusicBeatState
 			cancelMusicFadeTween();
 			MusicBeatState.switchState(new CharacterEditorState(SONG.player2));
 		}
-		
+		if (FlxG.keys.justPressed.NINE && !endingSong && !inCutscene) {
+			MusicBeatState.switchState(new ModchartEditorState());
+		}
 		if (startedCountdown)
 		{
 			Conductor.songPosition += FlxG.elapsed * 1000 * playbackRate;
