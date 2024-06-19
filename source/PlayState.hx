@@ -4791,7 +4791,7 @@ class PlayState extends MusicBeatState
 		#if hscript
 		if(FunkinLua.hscript != null) FunkinLua.hscript = null;
 		#end
-		ClientPrefs.cacheOnGPU = backupGpu;
+		//ClientPrefs.cacheOnGPU = backupGpu;
 
 		if(!ClientPrefs.controllerMode)
 		{
