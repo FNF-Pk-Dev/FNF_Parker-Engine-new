@@ -54,7 +54,7 @@ import hscript.Parser;
 import hscript.Interp;
 import hscript.Expr;
 #end
-//import modcharting.ModchartFuncs;
+import modcharting.ModchartFuncs;
 
 #if VIDEOS_ALLOWED
 import VideoHandler;
