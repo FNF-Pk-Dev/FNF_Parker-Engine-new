@@ -169,7 +169,7 @@ class ScriptUtil
 	
 	    if (script == null)
 			return;
-		/*	
+			
 		// ModChat
     	script.set('ModchartEditorState', modcharting.ModchartEditorState);
     	script.set('ModchartEvent', modcharting.ModchartEvent);
@@ -188,7 +188,7 @@ class ScriptUtil
     	script.set('Playfield', modcharting.Playfield);
     	script.set('PlayfieldRenderer', modcharting.PlayfieldRenderer);
     	script.set('SimpleQuaternion', modcharting.SimpleQuaternion);
-    	script.set('SustainStrip', modcharting.SustainStrip);*/
+    	script.set('SustainStrip', modcharting.SustainStrip);
 	}
 
 	public static inline function findScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String>
