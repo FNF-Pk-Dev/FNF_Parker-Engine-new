@@ -1104,9 +1104,6 @@ class PlayState extends MusicBeatState
 
 		// startCountdown();
 	        
-	        backupGpu = ClientPrefs.cacheOnGPU;
-	        ClientPrefs.cacheOnGPU = false;
-
 		generateSong(SONG.song);
 
 		#if LUA_ALLOWED
