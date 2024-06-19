@@ -1862,7 +1862,7 @@ class PlayState extends MusicBeatState
 			#end
 			generateStaticArrows(0);
 			generateStaticArrows(1);
-			//NoteMovement.getDefaultStrumPos(this);
+		        NoteMovement.getDefaultStrumPos(this);
 			for (i in 0...playerStrums.length) {
 				setOnLuas('defaultPlayerStrumX' + i, playerStrums.members[i].x);
 				setOnLuas('defaultPlayerStrumY' + i, playerStrums.members[i].y);
