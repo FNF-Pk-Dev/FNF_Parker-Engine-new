@@ -64,9 +64,9 @@ import flixel.system.FlxAssets.FlxShader;
 import hscript.Script;
 import hscript.ScriptGroup;
 import hscript.ScriptUtil;
-//import modcharting.ModchartFuncs;
-//import modcharting.NoteMovement;
-//import modcharting.PlayfieldRenderer;
+import modcharting.ModchartFuncs;
+import modcharting.NoteMovement;
+import modcharting.PlayfieldRenderer;
 import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
@@ -1081,7 +1081,6 @@ class PlayState extends MusicBeatState
 		
 		strumLineNotes = new FlxTypedGroup<StrumNote>();
 		add(strumLineNotes);
-    	        add(grpNoteSplashes);
 		
 		if(ClientPrefs.timeBarType == 'Song Name')
 		{
@@ -1126,6 +1125,11 @@ class PlayState extends MusicBeatState
 
 		// After all characters being loaded, it makes then invisible 0.01s later so that the player won't freeze when you change characters
 		// add(strumLine);
+
+		playfieldRenderer = new PlayfieldRenderer(strumLineNotes, notes, this);
+                playfieldRenderer.cameras = [camHUD];
+                add(playfieldRenderer);
+                add(grpNoteSplashes);
 		
 		camFollow = new FlxPoint();
 		camFollowPos = new FlxObject(0, 0, 1, 1);
@@ -1381,7 +1385,6 @@ class PlayState extends MusicBeatState
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_DOWN, onKeyPress);
 			FlxG.stage.addEventListener(KeyboardEvent.KEY_UP, onKeyRelease);
 		}
-		//ModchartFuncs.loadLuaFunctions();
 		callOnLuas('onCreatePost', []);
 
 		scripts.executeAllFunc("onCreatePost");
