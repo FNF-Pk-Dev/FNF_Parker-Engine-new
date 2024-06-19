@@ -335,6 +335,8 @@ class PlayState extends MusicBeatState
 	private var controlArray:Array<String>;
 
 	var precacheList:Map<String, String> = new Map<String, String>();
+	var backupGpu:Bool;
+	// Cnm 为什么Modifier不享受gpu效果,开了直接消失
 	
 	// stores the last judgement object
 	public static var lastRating:FlxSprite;
@@ -1101,6 +1103,9 @@ class PlayState extends MusicBeatState
 		scripts.executeAllFunc("onCreate");
 
 		// startCountdown();
+	        
+	        backupGpu = ClientPrefs.cacheOnGPU;
+	        ClientPrefs.cacheOnGPU = false;
 
 		generateSong(SONG.song);
 
@@ -4789,6 +4794,7 @@ class PlayState extends MusicBeatState
 		#if hscript
 		if(FunkinLua.hscript != null) FunkinLua.hscript = null;
 		#end
+		ClientPrefs.cacheOnGPU = backupGpu;
 
 		if(!ClientPrefs.controllerMode)
 		{
