@@ -54,6 +54,7 @@ import hscript.Parser;
 import hscript.Interp;
 import hscript.Expr;
 #end
+import modcharting.ModchartFuncs;
 
 #if VIDEOS_ALLOWED
 import VideoHandler;
@@ -237,6 +238,9 @@ class FunkinLua {
 		#else
 		set('buildTarget', 'unknown');
 		#end
+
+		// modchat
+		ModchartFuncs.loadLuaFunctions(this);
 
 		// custom substate
 		Lua_helper.add_callback(lua, "openCustomSubstate", function(name:String, pauseGame:Bool = false) {
