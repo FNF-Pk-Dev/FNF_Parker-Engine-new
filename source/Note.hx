@@ -19,7 +19,7 @@ typedef EventNote = {
 
 class Note extends FlxSprite
 {
-        public var mesh:modcharting.SustainStrip = null;
+       // public var mesh:modcharting.SustainStrip = null;
         public var z:Float = 0;
 	public var extraData:Map<String,Dynamic> = [];
 
