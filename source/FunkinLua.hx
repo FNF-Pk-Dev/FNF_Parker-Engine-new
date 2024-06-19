@@ -240,7 +240,7 @@ class FunkinLua {
 		#end
 
 		// modchat
-		//ModchartFuncs.loadLuaFunctions(this);
+		ModchartFuncs.loadLuaFunctions(this);
 
 		// custom substate
 		Lua_helper.add_callback(lua, "openCustomSubstate", function(name:String, pauseGame:Bool = false) {
