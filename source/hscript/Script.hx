@@ -16,6 +16,10 @@ import haxe.crypto.Base64;
 import PlayState;
 import Paths;
 #if LUA_ALLOWED
+import llua.Lua;
+import llua.LuaL;
+import llua.State;
+import llua.Convert;
 import FunkinLua;
 #end
 
@@ -45,6 +49,7 @@ class Script extends FlxBasic
 
 	public var name:Null<String> = "_hscript";
 	public var interacter:Interact;
+	public var parentLua:FunkinLua;
 
 	var _group:Null<ScriptGroup>;
 
