@@ -66,7 +66,6 @@ class Interp
 		declared = new Array();
 		variables.set("null", null);
 		variables.set("this", this);
-		variables.set("static", static);
 		variables.set("public", public);
 		variables.set("true", true);
 		variables.set("false", false);
