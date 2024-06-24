@@ -65,8 +65,6 @@ class Interp
 		#end
 		declared = new Array();
 		variables.set("null", null);
-		variables.set("this", this);
-		variables.set("public", public);
 		variables.set("true", true);
 		variables.set("false", false);
 		variables.set("trace", function(e) haxe.Log.trace(Std.string(e), posInfos()));
