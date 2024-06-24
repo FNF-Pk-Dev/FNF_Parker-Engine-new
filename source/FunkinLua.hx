@@ -54,7 +54,6 @@ import hscript.Parser;
 import hscript.Interp;
 import hscript.Expr;
 #end
-import modcharting.ModchartFuncs;
 
 #if VIDEOS_ALLOWED
 import VideoHandler;
@@ -238,9 +237,6 @@ class FunkinLua {
 		#else
 		set('buildTarget', 'unknown');
 		#end
-
-		// modchat
-		ModchartFuncs.loadLuaFunctions(this);
 
 		// custom substate
 		Lua_helper.add_callback(lua, "openCustomSubstate", function(name:String, pauseGame:Bool = false) {
@@ -3521,6 +3517,26 @@ class HScript
 			}
 			return false;
 		});
+		
+		#if LUA_ALLOWED
+		interp.variables.set('createGlobalCallback', function(name:String, func:Dynamic)
+		{
+			for (script in PlayState.instance.luaArray)
+				if(script != null && script.lua != null && !script.closed)
+					Lua_helper.add_callback(script.lua, name, func);
+
+			FunkinLua.customFunctions.set(name, func);
+		});
+
+		// this one was tested
+		interp.variables.set('createCallback', function(name:String, func:Dynamic, ?funk:FunkinLua = null)
+		{
+			if(funk == null) funk = parentLua;
+			
+			if(parentLua != null) funk.addLocalCallback(name, func);
+			else FunkinLua.luaTrace('createCallback ($name): 3rd argument is null', false, false, FlxColor.RED);
+		});
+		#end
 	}
 
 
