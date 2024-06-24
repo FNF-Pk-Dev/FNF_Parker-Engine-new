@@ -83,6 +83,7 @@ class FunkinLua {
 	public var camTarget:FlxCamera;
 	public var scriptName:String = '';
 	public var closed:Bool = false;
+	public var callbacks:Map<String, Dynamic> = new Map<String, Dynamic>();
 
 	#if hscript
 	public static var hscript:HScript = null;
@@ -3330,6 +3331,12 @@ class FunkinLua {
 		Lua.setglobal(lua, variable);
 		#end
 	}
+	
+	public function addLocalCallback(name:String, myFunction:Dynamic)
+	{
+		callbacks.set(name, myFunction);
+		Lua_helper.add_callback(lua, name, null); //just so that it gets called
+	}
 
 	#if LUA_ALLOWED
 	public function getBool(variable:String) {
@@ -3467,6 +3474,7 @@ class HScript
 {
 	public static var parser:Parser = new Parser();
 	public var interp:Interp;
+	public var parentLua:FunkinLua;
 
 	public var variables(get, never):Map<String, Dynamic>;
 
