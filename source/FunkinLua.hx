@@ -83,6 +83,8 @@ class FunkinLua {
 	public var camTarget:FlxCamera;
 	public var scriptName:String = '';
 	public var closed:Bool = false;
+	
+	public static var customFunctions:Map<String, Dynamic> = new Map<String, Dynamic>();
 	public var callbacks:Map<String, Dynamic> = new Map<String, Dynamic>();
 
 	#if hscript
@@ -99,6 +101,13 @@ class FunkinLua {
 		//trace("LuaJIT version: " + Lua.versionJIT());
 
 		//LuaL.dostring(lua, CLENSE);
+		
+		for (name => func in customFunctions)
+		{
+			if(func != null)
+				set(name, func);
+				// Lua_helper.add_callback(lua, name, func);
+		}
 		try{
 			var result:Dynamic = LuaL.dofile(lua, script);
 			var resultStr:String = Lua.tostring(lua, result);
@@ -3214,12 +3223,13 @@ class FunkinLua {
 		return null;
 	}
 
-	var lastCalledFunction:String = '';
+	public var lastCalledFunction:String = '';
+	public static var lastCalledScript:FunkinLua = null;
 	public function call(func:String, args:Array<Dynamic>):Dynamic {
-		#if LUA_ALLOWED
 		if(closed) return Function_Continue;
 
 		lastCalledFunction = func;
+		lastCalledScript = this;
 		try {
 			if(lua == null) return Function_Continue;
 
@@ -3228,7 +3238,7 @@ class FunkinLua {
 
 			if (type != Lua.LUA_TFUNCTION) {
 				if (type > Lua.LUA_TNIL)
-					luaTrace("ERROR (" + func + "): attempt to call a " + typeToString(type) + " value", false, false, FlxColor.RED);
+					luaTrace("ERROR (" + func + "): attempt to call a " + LuaUtils.typeToString(type) + " value", false, false, FlxColor.RED);
 
 				Lua.pop(lua, 1);
 				return Function_Continue;
@@ -3249,12 +3259,12 @@ class FunkinLua {
 			if (result == null) result = Function_Continue;
 
 			Lua.pop(lua, 1);
+			if(closed) stop();
 			return result;
 		}
 		catch (e:Dynamic) {
 			trace(e);
 		}
-		#end
 		return Function_Continue;
 	}
 
