@@ -233,6 +233,26 @@ class Script extends FlxBasic
 		{
 		return PlayState.instance.variables.get(varName);
 		});
+		
+		#if LUA_ALLOWED
+		set('createGlobalCallback', function(name:String, func:Dynamic)
+		{
+			for (script in PlayState.instance.luaArray)
+				if(script != null && script.lua != null && !script.closed)
+					Lua_helper.add_callback(script.lua, name, func);
+
+			FunkinLua.customFunctions.set(name, func);
+		});
+
+		// this one was tested
+		set('createCallback', function(name:String, func:Dynamic, ?funk:FunkinLua = null)
+		{
+			if(funk == null) funk = parentLua;
+			
+			if(parentLua != null) funk.addLocalCallback(name, func);
+			else FunkinLua.luaTrace('createCallback ($name): 3rd argument is null', false, false, FlxColor.RED);
+		});
+		#end
 
 		set("ScriptReturn", ScriptReturn);
 	}
@@ -310,12 +330,7 @@ class Script extends FlxBasic
 
 		super.update(elapsed);
 	}
-	
-	/*public function initMod(mod:modcharting.Modifier)
-    {
-    	executeFunc("initMod", [mod]);
-    }
-*/
+
 	function execute(ast:Expr):Dynamic
 	{
 		try
