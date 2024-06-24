@@ -15,6 +15,9 @@ import sys.io.File;
 import haxe.crypto.Base64;
 import PlayState;
 import Paths;
+#if LUA_ALLOWED
+import FunkinLua;
+#end
 
 using StringTools;
 
