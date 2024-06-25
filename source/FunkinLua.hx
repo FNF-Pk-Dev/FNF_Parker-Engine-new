@@ -1105,6 +1105,42 @@ class FunkinLua {
 		});
 
 		// gay ass tweens
+		Lua_helper.add_callback(lua,"startTween", function(tag:String, vars:String, values:Any = null, duration:Float, options:Any = null) {
+			var penisExam:Dynamic = LuaUtils.tweenPrepare(tag, vars);
+			if(penisExam != null)
+			{
+				if(values != null)
+				{
+					var myOptions:LuaTweenOptions = LuaUtils.getLuaTween(options);
+					if(tag != null)
+					{
+						var variables = MusicBeatState.getVariables();
+						tag = 'tween_' + LuaUtils.formatVariable(tag);
+						variables.set(tag, FlxTween.tween(penisExam, values, duration, {
+							type: myOptions.type,
+							ease: myOptions.ease,
+							startDelay: myOptions.startDelay,
+							loopDelay: myOptions.loopDelay,
+	
+							onUpdate: function(twn:FlxTween) {
+								if(myOptions.onUpdate != null) game.callOnLuas(myOptions.onUpdate, [tag, vars]);
+							},
+							onStart: function(twn:FlxTween) {
+								if(myOptions.onStart != null) game.callOnLuas(myOptions.onStart, [tag, vars]);
+							},
+							onComplete: function(twn:FlxTween) {
+								if(twn.type == FlxTweenType.ONESHOT || twn.type == FlxTweenType.BACKWARD) variables.remove(tag);
+								if(myOptions.onComplete != null) game.callOnLuas(myOptions.onComplete, [tag, vars]);
+							}
+						}));
+					}
+					else FlxTween.tween(penisExam, values, duration, {type: myOptions.type, ease: myOptions.ease, startDelay: myOptions.startDelay, loopDelay: myOptions.loopDelay});
+				}
+				else luaTrace('startTween: No values on 2nd argument!', false, false, FlxColor.RED);
+			}
+			else luaTrace('startTween: Couldnt find object: ' + vars, false, false, FlxColor.RED);
+		});
+		
 		Lua_helper.add_callback(lua, "doTweenX", function(tag:String, vars:String, value:Dynamic, duration:Float, ease:String) {
 			var penisExam:Dynamic = tweenShit(tag, vars);
 			if(penisExam != null) {
@@ -3306,6 +3342,14 @@ class FunkinLua {
 			coverMeInPiss = getVarInArray(coverMeInPiss, killMe[i]);
 		}
 		return coverMeInPiss;
+	}
+	
+	public static function tweenPrepare(tag:String, vars:String) {
+		if(tag != null) cancelTween(tag);
+		var variables:Array<String> = vars.split('.');
+		var sexyProp:Dynamic = getObjectDirectly(variables[0]);
+		if(variables.length > 1) sexyProp = getVarInArray(getPropertyLoop(variables), variables[variables.length-1]);
+		return sexyProp;
 	}
 
 	public static function getObjectDirectly(objectName:String, ?checkForTextsToo:Bool = true):Dynamic
