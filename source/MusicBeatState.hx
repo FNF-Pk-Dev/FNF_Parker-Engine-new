@@ -152,6 +152,13 @@ class MusicBeatState extends modcharting.ModchartMusicBeatState
 
 		super.update(elapsed);
 	}
+	
+	public static function getVariables()
+		return getState().variables;
+		
+	public static function getState():MusicBeatState {
+		return cast (FlxG.state, MusicBeatState);
+	}
 
 	private function updateSection():Void
 	{

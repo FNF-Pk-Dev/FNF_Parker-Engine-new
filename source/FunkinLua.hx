@@ -71,6 +71,16 @@ import android.FlxNewHitbox;
 
 using StringTools;
 
+typedef LuaTweenOptions = {
+	type:FlxTweenType,
+	startDelay:Float,
+	onUpdate:Null<String>,
+	onStart:Null<String>,
+	onComplete:Null<String>,
+	loopDelay:Float,
+	ease:EaseFunction
+}
+
 class FunkinLua {
 	public static var Function_Stop:Dynamic = "##PSYCHLUA_FUNCTIONSTOP";
 	public static var Function_Continue:Dynamic = "##PSYCHLUA_FUNCTIONCONTINUE";
@@ -1106,16 +1116,16 @@ class FunkinLua {
 
 		// gay ass tweens
 		Lua_helper.add_callback(lua,"startTween", function(tag:String, vars:String, values:Any = null, duration:Float, options:Any = null) {
-			var penisExam:Dynamic = LuaUtils.tweenPrepare(tag, vars);
+			var penisExam:Dynamic = tweenPrepare(tag, vars);
 			if(penisExam != null)
 			{
 				if(values != null)
 				{
-					var myOptions:LuaTweenOptions = LuaUtils.getLuaTween(options);
+					var myOptions:LuaTweenOptions = getLuaTween(options);
 					if(tag != null)
 					{
 						var variables = MusicBeatState.getVariables();
-						tag = 'tween_' + LuaUtils.formatVariable(tag);
+						tag = 'tween_' + formatVariable(tag);
 						variables.set(tag, FlxTween.tween(penisExam, values, duration, {
 							type: myOptions.type,
 							ease: myOptions.ease,
@@ -1123,14 +1133,14 @@ class FunkinLua {
 							loopDelay: myOptions.loopDelay,
 	
 							onUpdate: function(twn:FlxTween) {
-								if(myOptions.onUpdate != null) game.callOnLuas(myOptions.onUpdate, [tag, vars]);
+								if(myOptions.onUpdate != null) PlayState.instance.callOnLuas(myOptions.onUpdate, [tag, vars]);
 							},
 							onStart: function(twn:FlxTween) {
-								if(myOptions.onStart != null) game.callOnLuas(myOptions.onStart, [tag, vars]);
+								if(myOptions.onStart != null) PlayState.instance.callOnLuas(myOptions.onStart, [tag, vars]);
 							},
 							onComplete: function(twn:FlxTween) {
 								if(twn.type == FlxTweenType.ONESHOT || twn.type == FlxTweenType.BACKWARD) variables.remove(tag);
-								if(myOptions.onComplete != null) game.callOnLuas(myOptions.onComplete, [tag, vars]);
+								if(myOptions.onComplete != null) PlayState.instance.callOnLuas(myOptions.onComplete, [tag, vars]);
 							}
 						}));
 					}
@@ -3344,11 +3354,24 @@ class FunkinLua {
 		return coverMeInPiss;
 	}
 	
-	public static function tweenPrepare(tag:String, vars:String) {
+	public static function getLuaTween(options:Dynamic)
+	{
+		return {
+			type: getTweenTypeByString(options.type),
+			startDelay: options.startDelay,
+			onUpdate: options.onUpdate,
+			onStart: options.onStart,
+			onComplete: options.onComplete,
+			loopDelay: options.loopDelay,
+			ease: getTweenEaseByString(options.ease)
+		};
+	}
+	
+	function tweenPrepare(tag:String, vars:String) {
 		if(tag != null) cancelTween(tag);
 		var variables:Array<String> = vars.split('.');
 		var sexyProp:Dynamic = getObjectDirectly(variables[0]);
-		if(variables.length > 1) sexyProp = getVarInArray(getPropertyLoop(variables), variables[variables.length-1]);
+		if(variables.length > 1) sexyProp = getVarInArray(getPropertyLoopThingWhatever(variables), variables[variables.length-1]);
 		return sexyProp;
 	}
 
