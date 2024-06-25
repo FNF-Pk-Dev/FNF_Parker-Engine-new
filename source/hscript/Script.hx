@@ -244,7 +244,7 @@ class Script extends FlxBasic
 		});
 		
 		#if LUA_ALLOWED
-		set('createGlobalCallback', function(name:String, func:Dynamic, ?funk:FunkinLua = null)
+		set('createGlobalCallback', function(name:String, func:Dynamic, ?funk:Array<FunkinLua> = null)
         {
             if(funk != null) {
                 for (script in funk) {
@@ -253,8 +253,8 @@ class Script extends FlxBasic
                     }
                 }
             }
-			FunkinLua.customFunctions.set(name, func);
-		});
+            FunkinLua.customFunctions.set(name, func);
+        });
 
 		// this one was tested
 		set('createCallback', function(name:String, func:Dynamic, ?funk:FunkinLua = null)
