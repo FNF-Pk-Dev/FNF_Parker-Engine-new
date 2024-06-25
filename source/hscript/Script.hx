@@ -245,11 +245,14 @@ class Script extends FlxBasic
 		
 		#if LUA_ALLOWED
 		set('createGlobalCallback', function(name:String, func:Dynamic, ?funk:FunkinLua = null)
-		{
-			for (script in funk)
-				if(script != null && script.lua != null && !script.closed)
-					Lua_helper.add_callback(script.lua, name, func);
-
+        {
+            if(funk != null) {
+                for (script in funk) {
+                    if(script != null && script.lua != null && !script.closed) {
+                        Lua_helper.add_callback(script.lua, name, func);
+                    }
+                }
+            }
 			FunkinLua.customFunctions.set(name, func);
 		});
 
