@@ -154,16 +154,6 @@ class MusicBeatState extends modcharting.ModchartMusicBeatState
 
 		super.update(elapsed);
 	}
-	
-    public static function getVariables():Dynamic {
-        return getState().variables;
-    }
-    
-    public static function getState():MusicBeatState {
-        var curState:FlxState = FlxG.state;
-        var leState:MusicBeatState = cast(curState, MusicBeatState);
-        return leState;
-    }
 
 	private function updateSection():Void
 	{
@@ -239,13 +229,15 @@ class MusicBeatState extends modcharting.ModchartMusicBeatState
 	public static function resetState() {
 		MusicBeatState.switchState(FlxG.state);
 	}
-
-
+	
+	public static function getVariables():Dynamic {
+        return getState().variables;
+    }
+    
     public static function getState():MusicBeatState {
-        var curState:Dynamic = FlxG.state;
-        if (Std.is(curState, MusicBeatState)) {
-            return cast(curState, MusicBeatState);
-        }
+        var curState:FlxState = FlxG.state;
+        var leState:MusicBeatState = cast(curState, MusicBeatState);
+        return leState;
     }
 
 	public function stepHit():Void
