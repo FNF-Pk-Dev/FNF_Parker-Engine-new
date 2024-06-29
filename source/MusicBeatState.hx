@@ -34,6 +34,8 @@ class MusicBeatState extends modcharting.ModchartMusicBeatState
 	private var controls(get, never):Controls;
 
 	public static var camBeat:FlxCamera;
+	
+	public var variables:Map<String, Dynamic> = new Map();
 
 	inline function get_controls():Controls
 		return PlayerSettings.player1.controls;

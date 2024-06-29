@@ -3365,7 +3365,10 @@ class FunkinLua {
 		return coverMeInPiss;
 	}
 	
-	public static function getLuaTween(options:Dynamic)
+	function formatVariable(tag:String)
+		return tag.trim().replace(' ', '_').replace('.', '');
+	
+	function getLuaTween(options:Dynamic)
 	{
 		return {
 			type: getTypeByString(options.type),
