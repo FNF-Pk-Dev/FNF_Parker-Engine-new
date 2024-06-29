@@ -105,6 +105,12 @@ class Main extends Sprite
 		FlxG.autoPause = false;
 		FlxG.mouse.visible = false;
 		#end
+
+		#if cpp
+                cpp.NativeGc.enable(true);
+                cpp.NativeGc.run(true);
+                cpp.NativeGc.enterGCFreeZone();
+                #end
 		
 		#if CRASH_HANDLER
 		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
