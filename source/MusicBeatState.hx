@@ -153,8 +153,6 @@ class MusicBeatState extends modcharting.ModchartMusicBeatState
 		super.update(elapsed);
 	}
 	
-    public var variables:Dynamic;
-
     public static function getVariables():Dynamic {
         return getState().variables;
     }
