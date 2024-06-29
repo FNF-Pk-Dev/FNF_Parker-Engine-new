@@ -3165,6 +3165,17 @@ class FunkinLua {
 			PlayState.instance.modchartTimers.remove(tag);
 		}
 	}
+	
+	function getTypeByString(?type:String = '') {
+		switch(type.toLowerCase().trim())
+		{
+			case 'backward': return FlxTweenType.BACKWARD;
+			case 'looping'|'loop': return FlxTweenType.LOOPING;
+			case 'persist': return FlxTweenType.PERSIST;
+			case 'pingpong': return FlxTweenType.PINGPONG;
+		}
+		return FlxTweenType.ONESHOT;
+	}
 
 	//Better optimized than using some getProperty shit or idk
 	function getFlxEaseByString(?ease:String = '') {
@@ -3357,13 +3368,13 @@ class FunkinLua {
 	public static function getLuaTween(options:Dynamic)
 	{
 		return {
-			type: getTweenTypeByString(options.type),
+			type: getTypeByString(options.type),
 			startDelay: options.startDelay,
 			onUpdate: options.onUpdate,
 			onStart: options.onStart,
 			onComplete: options.onComplete,
 			loopDelay: options.loopDelay,
-			ease: getTweenEaseByString(options.ease)
+			ease: getFlxEaseByString(options.ease)
 		};
 	}
 	
