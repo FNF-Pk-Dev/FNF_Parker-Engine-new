@@ -4012,7 +4012,6 @@ class PlayState extends MusicBeatState
 			rating.setGraphicSize(Std.int(rating.width * daPixelZoom * 0.85));
 			comboSpr.setGraphicSize(Std.int(comboSpr.width * daPixelZoom * 0.85));
 		}
-        if(combo >= 10)
 		comboSpr.updateHitbox();
 		
 		rating.updateHitbox();
