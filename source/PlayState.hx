@@ -67,7 +67,6 @@ import hscript.ScriptUtil;
 import modcharting.ModchartFuncs;
 import modcharting.NoteMovement;
 import modcharting.PlayfieldRenderer;
-import modcharting.ModchartEditorState;
 import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
@@ -2872,9 +2871,7 @@ class PlayState extends MusicBeatState
 			cancelMusicFadeTween();
 			MusicBeatState.switchState(new CharacterEditorState(SONG.player2));
 		}
-		if (FlxG.keys.justPressed.NINE && !endingSong && !inCutscene) {
-			MusicBeatState.switchState(new ModchartEditorState());
-		}
+		
 		if (startedCountdown)
 		{
 			Conductor.songPosition += FlxG.elapsed * 1000 * playbackRate;
@@ -3979,8 +3976,10 @@ class PlayState extends MusicBeatState
 		rating.x += ratingOffsets[0];
 		rating.y -= ratingOffsets[1];
 		rating.visible = showRating;
-
-		var comboSpr:FlxSprite = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'combo' + pixelShitPart2));
+		
+		var comboSpr:FlxSprite;
+		if(combo >= 2){
+		comboSpr = new FlxSprite().loadGraphic(Paths.image(pixelShitPart1 + 'combo' + pixelShitPart2));
 		comboSpr.screenCenter();
 		comboSpr.x = coolText.x;
 		comboSpr.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
@@ -3990,6 +3989,7 @@ class PlayState extends MusicBeatState
 		comboSpr.x += ratingOffsets[0];
 		comboSpr.y -= ratingOffsets[1];
 		comboSpr.velocity.x += FlxG.random.int(1, 10) * playbackRate;
+		}
 
 		insert(members.indexOf(strumLineNotes), rating);
 		
@@ -4011,8 +4011,9 @@ class PlayState extends MusicBeatState
 			rating.setGraphicSize(Std.int(rating.width * daPixelZoom * 0.85));
 			comboSpr.setGraphicSize(Std.int(comboSpr.width * daPixelZoom * 0.85));
 		}
-
+        if(combo >= 10)
 		comboSpr.updateHitbox();
+		
 		rating.updateHitbox();
 
 		var seperatedScore:Array<Int> = [];
@@ -4028,6 +4029,7 @@ class PlayState extends MusicBeatState
 		var xThing:Float = 0;
 		if (showCombo)
 		{
+		    if(combo >= 10)
 			insert(members.indexOf(strumLineNotes), comboSpr);
 		}
 		if (!ClientPrefs.comboStacking)
