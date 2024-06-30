@@ -1217,13 +1217,13 @@ class FunkinLua {
 			}
 		});
 		Lua_helper.add_callback(lua, "doTweenNum", function(tag:String, value1:Dynamic, value2:Dynamic, duration:Float, ease:String) {
-			var penisExam:Dynamic = tweenShit(tag);
+			var penisExam:Dynamic = tweenShit(tag, null);
 			if(penisExam != null) {
 				PlayState.instance.modchartTweens.set(tag, FlxTween.num(value1, value2, duration, {ease: getFlxEaseByString(ease)}, function(val:Float) {
                 PlayState.instance.callOnLuas('onTweenUpdateNum', [tag, val]);
                    }));
 			} else {
-				luaTrace('doTweenNum: Couldnt find object: ' + vars, false, false, FlxColor.RED);
+				luaTrace('doTweenNum: Couldnt find object: ' + tag, false, false, FlxColor.RED);
 			}
 		});
 		Lua_helper.add_callback(lua, "doTweenColor", function(tag:String, vars:String, targetColor:String, duration:Float, ease:String) {
