@@ -37,7 +37,11 @@ class Main extends Sprite
 		zoom: -1.0, // game state bounds
 		framerate: 60, // default framerate
 		skipSplash: true, // if the default flixel splash screen should be skipped
+		#if android
 		startFullscreen: true // if the game should start at fullscreen mode
+		#elseif desktop
+		startFullscreen: false
+		#end
 	};
 
 	public static var fpsVar:FPS;
@@ -123,9 +127,7 @@ class Main extends Sprite
 				DiscordClient.shutdown();
 			});
 		}
-		Lib.application.window.fullscreen = false;
-		//Lib.application.window.x = CURRENT_X;
-		//Lib.application.window.y = CURRENT_Y;
+		//Lib.application.window.fullscreen = false;
 		#end
 	}
 
