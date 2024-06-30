@@ -47,6 +47,7 @@ jobs:
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec
           haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit-Fix.git
+          haxelib git hxpy https://github.com/FNF-Pk-Dev/hxpy.git
           haxelib install hscript
           haxelib git hscript-ex https://github.com/ianharrigan/hscript-ex
           haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
