@@ -136,6 +136,7 @@
 	<haxelib name="flixel-ui" />
 	<haxelib name="haxe-crypto" />
 	<haxelib name="flxgif" />
+	<haxelib name="hxpy" />
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
 	<haxelib name="hxCodec" if="VIDEOS_ALLOWED"/> 
         <haxelib name="extension-androidtools" if="android"/>
