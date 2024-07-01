@@ -4097,6 +4097,7 @@ class PlayState extends MusicBeatState
 
 		coolText.text = Std.string(seperatedScore);
 		// add(coolText);
+		scripts.executeAllFunc('popUpScore', [rating, comboSpr, numScore]);
 
 		FlxTween.tween(rating, {alpha: 0}, 0.2 / playbackRate, {
 			startDelay: Conductor.crochet * 0.001 / playbackRate
@@ -5075,7 +5076,8 @@ class PlayState extends MusicBeatState
 		setOnLuas('hits', songHits);
 
 		var ret:Dynamic = callOnLuas('onRecalculateRating', [], false);
-		if(ret != FunkinLua.Function_Stop)
+		var reth:Dynamic = scripts.executeAllFunc("onRecalculateRating", []);
+		if(ret != FunkinLua.Function_Stop || reth != FunkinLua.Function_Stop)
 		{
 			if(totalPlayed < 1) //Prevent divide by 0
 				ratingName = '?';
