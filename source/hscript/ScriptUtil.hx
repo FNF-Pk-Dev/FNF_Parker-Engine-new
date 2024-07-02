@@ -19,6 +19,9 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.util.FlxTimer;
+import hxvlc.flixel.FlxVideoSprite;
+import hxvlc.flixel.FlxVideo;
+import hxvlc.util.Handle;
 import haxe.Json;
 import Boyfriend;
 import Character;
@@ -34,7 +37,7 @@ import Conductor;
 import Section;
 import Song;
 import PlayState;
-//import modcharting.ModchartFuncs;
+import modcharting.ModchartFuncs;
 import CoolUtil;
 #if sys
 import sys.FileSystem;
@@ -105,6 +108,11 @@ class ScriptUtil
 		// Sprites
 		script.set("FlxSprite", FlxSprite);
 		script.set("FlxGraphic", FlxGraphic);
+		
+		// Video
+		script.set("FlxVideo", FlxVideo);
+		script.set("FlxVideoSprite", FlxVideoSprite);
+		script.set("Handle", Handle);
 
 		// Tweens
 		script.set("FlxTween", FlxTween);
@@ -124,6 +132,9 @@ class ScriptUtil
 		script.set("FlxRuntimeShader", FlxRuntimeShader);
 
 		// Color Functions
+		
+		script.set("FlxColor", FlxColor);
+		
 		script.set("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
 		{
 			return FlxColor.fromRGB(Red, Green, Blue, Alpha);
