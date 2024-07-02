@@ -13,7 +13,8 @@ import hscript.Parser;
 import openfl.Lib;
 import sys.FileSystem;
 import sys.io.File;
-import haxe.crypto.Base64;
+//import haxe.crypto.Base64;
+import com.hurlant.crypto.encoding.binary.Base64;
 import PlayState;
 import Paths;
 #if LUA_ALLOWED
@@ -140,8 +141,9 @@ class Script extends FlxBasic
         
                 if (FileSystem.exists(path))
                 {
+                    var Base64E = new Base64();
                     var base64Encoded:String = File.getContent(path);
-                    hx = haxe.crypto.Base64.decode(base64Encoded).toString();
+                    hx = Base64E.decode(base64Encoded).toString();
                     break;
                 }
             }
