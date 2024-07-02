@@ -133,8 +133,6 @@ class ScriptUtil
 
 		// Color Functions
 		
-		script.set("FlxColor", FlxColor);
-		
 		script.set("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
 		{
 			return FlxColor.fromRGB(Red, Green, Blue, Alpha);
