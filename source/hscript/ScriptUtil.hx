@@ -19,8 +19,7 @@ import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
 import flixel.math.FlxMath;
-import flixel.math.FlxPoint;
-import flixel.math.FlxRect;
+import openfl.display.BlendMode;
 import flixel.util.FlxTimer;
 import hxvlc.flixel.FlxVideoSprite;
 import hxvlc.flixel.FlxVideo;
@@ -81,6 +80,7 @@ class ScriptUtil
 			return;
 
 		// OpenFL
+		script.set("BlendMode", BlendMode);
 		script.set("Lib", Lib);
 		script.set("Capabilities", Capabilities);
 		script.set("ShaderFitler", ShaderFilter);
