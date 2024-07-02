@@ -34,6 +34,7 @@ import flixel.math.FlxMath;
 import flixel.util.FlxSave;
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.system.FlxAssets.FlxShader;
+import modcharting.ModchartFuncs;
 
 #if (!flash && sys)
 import flixel.addons.display.FlxRuntimeShader;
@@ -257,6 +258,9 @@ class FunkinLua {
 		#else
 		set('buildTarget', 'unknown');
 		#end
+		
+		// modchat
+		ModchartFuncs.loadLuaFunctions(this);
 
 		// custom substate
 		Lua_helper.add_callback(lua, "openCustomSubstate", function(name:String, pauseGame:Bool = false) {
