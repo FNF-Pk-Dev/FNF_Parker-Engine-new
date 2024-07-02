@@ -80,7 +80,7 @@ class ScriptUtil
 			return;
 
 		// OpenFL
-		script.set("BlendMode", BlendMode);
+		script.set("BlendMode", CustomBlendMode);
 		script.set("Lib", Lib);
 		script.set("Capabilities", Capabilities);
 		script.set("ShaderFitler", ShaderFilter);
@@ -425,4 +425,44 @@ class CustomFlxColor
 	public static final PINK:Int = FlxColor.PINK;
 	public static final MAGENTA:Int = FlxColor.MAGENTA;
 	public static final CYAN:Int = FlxColor.CYAN;
+}
+class CustomBlendMode
+{
+
+    public static function fromString(value:String){
+        return switch (value)
+		{
+			case "add": BlendMode.ADD;
+			case "alpha": BlendMode.ALPHA;
+			case "darken": BlendMode.DARKEN;
+			case "difference": BlendMode.DIFFERENCE;
+			case "erase": BlendMode.ERASE;
+			case "hardlight": BlendMode.HARDLIGHT;
+			case "invert": BlendMode.INVERT;
+			case "layer": BlendMode.LAYER;
+			case "lighten": BlendMode.LIGHTEN;
+			case "multiply": BlendMode.MULTIPLY;
+			case "normal": BlendMode.NORMAL;
+			case "overlay": BlendMode.OVERLAY;
+			case "screen": BlendMode.SCREEN;
+			case "shader": BlendMode.SHADER;
+			case "subtract": BlendMode.SUBTRACT;
+			default: null;
+		}
+    }
+    public static final ADD:Int = BlendMode.ADD;
+    public static final ALPHA:Int = BlendMode.ALPHA;
+    public static final DARKEN:Int = BlendMode.DARKEN;
+    public static final DIFFERENCE:Int = BlendMode.DIFFERENCE;
+    public static final ERASE:Int = BlendMode.ERASE;
+    public static final HARDLIGHT:Int = BlendMode.HARDLIGHT;
+    public static final INVERT:Int = BlendMode.INVERT;
+    public static final LAYER:Int = BlendMode.LAYER;
+    public static final LIGHTEN:Int = BlendMode.LIGHTEN;
+    public static final MULTIPLY:Int = BlendMode.MULTIPLY;
+    public static final NORMAL:Int = BlendMode.NORMAL;
+    public static final OVERLAY:Int = BlendMode.OVERLAY;
+    public static final SCREEN:Int = BlendMode.SCREEN;
+    public static final SHADER:Int = BlendMode.SHADER;
+    public static final SUBTRACT:Int = BlendMode.ASUBTRACT;
 }
