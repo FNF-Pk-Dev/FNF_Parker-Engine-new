@@ -464,5 +464,5 @@ class CustomBlendMode
     public static final OVERLAY:String = BlendMode.OVERLAY;
     public static final SCREEN:String = BlendMode.SCREEN;
     public static final SHADER:String = BlendMode.SHADER;
-    public static final SUBTRACT:String = BlendMode.ASUBTRACT;
+    public static final SUBTRACT:String = BlendMode.SUBTRACT;
 }
