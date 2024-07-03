@@ -450,19 +450,19 @@ class CustomBlendMode
 			default: null;
 		}
     }
-    public static final ADD:Int = Std.int(BlendMode.ADD);
-    public static final ALPHA:Int = Std.int(BlendMode.ALPHA);
-    public static final DARKEN:Int = Std.int(BlendMode.DARKEN);
-    public static final DIFFERENCE:Int = Std.int(BlendMode.DIFFERENCE);
-    public static final ERASE:Int = Std.int(BlendMode.ERASE);
-    public static final HARDLIGHT:Int = Std.int(BlendMode.HARDLIGHT);
-    public static final INVERT:Int = Std.int(BlendMode.INVERT);
-    public static final LAYER:Int = Std.int(BlendMode.LAYER);
-    public static final LIGHTEN:Int = Std.int(BlendMode.LIGHTEN);
-    public static final MULTIPLY:Int = Std.int(BlendMode.MULTIPLY);
-    public static final NORMAL:Int = Std.int(BlendMode.NORMAL);
-    public static final OVERLAY:Int = Std.int(BlendMode.OVERLAY);
-    public static final SCREEN:Int = Std.int(BlendMode.SCREEN);
-    public static final SHADER:Int = Std.int(BlendMode.SHADER);
-    public static final SUBTRACT:Int = Std.int(BlendMode.ASUBTRACT);
+    public static final ADD:String = BlendMode.ADD;
+    public static final ALPHA:String = BlendMode.ALPHA;
+    public static final DARKEN:String = BlendMode.DARKEN;
+    public static final DIFFERENCE:String = BlendMode.DIFFERENCE;
+    public static final ERASE:String = BlendMode.ERASE;
+    public static final HARDLIGHT:String = BlendMode.HARDLIGHT;
+    public static final INVERT:String = BlendMode.INVERT;
+    public static final LAYER:String = BlendMode.LAYER;
+    public static final LIGHTEN:String = BlendMode.LIGHTEN;
+    public static final MULTIPLY:String = BlendMode.MULTIPLY;
+    public static final NORMAL:String = BlendMode.NORMAL;
+    public static final OVERLAY:String = BlendMode.OVERLAY;
+    public static final SCREEN:String = BlendMode.SCREEN;
+    public static final SHADER:String = BlendMode.SHADER;
+    public static final SUBTRACT:String = BlendMode.ASUBTRACT;
 }
