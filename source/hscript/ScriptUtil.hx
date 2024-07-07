@@ -64,7 +64,6 @@ class ScriptUtil
 		script.set("Type", Type);
 		script.set("Reflect", Reflect);
 		script.set("Math", Math);
-		script.set("script", this);
 		script.set("StringTools", StringTools);
 		script.set("Json", {parse: Json.parse, stringify: Json.stringify});
 
