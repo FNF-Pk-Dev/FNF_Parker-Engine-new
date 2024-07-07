@@ -18,6 +18,7 @@ import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxColor;
+import flixel.ui.FlxBar;
 import flixel.math.FlxMath;
 import openfl.display.BlendMode;
 import flixel.util.FlxTimer;
@@ -110,17 +111,17 @@ class ScriptUtil
 			FlxG.state.add(obj);
 		});
 		
-		script.set("addBehindGF", function(obj:FlxBasic)
+		script.set("addBehindGF", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindGF(obj);
 		});
 		
-		script.set("addBehindBF", function(obj:FlxBasic)
+		script.set("addBehindBF", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindBF(obj);
 		});
 		
-		script.set("addBehindDad", function(obj:FlxBasic)
+		script.set("addBehindDad", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindDad(obj);
 		});
@@ -141,6 +142,9 @@ class ScriptUtil
 		// Sprites
 		script.set("FlxSprite", FlxSprite);
 		script.set("FlxGraphic", FlxGraphic);
+		
+		// Bar
+		script.set("FlxBar", FlxBar);
 		script.set("LEFT_TO_RIGHT", LEFT_TO_RIGHT);
 		script.set("RIGHT_TO_LEFT", RIGHT_TO_LEFT);
 		script.set("TOP_TO_BOTTOM", TOP_TO_BOTTOM);
