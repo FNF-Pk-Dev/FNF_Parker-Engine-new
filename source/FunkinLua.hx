@@ -56,10 +56,6 @@ import hscript.Interp;
 import hscript.Expr;
 #end
 
-#if VIDEOS_ALLOWED
-import VideoHandler;
-import VideoSprite;
-#end
 
 #if desktop
 import Discord;

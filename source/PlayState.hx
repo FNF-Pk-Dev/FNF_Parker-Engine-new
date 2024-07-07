@@ -41,6 +41,7 @@ import haxe.Json;
 import lime.utils.Assets;
 import openfl.Lib;
 import openfl.display.BlendMode;
+import openfl.display.BitmapData;
 import openfl.display.StageQuality;
 import openfl.filters.BitmapFilter;
 import openfl.utils.Assets as OpenFlAssets;
@@ -64,7 +65,6 @@ import flixel.system.FlxAssets.FlxShader;
 import hscript.Script;
 import hscript.ScriptGroup;
 import hscript.ScriptUtil;
-import modcharting.ModchartFuncs;
 import modcharting.NoteMovement;
 import modcharting.PlayfieldRenderer;
 import modcharting.ModchartEditorState;
@@ -81,8 +81,9 @@ import sys.io.File;
 #end
 
 #if VIDEOS_ALLOWED
-import VideoHandler;
-import VideoSprite;
+import hxvlc.flixel.FlxVideo;
+import hxvlc.flixel.FlxVideoSprite;
+import hxvlc.util.Handle;
 #end
 
 using StringTools;
@@ -1639,32 +1640,60 @@ class PlayState extends MusicBeatState
 			bg.cameras = [camOther];
 			bg.scrollFactor.set(0, 0);
 			add(bg);
-			var cutVid:VideoHandler;
+			var cutVid:FlxVideoSprite;
 			inCutscene = true;
-			cutVid = new VideoHandler();
-			cutVid.playVideo(Paths.video(name));
-			cutVid.finishCallback = function()
-			{
-			startAndEnd();
+			cutVid = new FlxVideoSprite();
+			cutVid.bitmap.onFormatSetup.add(function():Void
+    		{
+    			if (cutVid.bitmap != null && cutVid.bitmap.bitmapData != null)
+    			{
+    				final scale:Float = Math.min(FlxG.width / cutVid.bitmap.bitmapData.width, FlxG.height / cutVid.bitmap.bitmapData.height) * 0.8;
+    
+    				cutVid.setGraphicSize(cutVid.bitmap.bitmapData.width * scale, cutVid.bitmap.bitmapData.height * scale);
+    				cutVid.updateHitbox();
+    				cutVid.screenCenter();
+    				cutVid.cameras = [camOther];
+    			}
+    		});
+    		cutVid.play();
+    		cutVid.bitmap.onEndReached.add(function():Void{
+    		startAndEnd();
 			bg.alpha = 0;
-			}
+    		cutVid.destroy();
+    		});
+    		
+    		cutVid.load(Paths.video(name), [':input-repeat=2']);
+    		cutVid.antialiasing = ClientPrefs.globalAntialiasing;
+    		add(cutVid);
 		#end
 	}
-	var hi:VideoSprite;
+	var hi:FlxVideoSprite;
 	public function playVideo(name:String, cam:String = '')
 	{
 		#if VIDEOS_ALLOWED
 		
 		var filepath:String = Paths.video(name);
-		hi = new VideoSprite();
-		hi.playVideo(filepath);
-		hi.bitmap.canSkip = false;
-		hi.cameras = [cameraFromString(cam)];
-		hi.finishCallback = function()
+		hi = new FlxVideoSprite();
+		hi.bitmap.onFormatSetup.add(function():Void
 		{
+			if (hi.bitmap != null && hi.bitmap.bitmapData != null)
+			{
+				final scale:Float = Math.min(FlxG.width / hi.bitmap.bitmapData.width, FlxG.height / hi.bitmap.bitmapData.height) * 0.8;
+
+				hi.setGraphicSize(hi.bitmap.bitmapData.width * scale, hi.bitmap.bitmapData.height * scale);
+				hi.updateHitbox();
+				hi.screenCenter();
+				hi.cameras = [camOther];
+			}
+		});
+		hi.play();
+		hi.bitmap.onEndReached.add(function():Void{
 		hi.destroy();
 		callOnLuas('onVideoCompleted', [name]);
-		}
+		});
+		
+		hi.load(Paths.video(filepath), [':input-repeat=2']);
+		hi.antialiasing = ClientPrefs.globalAntialiasing;
 		add(hi);
 		#end
 	}
@@ -4089,7 +4118,7 @@ class PlayState extends MusicBeatState
 			daLoop++;
 			if(numScore.x > xThing) xThing = numScore.x;
 			
-			scripts.executeAllFunc('popUpScore', [rating, comboSpr, numScore]);
+			//scripts.executeAllFunc('popUpScore', [rating, comboSpr, numScore]);
 		}
 		comboSpr.x = xThing + 50;
 		/*
@@ -5017,7 +5046,7 @@ class PlayState extends MusicBeatState
     {
     return scripts.executeAllFunc(name, args); 
     }
-    /* 待定...
+    /* 
     public function callOnPython(name:String, ?parameters:Array<String>)
     {
     FunkinPython.setFunction(name, parameters); 
