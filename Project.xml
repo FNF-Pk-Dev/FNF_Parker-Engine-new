@@ -137,10 +137,7 @@
 	<haxelib name="haxe-crypto" />
 	<haxelib name="flxgif" />
 	<haxelib name="hxpy" />
-	<section if="cpp">
 	<haxelib name="hxvlc" if="VIDEOS_ALLOWED" />
-        </section>
-	<haxelib name="hxCodec" if="VIDEOS_ALLOWED" />
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
         <haxelib name="extension-androidtools" if="android"/>
 	<haxelib name="faxe" if='switch'/>
