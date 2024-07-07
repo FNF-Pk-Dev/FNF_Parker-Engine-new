@@ -1,4 +1,6 @@
 package;
+
+import flixel.FlxG;
 import hxvlc.flixel.FlxVideo;
 import hxvlc.flixel.FlxVideoSprite;
 import hxvlc.util.Handle;
