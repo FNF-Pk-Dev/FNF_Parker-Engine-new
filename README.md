@@ -76,8 +76,8 @@ Apk will be generated in this path (path to source)\export\release\android\bin\a
 
 ## particular thanks
 * luuan - Hscript
-* qqqeb(tchcfhvgd) - Video Mp4 (hxCodec)
-
+`qqqeb(tchcfhvgd) - Video Mp4 (hxCodec)`
+Now it has been replaced by hxvlc
 ## Psych Engine Original Credits:
 * Shadow Mario - Programmer
 * RiverOaken - Artist
