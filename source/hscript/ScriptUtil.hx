@@ -39,6 +39,7 @@ import Conductor;
 import Section;
 import Song;
 import PlayState;
+import PsychVideoSprite;
 import modcharting.ModchartFuncs;
 import CoolUtil;
 #if sys
@@ -115,6 +116,8 @@ class ScriptUtil
 		// Video
 		script.set("FlxVideo", FlxVideo);
 		script.set("FlxVideoSprite", FlxVideoSprite);
+		script.set("PsychVideoSprite", PsychVideoSprite);
+		script.set("PakerVideoSprite", PsychVideoSprite);
 		script.set("Handle", Handle);
 
 		// Tweens
