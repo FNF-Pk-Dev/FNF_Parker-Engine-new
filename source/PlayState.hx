@@ -1649,7 +1649,9 @@ class PlayState extends MusicBeatState
     			{
     				final scale:Float = Math.min(FlxG.width / cutVid.bitmap.bitmapData.width, FlxG.height / cutVid.bitmap.bitmapData.height) * 0.8;
     
-    				cutVid.setGraphicSize(cutVid.bitmap.bitmapData.width * scale, cutVid.bitmap.bitmapData.height * scale);
+    				var width:Int = Math.round(cutVid.bitmap.bitmapData.width * scale);
+                    var height:Int = Math.round(cutVid.bitmap.bitmapData.height * scale);
+                    cutVid.setGraphicSize(width, height);
     				cutVid.updateHitbox();
     				cutVid.screenCenter();
     				cutVid.cameras = [camOther];
@@ -1680,10 +1682,12 @@ class PlayState extends MusicBeatState
 			{
 				final scale:Float = Math.min(FlxG.width / hi.bitmap.bitmapData.width, FlxG.height / hi.bitmap.bitmapData.height) * 0.8;
 
-				hi.setGraphicSize(hi.bitmap.bitmapData.width * scale, hi.bitmap.bitmapData.height * scale);
+				var width:Int = Math.round(hi.bitmap.bitmapData.width * scale);
+                var height:Int = Math.round(hi.bitmap.bitmapData.height * scale);
+                hi.setGraphicSize(width, height);
 				hi.updateHitbox();
 				hi.screenCenter();
-				hi.cameras = [camOther];
+				hi.cameras = [cameraFromString(cam)];
 			}
 		});
 		hi.play();
