@@ -63,6 +63,7 @@ class ScriptUtil
 		script.set("Type", Type);
 		script.set("Reflect", Reflect);
 		script.set("Math", Math);
+		script.set("this", this);
 		script.set("StringTools", StringTools);
 		script.set("Json", {parse: Json.parse, stringify: Json.stringify});
 
@@ -81,10 +82,23 @@ class ScriptUtil
 			return;
 
 		// OpenFL
-		script.set("BlendMode", CustomBlendMode);
 		script.set("Lib", Lib);
 		script.set("Capabilities", Capabilities);
 		script.set("ShaderFitler", ShaderFilter);
+		script.set('BlendMode',{
+			SUBTRACT: BlendMode.SUBTRACT,
+			ADD: BlendMode.ADD,
+			MULTIPLY: BlendMode.MULTIPLY,
+			ALPHA: BlendMode.ALPHA,
+			DARKEN: BlendMode.DARKEN,
+			DIFFERENCE: BlendMode.DIFFERENCE,
+			INVERT: BlendMode.INVERT,
+			HARDLIGHT: BlendMode.HARDLIGHT,
+			LIGHTEN: BlendMode.LIGHTEN,
+			OVERLAY: BlendMode.OVERLAY,
+			SHADER: BlendMode.SHADER,
+			SCREEN: BlendMode.SCREEN
+		});
 
 		// Basic Stuff
 		script.set("state", FlxG.state);
@@ -94,6 +108,21 @@ class ScriptUtil
 		script.set("add", function(obj:FlxBasic)
 		{
 			FlxG.state.add(obj);
+		});
+		
+		script.set("addBehindGF", function(obj:FlxBasic)
+		{
+			PlayState.instance.addBehindGF(obj);
+		});
+		
+		script.set("addBehindBF", function(obj:FlxBasic)
+		{
+			PlayState.instance.addBehindBF(obj);
+		});
+		
+		script.set("addBehindDad", function(obj:FlxBasic)
+		{
+			PlayState.instance.addBehindDad(obj);
 		});
 
 		script.set("insert", function(postion:Int, obj:FlxBasic)
@@ -112,12 +141,20 @@ class ScriptUtil
 		// Sprites
 		script.set("FlxSprite", FlxSprite);
 		script.set("FlxGraphic", FlxGraphic);
+		script.set("LEFT_TO_RIGHT", LEFT_TO_RIGHT);
+		script.set("RIGHT_TO_LEFT", RIGHT_TO_LEFT);
+		script.set("TOP_TO_BOTTOM", TOP_TO_BOTTOM);
+		script.set("BOTTOM_TO_TOP", BOTTOM_TO_TOP);
+		script.set("HORIZONTAL_INSIDE_OUT", HORIZONTAL_INSIDE_OUT);
+		script.set("HORIZONTAL_OUTSIDE_IN", HORIZONTAL_OUTSIDE_IN);
+		script.set("VERTICAL_INSIDE_OUT", VERTICAL_INSIDE_OUT);
+		script.set("VERTICAL_OUTSIDE_IN", VERTICAL_OUTSIDE_IN);
 		
 		// Video
 		script.set("FlxVideo", FlxVideo);
 		script.set("FlxVideoSprite", FlxVideoSprite);
 		script.set("PsychVideoSprite", PsychVideoSprite);
-		script.set("PakerVideoSprite", PsychVideoSprite);
+		script.set("ParkerVideoSprite", PsychVideoSprite);
 		script.set("Handle", Handle);
 
 		// Tweens
@@ -152,6 +189,13 @@ class ScriptUtil
 
 		// Sounds
 		script.set("FlxSound", FlxSound);
+		
+		
+		script.set("FlxAxes", {
+			X: flixel.util.FlxAxes.X,
+			Y: flixel.util.FlxAxes.Y,
+			XY: flixel.util.FlxAxes.XY
+		});
 	}
 
 	public static function setUpFNFScript(script:Script)
@@ -428,44 +472,4 @@ class CustomFlxColor
 	public static final PINK:Int = FlxColor.PINK;
 	public static final MAGENTA:Int = FlxColor.MAGENTA;
 	public static final CYAN:Int = FlxColor.CYAN;
-}
-class CustomBlendMode
-{
-
-    public static function fromString(value:String){
-        return switch (value)
-		{
-			case "add": BlendMode.ADD;
-			case "alpha": BlendMode.ALPHA;
-			case "darken": BlendMode.DARKEN;
-			case "difference": BlendMode.DIFFERENCE;
-			case "erase": BlendMode.ERASE;
-			case "hardlight": BlendMode.HARDLIGHT;
-			case "invert": BlendMode.INVERT;
-			case "layer": BlendMode.LAYER;
-			case "lighten": BlendMode.LIGHTEN;
-			case "multiply": BlendMode.MULTIPLY;
-			case "normal": BlendMode.NORMAL;
-			case "overlay": BlendMode.OVERLAY;
-			case "screen": BlendMode.SCREEN;
-			case "shader": BlendMode.SHADER;
-			case "subtract": BlendMode.SUBTRACT;
-			default: null;
-		}
-    }
-    public static final ADD:String = BlendMode.ADD;
-    public static final ALPHA:String = BlendMode.ALPHA;
-    public static final DARKEN:String = BlendMode.DARKEN;
-    public static final DIFFERENCE:String = BlendMode.DIFFERENCE;
-    public static final ERASE:String = BlendMode.ERASE;
-    public static final HARDLIGHT:String = BlendMode.HARDLIGHT;
-    public static final INVERT:String = BlendMode.INVERT;
-    public static final LAYER:String = BlendMode.LAYER;
-    public static final LIGHTEN:String = BlendMode.LIGHTEN;
-    public static final MULTIPLY:String = BlendMode.MULTIPLY;
-    public static final NORMAL:String = BlendMode.NORMAL;
-    public static final OVERLAY:String = BlendMode.OVERLAY;
-    public static final SCREEN:String = BlendMode.SCREEN;
-    public static final SHADER:String = BlendMode.SHADER;
-    public static final SUBTRACT:String = BlendMode.SUBTRACT;
 }

@@ -131,6 +131,17 @@ class Script extends FlxBasic
 			}
 		});
 		
+		set("addHaxeLibrary", function(lib:String, ?libPackage:String = '') // no Of course it works.
+		{
+		try{
+		    var str:String = '';
+			if(libPackage.length > 0)
+				str = libPackage + '.';
+				
+				set(lib, Type.resolveClass(str + lib));
+			}
+		});
+		
 		set("addEncodedScript", function(scriptName:String):Dynamic
         {
             var hx:Null<String> = null;
