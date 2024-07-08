@@ -43,6 +43,9 @@ import PlayState;
 import PsychVideoSprite;
 import modcharting.ModchartFuncs;
 import CoolUtil;
+#if LUA_ALLOWED
+import FunkinLua;
+#end
 #if sys
 import sys.FileSystem;
 import sys.io.File;
@@ -171,6 +174,12 @@ class ScriptUtil
 		script.set("FlxText", FlxText);
 		script.set("FlxTextFormat", FlxTextFormat);
 		script.set("FlxTextFormatMarkerPair", FlxTextFormatMarkerPair);
+		script.set("FlxTextAlign", {
+			CENTER: flixel.text.FlxText.FlxTextAlign.CENTER,
+			JUSTIFY: flixel.text.FlxText.FlxTextAlign.JUSTIFY,
+			LEFT: flixel.text.FlxText.FlxTextAlign.LEFT,
+			RIGHT: flixel.text.FlxText.FlxTextAlign.RIGHT
+		});
 		script.set("FlxTextBorderStyle", FlxTextBorderStyle);
 
 		// Shaders
@@ -193,6 +202,15 @@ class ScriptUtil
 		// Sounds
 		script.set("FlxSound", FlxSound);
 		
+		// RunLuaCodes
+		#if LUA_ALLOWED
+		script.set("runLuaCode", function(str:String)
+		{
+		    var parentLua:FunkinLua;
+		    parentLua = new FunkinLua(null);
+			FunkinLua.executeLua(str);
+		});
+		#end
 		
 		script.set("FlxAxes", {
 			X: flixel.util.FlxAxes.X,
@@ -269,6 +287,81 @@ class ScriptUtil
 		return arr.contains(ScriptReturn.PUASE);
 	}
 }
+/*待开发
+class HScriptSubstate extends MusicBeatSubstate
+{
+	public var script:ScriptGroup;
+
+	public function new(ScriptName:String, ?additionalVars:Map<String, Any>)
+	{
+		super();
+		
+		script = new ScriptGroup();
+
+		var fileName = 'substates/$ScriptName.$ScriptUtil.extns';
+
+
+		for (filePath in [#if MODS_ALLOWED Paths.modFolders(fileName), Paths.mods(fileName), #end Paths.getPreloadPath(fileName)])
+		{
+			if (!FileSystem.exists(filePath)) continue;
+
+			// some shortcuts
+			var variables = new Map<String, Dynamic>();
+			variables.set("this", this);
+			variables.set("add", this.add);
+			variables.set("remove", this.remove);
+			variables.set("getControls", function(){ return controls;}); // i get it now
+			variables.set("close", this.close);
+			variables.set('members',this.members);
+			variables.set('cameras',this.cameras);
+			variables.set('insert',this.insert);
+
+
+			if (additionalVars != null){
+				for (key in additionalVars.keys())
+					variables.set(key, additionalVars.get(key));
+			}
+
+			scripts.onAddScript.push(filePath);
+			script.scriptName = ScriptName;
+			break;
+		}
+
+		if (script == null){
+			trace('Script file "$ScriptName" not found!');
+			return close();
+		}
+
+		script.call("onLoad");
+	}
+
+	override function update(e:Float)
+	{
+		if (script.call("update", [e]) == FunkinLua.Function_Stop)
+			return; 
+		
+		super.update(e);
+		script.call("updatePost", [e]);
+	}
+
+	override function close(){
+		if (script != null)
+			script.call("onClose");
+		
+		return super.close();
+	}
+
+	override function destroy()
+	{
+		if (script != null){
+			script.call("onDestroy");
+			script.stop();
+		}
+		script = null;
+
+		return super.destroy();
+	}
+}*/
 class CustomFlxColor
 {
 	// These aren't part of FlxColor but i thought they could be useful
