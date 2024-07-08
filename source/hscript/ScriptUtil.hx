@@ -208,7 +208,7 @@ class ScriptUtil
 		{
 		    var parentLua:FunkinLua;
 		    parentLua = new FunkinLua(null);
-			FunkinLua.executeLua(str);
+			parentLua.executeLua(str);
 		});
 		#end
 		
