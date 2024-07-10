@@ -136,7 +136,7 @@ class Main extends Sprite
 				//fpsVar.positionFPS(10, 3, Math.min(Lib.current.stage.stageWidth / FlxG.width, Lib.current.stage.stageHeight / FlxG.height));
 		     if (FlxG.cameras != null) {
 			   for (cam in FlxG.cameras.list) {
-				if (cam != null && cam._filters != null)
+				if (cam != null && cam.filters != null)
 					resetSpriteCache(cam.flashSprite);
 			   }
 			}
