@@ -468,7 +468,7 @@ class Controls extends FlxActionSet
 		inline forEachBound(Control.SPACE, (action, state) -> addButtonUI(action, Hitbox.buttonSpace, state));
 	}
 
-	public function setGradientHitBox(Hitbox:Gradient):Void
+	public function setGradientHitBox(Hitbox:Gradient)
 	{
 		if (Hitbox == null)
 			return;
