@@ -87,11 +87,11 @@ class AndroidControls extends FlxSpriteGroup {
 			case DUO:
 				initControler(3);
 			case HITBOX:
-		    if(ClientPrefs.hitboxmode != 'New'){
+		    if(ClientPrefs.hitboxmode == 'Classic'){
 				initControler(4);
-		    }else{
+		    }else if(ClientPrefs.hitboxmode == 'New'){
 		    initControler(5);
-		    }if(ClientPrefs.hitboxmode == 'Gradient'){
+		    }else{
 		    initControler(6);
 		    }
 			case KEYBOARD:// nothing
