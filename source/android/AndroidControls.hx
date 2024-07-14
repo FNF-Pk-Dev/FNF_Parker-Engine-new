@@ -120,7 +120,7 @@ class AndroidControls extends FlxSpriteGroup {
 			  newhbox = new FlxNewHitbox();
 			  add(newhbox);
 			case 6:
-			  ghbox = new Gradient();
+			  ghbox = new Gradient(4, Std.int(FlxG.width / 4), FlxG.height, [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000]);
 			  add(ghbox);
 			default:
 				vpad = new FlxVirtualPad(RIGHT_FULL, NONE, 0.75, ClientPrefs.globalAntialiasing);	
