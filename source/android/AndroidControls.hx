@@ -7,6 +7,7 @@ import flixel.math.FlxPoint;
 
 import android.FlxVirtualPad;
 import android.FlxHitbox;
+import android.hitboxskin.*;
 
 class Config {
 	var save:FlxSave;
@@ -64,6 +65,7 @@ class AndroidControls extends FlxSpriteGroup {
 
 	public var hbox:FlxHitbox;
 	public var newhbox:FlxNewHitbox;
+	public var ghbox:Gradient;
 	public var vpad:FlxVirtualPad;
 
 	var config:Config;
@@ -89,6 +91,8 @@ class AndroidControls extends FlxSpriteGroup {
 				initControler(4);
 		    }else{
 		    initControler(5);
+		    }if(ClientPrefs.hitboxmode == 'Gradient'){
+		    initControler(6);
 		    }
 			case KEYBOARD:// nothing
 		}
@@ -115,6 +119,9 @@ class AndroidControls extends FlxSpriteGroup {
 			case 5:
 			  newhbox = new FlxNewHitbox();
 			  add(newhbox);
+			case 6:
+			  ghbox = new Gradient();
+			  add(ghbox);
 			default:
 				vpad = new FlxVirtualPad(RIGHT_FULL, NONE, 0.75, ClientPrefs.globalAntialiasing);	
 				add(vpad);					
