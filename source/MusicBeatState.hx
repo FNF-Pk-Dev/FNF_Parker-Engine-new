@@ -76,7 +76,7 @@ class MusicBeatState extends modcharting.ModchartMusicBeatState
 				controls.setVirtualPadNOTES(androidc.vpad, DUO, NONE);
 			case HITBOX:
 			   if(ClientPrefs.hitboxmode == 'New'){
-				controls.setNewHitBox(androidc.newbox);
+				controls.setNewHitBox(androidc.newhbox);
 				}else{
 				controls.setGradientHitBox(androidc.ghbox);
 		                }
