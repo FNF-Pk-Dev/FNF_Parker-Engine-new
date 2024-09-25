@@ -24,11 +24,11 @@ import sys.FileSystem;
 import sys.io.File;
 #end
 import Type.ValueType;
-import Controls;
-import DialogueBoxPsych;
+import backend.player.Controls;
+import psych.cutscenes.DialogueBoxPsych;
 
 #if desktop
-import Discord;
+import backend.Discord;
 #end
 
 using StringTools;

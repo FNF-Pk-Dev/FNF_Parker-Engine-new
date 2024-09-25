@@ -1,15 +1,15 @@
 package editors;
 
 #if desktop
-import Discord.DiscordClient;
+import backend.Discord.DiscordClient;
 #end
 import flash.geom.Rectangle;
 import haxe.Json;
 import haxe.format.JsonParser;
 import haxe.io.Bytes;
-import Conductor.BPMChangeEvent;
-import Section.SwagSection;
-import Song.SwagSong;
+import backend.songs.Conductor.BPMChangeEvent;
+import backend.songs.Section.SwagSection;
+import backend.songs.Song.SwagSong;
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSprite;
@@ -50,7 +50,6 @@ import openfl.media.Sound;
 import openfl.net.FileReference;
 import openfl.utils.Assets as OpenFlAssets;
 import openfl.utils.ByteArray;
-import hscript.ScriptUtil;
 using StringTools;
 #if sys
 import flash.media.Sound;
