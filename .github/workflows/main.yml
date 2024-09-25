@@ -1,0 +1,143 @@
+
+# This is a basic workflow to help you get started with Actions
+
+name: Build
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+
+  buildAndroid:
+    name: buildAndroid
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+
+      - name: Setup Android NDK
+        uses: nttld/setup-ndk@main
+        id: setup-ndk
+        with:
+          ndk-version: r21e
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@main
+        with:
+          distribution: 'temurin'
+          java-version: 11
+
+     # - name: Setup Android SDK
+    #  uses: android-actions/setup-android@main
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@v1.2.0
+        with:
+          haxe-version: 4.2.5
+
+      - name: Restore Previous Cache
+        id: cache-debug-build-android-restore
+        uses: actions/cache/restore@main
+        with:
+          path: |
+            ~/haxelib
+            ~/.gradle
+            export/release/android/haxe
+            export/release/android/obj
+          key: cache-android-build
+
+      - name: Install Haxelib
+        run: |
+          haxelib setup ~/haxelib
+          haxelib git hxcpp https://github.com/mcagabe19-stuff/hxcpp.git > /dev/null
+          haxelib install lime 8.0.2
+          haxelib install openfl 9.2.2
+          haxelib --never install flixel 5.8.0
+          haxelib install flixel-tools
+          haxelib install flixel-ui
+          haxelib install flixel-addons 3.0.2
+          haxelib install tjson
+          haxelib install hxjsonast
+          haxelib install hscript
+          haxelib install hxvlc 1.8.1
+          haxelib git fnf-modcharting-tools https://github.com/FNF-Pk-Dev/FNF-Modcharting-Tools-Fix
+          haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
+          haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
+          haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec.git
+          haxelib git hxpy https://github.com/FNF-Pk-Dev/hxpy.git
+          haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit_pk
+          haxelib git extension-androidtools https://github.com/FNF-Pk-Dev/extension-androidtools
+          haxelib install hxcpp-debug-server
+          haxelib list
+      - name: Create Version Tag
+        run: echo "${{github.run_id}}" > VERSION
+
+      - name: Setup Lime
+        run: |
+          haxelib run lime setup -alias -y
+          haxelib run lime config ANDROID_SDK $ANDROID_HOME
+          haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_HOME
+          haxelib run lime config JAVA_HOME $JAVA_HOME
+          haxelib run lime config ANDROID_SETUP true
+          haxelib set lime 8.0.2
+          haxelib set openfl 9.2.2
+          haxelib set flixel-addons 3.0.2
+          haxelib set hxcpp git
+        env:
+          ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+      - name: Compile
+        run: haxelib run lime build android -D NO_PRECOMPILED_HEADERS --app-version="4.0.0-${{ github.run_id}}"
+
+      - name: Clear Previous Cache
+        uses: actions/github-script@main
+        with:
+          script: |
+            try {
+            	const caches = await github.rest.actions.getActionsCacheList({
+            		owner: context.repo.owner,
+            		repo: context.repo.repo,
+            	})
+            	if (typeof caches.data.actions_caches != null && caches.data.actions_caches.length > 0) {
+            		for (const cache of caches.data.actions_caches) {
+            			if (cache.key == "cache-android-build") {
+            				console.log('Clearing ' + cache.key + '...')
+            				await github.rest.actions.deleteActionsCacheById({
+            					owner: context.repo.owner,
+            					repo: context.repo.repo,
+            					cache_id: cache.id,
+            				})
+            				console.log("Previous Cache Cleared!")
+            			}
+            		}
+            	}
+            } catch (error) {
+            	console.log(error.message);
+            }
+      - name: Save Current Cache
+        id: cache-release-build-android-save
+        uses: actions/cache/save@main
+        with:
+          path: |
+            ~/haxelib
+            ~/.gradle
+            export/release/android/haxe
+            export/release/android/obj
+          key: cache-android-build
+
+      - name: Publish Artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: buildAndroid
+          path: export/release/android/bin/app/build/outputs/apk/debug
+
