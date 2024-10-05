@@ -27,7 +27,7 @@
 	<window if="html5" resizable="true" />
 
 	<!--Desktop-specific-->
-	<window if="desktop" orientation="landscape" fullscreen="false" resizable="true" vsync="false"/>
+	<window if="desktop" orientation="landscape" fullscreen="false" resizable="false" vsync="false"/>
 
 	<!--Mobile-specific-->
 	<window if="mobile" orientation="landscape" fullscreen="true" width="1280" height="720" resizable="false"/>
@@ -202,6 +202,23 @@
 	<config:android permission="android.permission.WRITE_EXTERNAL_STORAGE" if="android"/>
   <!--<config:android gradle-version="7.5.1" />
   <config:android gradle-plugin="7.3.1" />-->
+  <section if="android">
+		<config>
+			<!--Gradle-->
+			<!--<android gradle-version="7.4.2" gradle-plugin="7.3.1" />--> <!-- ENABLE THIS IF YOU HAVE ISSUES AT COMPILE -->
+
+			<!--Target SDK-->
+			<android min-sdk-version="16" target-sdk-version="29" max-sdk-version="33" if="${lime &lt; 8.1.0}"/>
+                </config>
+	</section>
+
+  <target desktop="true">
+    <executable>bin/${target}/${app}</executable>
+    <sourcePath>src</sourcePath>
+    <extraParams>-D assets-dir=assets</extraParams>
+    <extraParams>-D assets-output=bin/${target}/assets</extraParams>
+    <extraParams>-D embed-assets=true</extraParams>
+  </target>
 
 	<!-- _________________________________ Custom _______________________________ -->
 
