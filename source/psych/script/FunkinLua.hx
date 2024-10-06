@@ -1954,13 +1954,13 @@ class FunkinLua {
 			}
 			return false;
 		});
-		
 		set("setVar", function(varName:String, value:Dynamic) {
 			PlayState.instance.variables.set(varName, value);
 			return value;
 		});
 		set("getVar", function(varName:String) {
-			return PlayState.instance.variables.get(varName);
+			PlayState.instance.variables.get(varName);
+			return varName;
 		});
 
 		set("setScrollFactor", function(obj:String, scrollX:Float, scrollY:Float) {

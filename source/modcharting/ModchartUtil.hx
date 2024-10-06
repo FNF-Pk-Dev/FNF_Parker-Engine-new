@@ -18,33 +18,11 @@ class ModchartUtil
     {
         //need to test each engine
         //not expecting all to work
-        #if PSYCH 
         return ClientPrefs.downScroll;
-        #elseif LEATHER
-        return utilities.Options.getData("downscroll");
-        #elseif ANDROMEDA //dunno why youd use this on andromeda but whatever, already got its own cool modchart system
-        return instance.currentOptions.downScroll;
-        #elseif KADE 
-        return PlayStateChangeables.useDownscroll;
-        #elseif FOREVER_LEGACY //forever might not work just yet because of the multiple strumgroups
-        return Init.trueSettings.get('Downscroll');
-        #elseif FPSPLUS 
-        return Config.downscroll;
-        #elseif MIC_D_UP //basically no one uses this anymore
-        return MainVariables._variables.scroll == "down"
-        #else 
-        return false;
-        #end
     }
     public static function getMiddlescroll(instance:ModchartMusicBeatState)
     {
-        #if PSYCH 
         return ClientPrefs.middleScroll;
-        #elseif LEATHER
-        return utilities.Options.getData("middlescroll");
-        #else 
-        return false;
-        #end
     }
     public static function getScrollSpeed(instance:PlayState)
     {
