@@ -66,8 +66,8 @@ jobs:
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec.git
           haxelib git hxpy https://github.com/FNF-Pk-Dev/hxpy.git
-          haxelib git linc_luajit https://github.com/mcagabe19-stuff/hxluajit
-          haxelib git lscript https://github.com/FNF-Pk-Dev/lscript
+          haxelib git linc_luajit https://github.com/SrtHero278/linc_luajit
+          haxelib git lscript https://github.com/SrtHero278/lscript
           haxelib git extension-androidtools https://github.com/FNF-Pk-Dev/extension-androidtools
           haxelib install hxcpp-debug-server
           haxelib list
