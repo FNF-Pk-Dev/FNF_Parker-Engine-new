@@ -47,6 +47,7 @@ import backend.CoolUtil;
 import psych.script.FunkinLua;
 #end
 import script.hscript.HScript;
+import script.FunkinHScript;
 #if sys
 import sys.FileSystem;
 import sys.io.File;
@@ -296,8 +297,8 @@ class HScriptUtil
 class HScriptState extends MusicBeatState
 {
 	var file:String = '';
-	var stateScript:Script;
-	public var scripts:ScriptGroup;
+	var stateScript:HScript;
+	public var scripts:FunkinHScript;
 
 	public function new(fileName:String, ?additionalVars:Map<String, Any>)
 	{
@@ -311,17 +312,13 @@ class HScriptState extends MusicBeatState
 			".hxs"
 		];
 		
-		stateScript = new Script();
-		scripts = new ScriptGroup();
-		
-		file = fileName;
-		for (extn in endexts){
+		stateScript = new HScript();
+		scripts = new FunkinHScript();
+
 		for (filePath in Paths.modFolders("states/"))
 		{
-			var name = filePath + fileName;
-			if (!name.endsWith(extn))
-				name += extn;
-			//trace(filePath, name);
+			var name = filePath + fileName + endexts;
+
 			if (!FileSystem.exists(name))
 				continue;
 			
@@ -336,11 +333,10 @@ class HScriptState extends MusicBeatState
 			else
 			{
 				scripts.getScriptByTag(fileName).error("Duplacite Script Error!", '$fileName: Duplicate Script');
-				Sys.exit(0);
+				//Sys.exit(0);
 			}
 			break;
 		    }
-		}
 
 		stateScript.executeFunc("onLoad");
 	}
@@ -352,28 +348,16 @@ class HScriptState extends MusicBeatState
 		// I'd love to modify HScript to add override specifically for troll engine hscript
 		// THSCript...
 
-		if (stateScript == null)
-		{
-			FlxG.switchState(new MainMenuState(false));
-			return;
-		}
-
 		// onCreate is used when the script is created so lol
-		if (stateScript.executeFunc("onStateCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
+		if (stateScript.executeFunc("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
 			return;
 
 		super.create();
-		stateScript.executeFunc("onStateCreatePost");
+		stateScript.executeFunc("onCreatePost");
 	}
 
 	override function update(e)
 	{
-		if (FlxG.keys.justPressed.F7)
-			if (FlxG.keys.pressed.CONTROL)
-				FlxG.switchState(new FreeplayState());
-			else
-				FlxG.switchState(new HScriptState(file));
-
 		if (stateScript.executeFunc("onUpdate", [e]) == FunkinLua.Function_Stop)
 			return;
 

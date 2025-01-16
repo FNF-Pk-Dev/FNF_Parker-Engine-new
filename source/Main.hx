@@ -27,6 +27,10 @@ import sys.io.File;
 import sys.io.Process;
 #end
 
+import haxe.io.Bytes;
+import haxe.zip.Uncompress;
+import haxe.crypto.Md5;
+
 using StringTools;
 
 class Main extends Sprite
@@ -56,6 +60,7 @@ class Main extends Sprite
                 cpp.NativeGc.run(true);
                 cpp.NativeGc.enterGCFreeZone();
                 #end
+     
 		Lib.current.addChild(new Main());
 	}
 
@@ -136,7 +141,27 @@ class Main extends Sprite
 		
 	}
 
-	
+	public static function getCompressedFileData(filePath:String):Bytes {
+        return File.getBytes(filePath);
+    }
+
+    public static function calculateMd5(data:Bytes):String {
+        return Md5.encode(data.toString());
+    }
+
+    public static function unpackInMemory(filePath:String):Bytes {
+        var compressedData:Bytes = getCompressedFileData(filePath);
+
+        var data:Bytes = Uncompress.run(compressedData);
+
+        trace("File: $filePath - MD5: ${calculateMd5(data)}");
+
+        return data;
+    }
+
+    public static function useUnpackedData(data:Bytes) {
+        trace("Using unpacked data in memory, length: " + data.length);
+    }
 	
 
 	// Code was entirely made by sqirra-rng for their fnf engine named "Izzy Engine", big props to them!!!

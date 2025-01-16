@@ -1,0 +1,8 @@
+package script;
+
+using StringTools;
+
+class FunkinPython extends FlxBasic
+{
+    
+}
