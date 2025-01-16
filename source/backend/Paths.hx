@@ -83,6 +83,11 @@ class Paths
 			}
 		}
 		// run the garbage collector for good measure lmfao
+		#if cpp
+                cpp.NativeGc.enable(true);
+                cpp.NativeGc.run(true);
+                cpp.NativeGc.enterGCFreeZone();
+                #end
 		System.gc();
 	}
 
@@ -111,6 +116,11 @@ class Paths
 			}
 		}
 		// flags everything to be cleared out next unused memory clear
+		#if cpp
+                cpp.NativeGc.enable(true);
+                cpp.NativeGc.run(true);
+                cpp.NativeGc.enterGCFreeZone();
+                #end
 		localTrackedAssets = [];
 		openfl.Assets.cache.clear("songs");
 		CoolUtil.precacheImage("ui/diaTrans");
