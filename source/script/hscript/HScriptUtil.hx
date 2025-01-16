@@ -44,6 +44,7 @@ import psych.obj.PsychVideoSprite;
 import modcharting.ModchartFuncs;
 import backend.CoolUtil;
 #if LUA_ALLOWED
+import llua.Lua_helper;
 import psych.script.FunkinLua;
 #end
 import script.hscript.HScript;
@@ -77,6 +78,12 @@ class HScriptUtil
 		script.set("File", File);
 		script.set("Sys", Sys);
 		#end
+
+		#if LUA_ALLOWED
+
+	       for(i in Lua_helper.callbacks.keys()) //adds lua callbacks basic
+               script.set(i, Lua_helper.callbacks.get(i));
+	       #end
 
 		return script;
 	}
