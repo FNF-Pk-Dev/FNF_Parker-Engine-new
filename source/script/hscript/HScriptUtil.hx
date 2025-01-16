@@ -87,8 +87,6 @@ class HScriptUtil
 
 	       for(i in Lua_helper.callbacks.keys()) //adds lua callbacks basic
                script.set(i, Lua_helper.callbacks.get(i));
-	       script.set("Lua", Lua);
-	       script.set("LuaL", LuaL);
 	       #end
 
 		return script;
