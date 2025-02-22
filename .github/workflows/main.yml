@@ -35,7 +35,7 @@ jobs:
         uses: actions/setup-java@main
         with:
           distribution: 'temurin'
-          java-version: 11
+          java-version: 17
 
      # - name: Setup Android SDK
     #  uses: android-actions/setup-android@main
@@ -43,7 +43,7 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1.2.0
         with:
-          haxe-version: 4.2.5
+          haxe-version: 4.3.6
 
       - name: Restore Previous Cache
         id: cache-debug-build-android-restore
