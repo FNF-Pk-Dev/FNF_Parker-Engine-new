@@ -69,7 +69,7 @@ jobs:
           haxelib install tjson
           haxelib install hxjsonast
           haxelib git hscript https://github.com/Ajwyunsx/t-hscript
-          haxelib install hxvlc 1.8.2 --quiet --skip-dependencies
+          haxelib install hxvlc --quiet --skip-dependencies
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit_pk
@@ -86,8 +86,6 @@ jobs:
           haxelib run lime config ANDROID_NDK_ROOT $ANDROID_NDK_HOME
           haxelib run lime config JAVA_HOME $JAVA_HOME
           haxelib run lime config ANDROID_SETUP true
-          haxelib set lime 8.0.2
-          haxelib set openfl 9.2.2
           haxelib set flixel-addons 3.2.2
           haxelib set hxcpp git
         env:
