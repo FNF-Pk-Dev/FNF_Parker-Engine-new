@@ -46,7 +46,7 @@ class PsychVideoSprite extends FlxVideoSprite
         return b;
     }
 
-    public override function pause() {
+    public inline function pause() {
 
         super.pause();
         if (FlxG.autoPause) 
@@ -56,7 +56,7 @@ class PsychVideoSprite extends FlxVideoSprite
         }
     }
 
-    public override function resume() {
+    public inline function resume() {
 
         super.resume();
         if (FlxG.autoPause) 
