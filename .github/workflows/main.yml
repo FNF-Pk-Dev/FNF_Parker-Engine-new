@@ -69,7 +69,7 @@ jobs:
           haxelib install tjson
           haxelib install hxjsonast
           haxelib git hscript https://github.com/Ajwyunsx/t-hscript
-          haxelib git hxvlc https://github.com/MobilePorting/hxvlc --quiet --skip-dependencies
+          haxelib install hxvlc 1.8.1 --quiet --skip-dependencies
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit_pk
