@@ -32,17 +32,7 @@ jobs:
         uses: krdlab/setup-haxe@v1.2.0
         with:
           haxe-version: 4.3.6
-
-      - name: Restore Previous Cache
-        id: cache-debug-build-android-restore
-        uses: actions/cache/restore@main
-        with:
-          path: |
-            ~/.gradle
-            export/release/android/haxe
-            export/release/android/obj
-          key: cache-android-build
-
+          
       - name: Install Haxelib
         run: |
           haxelib setup ~/haxelib
