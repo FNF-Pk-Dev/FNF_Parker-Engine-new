@@ -4500,6 +4500,7 @@ class PlayState extends MusicBeatState
 			if(char != null)
 			{
 				char.playAnim(animToPlay, true);
+				char.specialAnim = true;
 				char.holdTimer = 0;
 			}
 		}
@@ -4579,12 +4580,14 @@ class PlayState extends MusicBeatState
 					if(gf != null)
 					{
 						gf.playAnim(animToPlay + note.animSuffix, true);
+						gf.specialAnim = true;
 						gf.holdTimer = 0;
 					}
 				}
 				else
 				{
 					boyfriend.playAnim(animToPlay + note.animSuffix, true);
+					boyfriend.specialAnim = true;
 					boyfriend.holdTimer = 0;
 				}
 
