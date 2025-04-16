@@ -24,10 +24,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@main
-
-     # - name: Setup Android SDK
-    #  uses: android-actions/setup-android@main
-
+        
       - name: Setup Haxe
         uses: krdlab/setup-haxe@v1.2.0
         with:
@@ -96,16 +93,7 @@ jobs:
             } catch (error) {
             	console.log(error.message);
             }
-      - name: Save Current Cache
-        id: cache-release-build-android-save
-        uses: actions/cache/save@main
-        with:
-          path: |
-            ~/haxelib
-            ~/.gradle
-            export/release/android/haxe
-            export/release/android/obj
-          key: cache-android-build
+      
 
       - name: Publish Artifact
         uses: actions/upload-artifact@main
