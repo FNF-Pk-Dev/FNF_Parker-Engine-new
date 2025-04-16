@@ -32,6 +32,7 @@ jobs:
           
       - name: Install Haxelib
         run: |
+          mkdir ~/haxelib && haxelib setup ~/haxelib
           haxelib git hxcpp https://github.com/mcagabe19-stuff/hxcpp.git > /dev/null
           haxelib git lime https://github.com/tchcfhvgd/lime-8.2.2
           haxelib install openfl 9.2.2 --quiet
