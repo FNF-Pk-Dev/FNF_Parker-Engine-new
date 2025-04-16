@@ -26,9 +26,9 @@ jobs:
         uses: actions/checkout@main
         
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@v1.2.0
+        uses: krdlab/setup-haxe@v1
         with:
-          haxe-version: 4.3.6
+          haxe-version: 4.2.5
           
       - name: Install Haxelib
         run: |
