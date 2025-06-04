@@ -26,15 +26,26 @@ jobs:
         uses: actions/checkout@main
         
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@v1
+        uses: krdlab/setup-haxe@v2
         with:
-          haxe-version: 4.2.5
+          haxe-version: 4.3.7
+
+      - name: Restore Previous Cache
+        id: cache-debug-build-android-restore
+        uses: actions/cache/restore@main
+        with:
+          path: |
+            ~/haxelib
+            ~/.gradle
+            export/release/android/haxe
+            export/release/android/obj
+          key: cache-android-build
           
       - name: Install Haxelib
         run: |
           mkdir ~/haxelib && haxelib setup ~/haxelib
           haxelib git hxcpp https://github.com/Ajwyunsx/hxcpp.git > /dev/null
-          haxelib git lime https://github.com/tchcfhvgd/lime-8.2.2
+          haxelib git lime https://github.com/VapireMox/lime
           haxelib install openfl 9.2.2 --quiet
           haxelib --never install flixel 5.8.0
           haxelib install flixel-tools 1.5.1
@@ -47,7 +58,6 @@ jobs:
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit_pk
-          haxelib git extension-androidtools https://github.com/MAJigsaw77/extension-androidtools.git
           haxelib install hxcpp-debug-server
           haxelib list
       - name: Create Version Tag
@@ -93,6 +103,17 @@ jobs:
             } catch (error) {
             	console.log(error.message);
             }
+
+      - name: Save Current Cache
+        id: cache-release-build-android-save
+        uses: actions/cache/save@main
+        with:
+          path: |
+            ~/haxelib
+            ~/.gradle
+            export/release/android/haxe
+            export/release/android/obj
+          key: cache-android-build
       
 
       - name: Publish Artifact
