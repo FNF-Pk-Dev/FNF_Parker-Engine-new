@@ -150,6 +150,8 @@
 	<!-- Enables a terminal log prompt on debug builds -->
 	<haxelib name="hxcpp-debug-server" if="debug"/>
 
+	<android target-sdk-version="30" />
+
 	<!-- <haxelib name="markdown" /> -->
 	<!-- <haxelib name="HtmlParser" /> -->
 
