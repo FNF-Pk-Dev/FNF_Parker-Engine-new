@@ -28,7 +28,7 @@ jobs:
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
-          haxe-version: 4.3.7
+          haxe-version: 4.2.5
 
       - name: Setting up Android NDK
         id: setup-ndk
@@ -36,6 +36,12 @@ jobs:
         with:
           ndk-version: r27c
           add-to-path: false
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@main
+        with:
+          distribution: 'zulu'
+          java-version: 18
 
       - name: Restore Previous Cache
         id: cache-debug-build-android-restore
@@ -75,7 +81,7 @@ jobs:
           haxelib run lime setup -alias -y
           haxelib run lime config ANDROID_SDK $ANDROID_HOME
           haxelib run lime config ANDROID_NDK_ROOT ${{ steps.setup-ndk.outputs.ndk-path }}
-          haxelib run lime config JAVA_HOME $JAVA_HOME_17_X64
+          haxelib run lime config JAVA_HOME $JAVA_HOME
           haxelib run lime config ANDROID_SETUP true
           haxelib set flixel-addons 3.2.2
           haxelib set hxcpp git
