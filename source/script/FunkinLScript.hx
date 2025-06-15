@@ -133,7 +133,7 @@ class FunkinLScript
     }
     public function stop() {
         if(Ls != null) {
-            Ls.stop();
+            //Ls.stop();
         }
     }
 
