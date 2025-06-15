@@ -74,7 +74,7 @@ jobs:
           haxelib git lscript https://github.com/SrtHero278/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
-          haxelib git linc_luajit https://github.com/FNF-Pk-Dev/linc_luajit_pk
+          haxelib git linc_luajit https://github.com/AnDevGo/linc_luajit_h
           haxelib install hxcpp-debug-server
           haxelib list
       - name: Create Version Tag
