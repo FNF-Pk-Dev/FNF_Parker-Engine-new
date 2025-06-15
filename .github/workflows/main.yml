@@ -29,7 +29,7 @@ jobs:
         uses: nttld/setup-ndk@main
         id: setup-ndk
         with:
-          ndk-version: r21e
+          ndk-version: r27c
 
       - name: Setup Java JDK
         uses: actions/setup-java@main
@@ -65,7 +65,7 @@ jobs:
           haxelib --never git flixel https://github.com/FNF-Pk-Dev/flixel
           haxelib install flixel-tools
           haxelib install flixel-ui
-          haxelib install flixel-addons 3.0.2
+          haxelib install flixel-addons 3.2.2
           haxelib install tjson
           haxelib install hxjsonast
           haxelib install hscript
@@ -89,7 +89,7 @@ jobs:
           haxelib run lime config ANDROID_SETUP true
           haxelib set lime git
           haxelib set openfl git
-          haxelib set flixel-addons 3.0.2
+          haxelib set flixel-addons 3.2.2
           haxelib set hxcpp git
         env:
           ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
