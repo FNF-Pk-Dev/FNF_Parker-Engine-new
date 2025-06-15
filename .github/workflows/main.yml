@@ -64,7 +64,7 @@ jobs:
           haxelib git openfl https://github.com/AnDevGO/openfl.git
           haxelib --never git flixel https://github.com/FNF-Pk-Dev/flixel
           haxelib install flixel-tools
-          haxelib install flixel-ui
+          haxelib install flixel-ui 2.6.1
           haxelib install flixel-addons 3.2.2
           haxelib install tjson
           haxelib install hxjsonast
