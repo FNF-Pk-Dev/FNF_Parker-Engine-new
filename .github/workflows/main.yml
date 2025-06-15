@@ -137,5 +137,5 @@ jobs:
         uses: actions/upload-artifact@main
         with:
           name: buildAndroid
-          path: export/release/android/bin/app/build/outputs/apk/debug
+          path: export/release/android/bin/app/build/outputs/apk/release/*.apk
 
