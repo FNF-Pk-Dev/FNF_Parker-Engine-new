@@ -14,7 +14,10 @@ import flixel.util.FlxGradient;
 import flixel.FlxState;
 import flixel.FlxCamera;
 import flixel.FlxBasic;
-
+#if sys
+import sys.FileSystem;
+import sys.io.File;
+#end
 #if android
 import flixel.input.actions.FlxActionInput;
 import android.AndroidControls.AndroidControls;
@@ -24,7 +27,6 @@ import android.FlxJoyStick;
 
 class MusicBeatState extends FlxUIState
 {
-	public var script:FunkinHScript;
 	private var curSection:Int = 0;
 	private var stepsToDo:Int = 0;
 
@@ -45,6 +47,56 @@ class MusicBeatState extends FlxUIState
         super();
         this.canBeScripted = canBeScripted;
     }
+
+	public var scripted:Bool = false;
+	public var scriptName:String = 'Placeholder';
+	public var script:OScriptState;
+
+	inline function setOnScript(name:String, value:Dynamic) //depreciate this soon because the macro does this now? macro still needs more work i think though
+	{
+		if (script != null) script.set(name, value);
+	}
+
+	public function callOnScript(name:String, vars:Array<Any>, ignoreStops:Bool = false)
+	{
+		var returnVal:Dynamic = HScript.Function_Continue;
+		if (script != null)
+		{
+			var ret:Dynamic = script.call(name, vars);
+			if (ret == HScript.Function_Halt)
+			{
+				ret = returnVal;
+				if (!ignoreStops) return returnVal;
+			};
+
+			if (ret != HScript.Function_Continue && ret != null) returnVal = ret;
+
+			if (returnVal == null) returnVal = HScript.Function_Continue;
+		}
+		return returnVal;
+	}
+
+	inline function isHardcodedState() return (script != null && !script.customMenu) || (script == null);
+
+	public function setUpScript(s:String = 'Placeholder')
+	{
+		scripted = true;
+		scriptName = s;
+
+		var scriptFile = HScript.getPath('scripts/menus/$scriptName');
+
+		if (FileSystem.exists(scriptFile))
+		{
+			script = OScriptState.fromFile(scriptFile);
+			trace('$scriptName script [$scriptFile] found!');
+		}
+		else
+		{
+			// trace('$scriptName script [$scriptFile] is null!');
+		}
+
+		callOnScript('onCreate', []);
+	}
 
 	inline function get_controls():Controls
 		return backend.player.PlayerSettings.player1.controls;
@@ -173,6 +225,8 @@ class MusicBeatState extends FlxUIState
 
 		if(FlxG.save.data != null) FlxG.save.data.fullscreen = FlxG.fullscreen;
 
+		callOnScript('onUpdate', [elapsed]);
+
 		super.update(elapsed);
 	}
 
@@ -265,6 +319,8 @@ class MusicBeatState extends FlxUIState
 	{
 		if (curStep % 4 == 0)
 			beatHit();
+
+		callOnScript('onStepHit', [curStep]);
 	}
 
 	public function beatHit():Void

@@ -22,7 +22,11 @@ import openfl.system.System;
 import openfl.geom.Rectangle;
 import haxe.Json;
 import flash.media.Sound;
-
+import haxe.io.Bytes;
+import haxe.io.Path;
+import lime.media.AudioBuffer;
+import lime.media.vorbis.VorbisFile;
+import lime.utils.Assets;
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
 #end
@@ -237,18 +241,52 @@ class Paths
 		return file;
 	}
 
-	inline static public function voices(song:String):Any
+	//Loads the Voices. Crucial for generateSong
+	static public function voices(song:String, ?difficulty:String = '', ?postfix:String = null):Any
 	{
+		var formattedDifficulty:String = formatToSongPath(difficulty);
+		if (difficulty.contains(' ')) difficulty = formattedDifficulty;
+		#if html5
+		return 'songs:assets/songs/${formatToSongPath(song)}/Voices.$SOUND_EXT';
+		#else
+		if (difficulty != null)
+		{
+			var songKey:String = '${formatToSongPath(song)}/Voices';
+			if(postfix != null) songKey += '-' + postfix;
+			songKey += '-$difficulty';
+			if (FileSystem.exists(Paths.modFolders('songs/' + songKey + '.$SOUND_EXT')) || FileSystem.exists('assets/songs/' + songKey + '.$SOUND_EXT')) 
+			{
+				var voices = returnSound('songs', songKey);
+				return voices;
+			}
+		}
 		var songKey:String = '${formatToSongPath(song)}/Voices';
+		if(postfix != null) songKey += '-' + postfix;
 		var voices = returnSound('songs', songKey);
 		return voices;
+		#end
 	}
-
-	inline static public function inst(song:String):Any
+	//Loads the instrumental. Crucial for generateSong
+	static public function inst(song:String, ?difficulty:String = ''):Any
 	{
+		var formattedDifficulty:String = formatToSongPath(difficulty);
+		if (difficulty.contains(' ')) difficulty = formattedDifficulty;
+		#if html5
+		return 'songs:assets/songs/${formatToSongPath(song)}/Inst.$SOUND_EXT';
+		#else
+		if (difficulty != null)
+		{
+			var songKey:String = '${formatToSongPath(song)}/Inst-$difficulty';
+			if (FileSystem.exists(Paths.modFolders('songs/' + songKey + '.$SOUND_EXT')) || FileSystem.exists('assets/songs/' + songKey + '.$SOUND_EXT')) 
+			{
+				var inst = returnSound('songs', songKey);
+				return inst;
+			}
+		}
 		var songKey:String = '${formatToSongPath(song)}/Inst';
 		var inst = returnSound('songs', songKey);
 		return inst;
+		#end
 	}
 
 	static public function image(key:String, ?library:String = null, ?allowGPU:Bool = true):FlxGraphic
@@ -501,35 +539,70 @@ class Paths
 	}
 	*/
 
+	// completely rewritten asset loading? fuck!
 	public static var currentTrackedSounds:Map<String, Sound> = [];
-	public static function returnSound(path:String, key:String, ?library:String) {
-		#if MODS_ALLOWED
-		var file:String = modsSounds(path, key);
-		if(FileSystem.exists(file)) {
-			if(!currentTrackedSounds.exists(file)) {
-				currentTrackedSounds.set(file, Sound.fromFile(file));
-			}
-			localTrackedAssets.push(key);
-			return currentTrackedSounds.get(file);
-		}
-		#end
-		// I hate this so god damn much
-		var gottenPath:String = SUtil.getPath() + getPath('$path/$key.$SOUND_EXT', SOUND, library);
-		gottenPath = gottenPath.substring(gottenPath.indexOf(':') + 1, gottenPath.length);
-		// trace(gottenPath);
-		if(!currentTrackedSounds.exists(gottenPath))
-		#if MODS_ALLOWED
-			currentTrackedSounds.set(gottenPath, Sound.fromFile(gottenPath));
-		#else
-		{
-			var folder:String = '';
-			if(path == 'songs') folder = 'songs:';
+	//Returns sounds which is useful for all the sfx
+	public static function returnSound(path:String, key:String, ?library:String, stream:Bool = false) {
+		var sound:Sound = null;
+		var file:String = null;
 
-			currentTrackedSounds.set(gottenPath, OpenFlAssets.getSound(folder + getPath('$path/$key.$SOUND_EXT', SOUND, library)));
+        #if MODS_ALLOWED
+        file = modsSounds(path, key);
+        if (currentTrackedSounds.exists(file)) {
+            localTrackedAssets.push(file);
+            return currentTrackedSounds.get(file);
+        } else if (FileSystem.exists(file)) {
+            #if lime_vorbis
+            if (stream)
+                sound = Sound.fromAudioBuffer(AudioBuffer.fromVorbisFile(VorbisFile.fromFile(file)));
+            else
+            #end
+						try {
+							final header:Bytes = File.getBytes(file).sub(0, 4);
+							if (header.toString() != "OggS" && file != null) {
+								throw 'The file "$file" is not a valid OGG file (missing OggS header). It may have been renamed from another format like MP3.';
+							}
+							
+            	sound = Sound.fromFile(file);
+						}
+						catch(e)
+						{
+							throw 'Cannot load sound file: $file\nMake sure it is a properly encoded .ogg file.\nError: $e';
+						}
+        }
+        else
+        #end
+        {
+			// I hate this so god damn much
+			var gottenPath:String = getPath('$path/$key.$SOUND_EXT', SOUND, library);
+			file = gottenPath.substring(gottenPath.indexOf(':') + 1, gottenPath.length);
+			if (path == 'songs')
+				gottenPath = 'songs:' + gottenPath;
+			if (currentTrackedSounds.exists(file))
+			{
+				localTrackedAssets.push(file);
+				return currentTrackedSounds.get(file);
+			}
+			else if (OpenFlAssets.exists(gottenPath, SOUND))
+			{
+				#if lime_vorbis
+				if (stream)
+					sound = OpenFlAssets.getMusic(gottenPath);
+				else
+				#end
+				sound = OpenFlAssets.getSound(gottenPath);
+			}
 		}
-		#end
-		localTrackedAssets.push(gottenPath);
-		return currentTrackedSounds.get(gottenPath);
+
+		if (sound != null)
+		{
+			localTrackedAssets.push(file);
+			currentTrackedSounds.set(file, sound);
+			return sound;
+		}
+
+		trace('oh no its returning null NOOOO ($file)');
+		return null;
 	}
 
 	#if MODS_ALLOWED

@@ -12,65 +12,48 @@ class FunkinHScript extends FlxBasic
 {
 	public var scripts:Array<HScript> = [];
 
-	public var onAddScript:Array<HScript->Void> = [];
+	// public function addScript(tag:Null<String>):HScript
+	// {
+	// 	// var script:HScript = HScriptUtil.getBasicScript();
+	// 	// HScriptUtil.setUpFlixelScript(script);
+	// 	// HScriptUtil.setUpFNFScript(script);
 
-	public override function new()
-	{
-		super();
-	}
+	// 	@:privateAccess
+	// 	script._group = this;
 
-	public override function update(elapsed:Float)
-	{
-		super.update(elapsed);
+	// 	if (tag != null)
+	// 	{
+	// 		script.set("name", tag);
+	// 		script.name = tag;
+	// 	}
+	// 	else
+	// 	{
+	// 		var i:Int = 0;
+	// 		for (script in scripts)
+	// 		{
+	// 			if (script == null)
+	// 				continue;
 
-		for (_ in scripts)
-		{
-			if (_ != null)
-				_.update(elapsed);
-		}
-	}
+	// 			if (script.name.toLowerCase().contains("_hscript"))
+	// 				i++;
+	// 		}
 
-	public function addScript(tag:Null<String>):HScript
-	{
-		var script:HScript = HScriptUtil.getBasicScript();
-		HScriptUtil.setUpFlixelScript(script);
-		HScriptUtil.setUpFNFScript(script);
+	// 		script.set("name", '_hscript$i');
+	// 		script.name = '_hscript$i';
+	// 	}
+	// 	trace('999');
 
-		@:privateAccess
-		script._group = this;
+	// 	for (func in onAddScript)
+	// 	{
+	// 		if (func == null)
+	// 			continue;
+	// 		func(script);
+	// 	}
 
-		if (tag != null)
-		{
-			script.set("name", tag);
-			script.name = tag;
-		}
-		else
-		{
-			var i:Int = 0;
-			for (script in scripts)
-			{
-				if (script == null)
-					continue;
+	// 	scripts.push(script);
 
-				if (script.name.toLowerCase().contains("_hscript"))
-					i++;
-			}
-
-			script.set("name", '_hscript$i');
-			script.name = '_hscript$i';
-		}
-
-		for (func in onAddScript)
-		{
-			if (func == null)
-				continue;
-			func(script);
-		}
-
-		scripts.push(script);
-
-		return script;
-	}
+	// 	return script;
+	// }
 
 	public function executeAllFunc(name:String, ?args:Array<Any>):Array<Dynamic>
 	{
@@ -81,42 +64,56 @@ class FunkinHScript extends FlxBasic
 			if (_ == null)
 				continue;
 
-			returns.push(_.executeFunc(name, args));
+			try {
+				returns.push(_.executeFunc(name, args));
+			} catch(e:Dynamic) {
+				trace('Error executing $name: $e');
+				returns.push(null);
+			}
 		}
 
 		return returns;
 	}
+
+	public function error(msg:String, ?code:String = "error"):Void
+	{
+		for (_ in scripts)
+		{
+			if (_ == null)
+				continue;
+
+			_.error(msg, code);
+		}
+	}
+
 
 	public function initScript(name:String, folder:String)
 	{
 		if (this == null)
 			return;
 
-		var scriptData:Map<String, String> = [];
-
 		var hx:Null<String> = null;
 
 		for (extn in HScriptUtil.extns)
 		{
 			var path:String = Paths.modFolders(folder + "/" + name);
-			trace(path);
 			if (FileSystem.exists(path))
 			{
-				
-				hx = File.getContent(path);
-				break;
+				try {
+					hx = File.getContent(path);
+					break;
+				} catch(e:Dynamic) {
+					trace('Failed to load script: $e');
+				}
 			}
-
 		}
 
-		if (this.getScriptByTag(name) == null)
-			this.addScript(name).executeString(hx);
-		else
-		{
-			this.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
+		if (hx == null) {
+			trace('Script $name not found in $folder');
+			return;
 		}
 
-		//stateScript.executeAllFunc("onCreate");
+	
 	}
 
 	public function setAll(name:String, val:Dynamic)
@@ -159,19 +156,5 @@ class FunkinHScript extends FlxBasic
 		return null;
 	}
 
-	public override function destroy()
-	{
-		super.destroy();
-
-		for (_ in scripts)
-		{
-			if (_ == null)
-				continue;
-
-			_.destroy();
-			_ = null;
-		}
-
-		scripts = [];
-	}
+	
 }

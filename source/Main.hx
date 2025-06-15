@@ -117,17 +117,27 @@ class Main extends Sprite
 		addChild(new FNFGame(game.width, game.height, #if (mobile && MODS_ALLOWED) !CopyState.checkExistingFiles() ? CopyState : #end game.initialState, #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
 
 		fpsVar = new FPS(10, 3, 0xFFFFFF);
+		#if !mobile
 		addChild(fpsVar);
+		#else
+		FlxG.game.addChild(fpsVar);
+		#end
 		Lib.current.stage.align = "tl";
 		Lib.current.stage.scaleMode = StageScaleMode.NO_SCALE;
 		if(fpsVar != null) {
 			fpsVar.visible = ClientPrefs.showFPS;
 		}
 
-		scripts = new FunkinHScript();
-		scripts.onAddScript.push(onAddScript);
 
-		inScripts();
+		for (extn in HScriptUtil.extns)
+		{
+			var path:String = Paths.modFolders('global.$extn');
+			
+			if (FileSystem.exists(path))
+			initIris(File.getContent(path), 'GLOBAL');
+		}
+
+		//inScripts();
 
 		#if html5
 		FlxG.autoPause = false;
@@ -137,8 +147,6 @@ class Main extends Sprite
 		#if android
 		FlxG.android.preventDefaultKeys = [BACK];
 		#end
-
-		scripts.executeAllFunc("onCreate");
 		
 		#if CRASH_HANDLER
 		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
@@ -153,28 +161,21 @@ class Main extends Sprite
 		}
 		//Lib.application.window.fullscreen = false;
 		#end
-
-		scripts.executeAllFunc("onCreatePost");
 		
 	}
 
-	public static function getCompressedFileData(filePath:String):Bytes {
-        return File.getBytes(filePath);
-    }
+	function initIris(filePath:String, ?name:String)
+	{
+		var script:HScript = new HScript(filePath, name);
+		if (script.parsingException != null)
+		{
+			script.stop();
+			return null;
+		}
+		script.call('onCreate');
+		return script;
+	}
 
-    public static function calculateMd5(data:Bytes):String {
-        return Md5.encode(data.toString());
-    }
-
-    public static function unpackInMemory(filePath:String):Bytes {
-        var compressedData:Bytes = getCompressedFileData(filePath);
-
-        var data:Bytes = Uncompress.run(compressedData);
-
-        trace("File: $filePath - MD5: ${calculateMd5(data)}");
-
-        return data;
-    }
 
     public static function useUnpackedData(data:Bytes) {
         trace("Using unpacked data in memory, length: " + data.length);
@@ -197,13 +198,6 @@ class Main extends Sprite
 				break;
 			}
 
-		}
-
-		if (scripts.getScriptByTag('global') == null)
-			scripts.addScript('global').executeString(hx);
-		else
-		{
-			scripts.getScriptByTag('global').error("Duplacite Script Error!", 'global: Duplicate Script');
 		}
 	}
 	

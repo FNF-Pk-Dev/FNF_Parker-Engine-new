@@ -14,8 +14,9 @@ class FNFGame extends FlxGame {
             var simpleName = className.split(".").pop();
                     for (extn in HScriptUtil.extns) {
                         var fileName = 'globals/$simpleName.$extn';
+                        trace(fileName);
                         if (Paths.exists(Paths.modFolders('states/$fileName'))) {
-                            _nextState = new HScriptState(fileName, true);
+                            _nextState = OScriptState.fromFile(Paths.modFolders('states/$fileName'));
                             trace(fileName);
                             return super.switchState();
                         }
@@ -23,11 +24,6 @@ class FNFGame extends FlxGame {
             }
         }
 
-        var className = Type.getClassName(Type.getClass(_nextState));
-        var simpleName = className.split(".").pop();
-        for (extn in HScriptUtil.extns){
-        var fileName = 'global/$simpleName.$extn';
-        trace(Paths.modFolders('states/$fileName'));}
         return super.switchState();
     }
 }

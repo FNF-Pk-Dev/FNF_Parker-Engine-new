@@ -317,7 +317,8 @@ class PlayState extends MusicBeatState
 	// Lua shit
 	public static var instance:PlayState;
 	public var luaArray:Array<FunkinLua> = [];
-	public var hxArray:Array<FunkinHScript> = [];
+	public var lscriptArray:Array<FunkinLScript> = [];
+	public var hscriptArray:Array<HScript> = [];
 	private var luaDebugGroup:FlxTypedGroup<DebugLuaText>;
 	public var introSoundsSuffix:String = '';
 
@@ -350,7 +351,6 @@ class PlayState extends MusicBeatState
 		instance = this;
 		
 		scripts = new FunkinHScript();
-		scripts.onAddScript.push(onAddScript);
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -917,11 +917,41 @@ class PlayState extends MusicBeatState
 		}
 		#end
 
+	    //lscript
+
+		// var filesPushed:Array<String> = [];
+		// var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('scripts/')];
+
+		// #if MODS_ALLOWED
+		// foldersToCheck.insert(0, Paths.mods('scripts/'));
+		// if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+		// 	foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
+
+		// for(mod in Paths.getGlobalMods())
+		// 	foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
+		// #end
+
+		// for (folder in foldersToCheck)
+		// {
+		// 	if(FileSystem.exists(folder))
+		// 	{
+		// 		for (file in FileSystem.readDirectory(folder))
+		// 		{
+		// 			if(file.endsWith('.luahx') && !filesPushed.contains(file))
+		// 			{
+		// 				lscriptArray.push(initLScript(folder + file));
+		// 				filesPushed.push(file);
+		// 			}
+		// 		}
+		// 	}
+		// }
+
 
 		// STAGE SCRIPTS
 		#if (MODS_ALLOWED && LUA_ALLOWED)
 		startLuasOnFolder('stages/' + curStage + '.lua');
 		#end
+		// startLuahxOnFolder('stages/' + curStage + '.luahx');
 
 		var gfVersion:String = SONG.gfVersion;
 		if(gfVersion == null || gfVersion.length < 1)
@@ -1090,13 +1120,12 @@ class PlayState extends MusicBeatState
 		
 		initScripts();
 
-		scripts.executeAllFunc("onCreate");
+		callOnHScripts("onCreate", []);
 
 		// startCountdown();
 	        
 		generateSong(SONG.song);
 		modManager = new ModManager(this);
-		scripts.setAll("modManager", modManager);
 
 		#if LUA_ALLOWED
 		for (notetype in noteTypeMap.keys())
@@ -1135,12 +1164,7 @@ class PlayState extends MusicBeatState
 		
 				if (hx != null)
 				{
-					if (scripts.getScriptByTag(notetype) == null)
-						scripts.addScript(notetype).executeString(hx);
-						else
-					{
-						scripts.getScriptByTag(notetype).error("Duplacite Script Error!", '$notetype: Duplicate Script');
-					}
+					initIris(hx, notetype);
 				}
 			}
 
@@ -1161,12 +1185,7 @@ class PlayState extends MusicBeatState
 			
 					if (hx != null)
 					{
-						if (scripts.getScriptByTag(notetype) == null)
-							scripts.addScript(notetype).executeString(hx);
-							else
-						{
-							scripts.getScriptByTag(notetype).error("Duplacite Script Error!", '$notetype: Duplicate Script');
-						}
+						initIris(hx, notetype);
 					}
 				}
 		
@@ -1267,7 +1286,6 @@ class PlayState extends MusicBeatState
 		#if android
 		addAndroidControls();
 		androidc.visible = false;
-		scripts.setAll("androidc", androidc);
 		#end
 
 
@@ -1283,6 +1301,14 @@ class PlayState extends MusicBeatState
 			startLuasOnFolder('custom_events/' + event + '.lua');
 		}
 		#end
+		// for (notetype in noteTypeMap.keys())
+		// {
+		// 	startLuahxOnFolder('custom_notetypes/' + notetype + '.luahx');
+		// }
+		// for (event in eventPushedMap.keys())
+		// {
+		// 	startLuahxOnFolder('custom_events/' + event + '.luahx');
+		// }
 		/*for (notetype in noteTypeMap.keys())
 		{
 			startHScriptsOnFolder('custom_notetypes/', notetype);
@@ -1439,8 +1465,8 @@ class PlayState extends MusicBeatState
 		}
 		callOnLuas('onCreatePost', []);
 
-		scripts.executeAllFunc("onCreatePost");
-		scripts.executeAllFunc("onLoad");
+		callOnHScripts("onCreatePost", []);
+		callOnHScripts("onLoad", []);
 
 		super.create();
 
@@ -1919,7 +1945,7 @@ class PlayState extends MusicBeatState
 	{
 		if(startedCountdown) {
 			callOnLuas('onStartCountdown', []);
-			scripts.executeAllFunc("onStartCountdown");
+			callOnHScripts("onStartCountdown", []);
 			return;
 		}
 
@@ -1945,10 +1971,10 @@ class PlayState extends MusicBeatState
 			
 			modManager.receptors = [playerStrums.members, opponentStrums.members];
 			callOnLuas('preModifierRegister', []);
-			scripts.executeAllFunc('preModifierRegister', []);
+			callOnHScripts('preModifierRegister', []);
 			modManager.registerDefaultModifiers();
 			callOnLuas('postModifierRegister', []);
-			scripts.executeAllFunc('postModifierRegister', []);
+			callOnHScripts('postModifierRegister', []);
 			Modcharts.loadModchart(modManager, SONG.song);
 
 			if (ClientPrefs.middleScroll)
@@ -2100,10 +2126,10 @@ class PlayState extends MusicBeatState
 					}
 				});
 				callOnLuas('onCountdownTick', [swagCounter]);
-			    scripts.executeAllFunc("onCountdownTick", [swagCounter]);
+			    callOnHScripts("onCountdownTick", [swagCounter]);
 			    
 			    callOnLuas("generateModchart", []);
-			    scripts.executeAllFunc("generateModchart");
+			    callOnHScripts("generateModchart", []);
 
 				swagCounter += 1;
 				// generateSong('fresh');
@@ -2180,7 +2206,7 @@ class PlayState extends MusicBeatState
 			});
 		}
 		callOnLuas('onUpdateScore', [miss]);
-		scripts.executeAllFunc("onUpdateScore", [miss]);
+		callOnHScripts("onUpdateScore", [miss]);
 	}
 
 	public function setSongTime(time:Float)
@@ -2262,7 +2288,7 @@ class PlayState extends MusicBeatState
 		#end
 		setOnLuas('songLength', songLength);
 		callOnLuas('onSongStart', []);
-		scripts.executeAllFunc('onSongStart');
+		callOnHScripts('onSongStart', []);
 	}
 
 	var debugNum:Int = 0;
@@ -2646,7 +2672,7 @@ class PlayState extends MusicBeatState
 			}
 			paused = false;
 			callOnLuas('onResume', []);
-			scripts.executeAllFunc("onResume", []);
+			callOnHScripts("onResume", []);
 
 			#if desktop
 			if (startTimer != null && startTimer.finished)
@@ -2725,8 +2751,7 @@ class PlayState extends MusicBeatState
 		callOnLuas('onUpdate', [elapsed]);
 		if (scripts != null)
 		{
-			scripts.update(elapsed);
-			//scripts.executeAllFunc("onUpdate", [elapsed]); old
+			callOnHScripts("onUpdate", [elapsed]);
 		}
 
 		switch (curStage)
@@ -2802,7 +2827,7 @@ class PlayState extends MusicBeatState
 		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause)
 		{
 			var ret:Dynamic = callOnLuas('onPause', [], false);
-			var retH:Dynamic = scripts.executeAllFunc("onPause", []);
+			var retH:Dynamic = callOnHScripts("onPause", []);
 			if(ret != FunkinLua.Function_Stop || retH != FunkinLua.Function_Stop) {
 				openPauseMenu();
 			}
@@ -2951,7 +2976,7 @@ class PlayState extends MusicBeatState
 				notes.insert(0, dunceNote);
 				dunceNote.spawned=true;
 				callOnLuas('onSpawnNote', [notes.members.indexOf(dunceNote), dunceNote.noteData, dunceNote.noteType, dunceNote.isSustainNote]);
-				scripts.executeAllFunc("onSpawnNote", [dunceNote]);
+				callOnHScripts("onSpawnNote", [dunceNote]);
 
 				var index:Int = unspawnNotes.indexOf(dunceNote);
 				unspawnNotes.splice(index, 1);
@@ -3171,7 +3196,7 @@ class PlayState extends MusicBeatState
 		callOnLuas('onUpdatePost', [elapsed]);
 		
 		if (scripts != null)
-			scripts.executeAllFunc("onUpdatePost", [elapsed]);
+			callOnHScripts("onUpdatePost", [elapsed]);
 			
 	}
 
@@ -3232,7 +3257,7 @@ class PlayState extends MusicBeatState
 		if (((skipHealthCheck && instakillOnMiss) || health <= 0) && !practiceMode && !isDead)
 		{
 			var ret:Dynamic = callOnLuas('onGameOver', [], false);
-			var retH:Dynamic = scripts.executeAllFunc("onGameOver", []);
+			var retH:Dynamic = callOnHScripts("onGameOver", []);
 			if(ret != FunkinLua.Function_Stop || retH != FunkinLua.Function_Stop) {
 				boyfriend.stunned = true;
 				deathCounter++;
@@ -3669,7 +3694,7 @@ class PlayState extends MusicBeatState
 				}
 		}
 		callOnLuas('onEvent', [eventName, value1, value2]);
-		scripts.executeAllFunc("onEvent", [eventName, value1, value2]);
+		callOnHScripts("onEvent", [eventName, value1, value2]);
 	}
 
 	function moveCameraSection():Void {
@@ -3682,7 +3707,7 @@ class PlayState extends MusicBeatState
 			camFollow.y += gf.cameraPosition[1] + girlfriendCameraOffset[1];
 			tweenCamIn();
 			callOnLuas('onMoveCamera', ['gf']);
-			scripts.executeAllFunc("onMoveCamera", [gf]);
+			callOnHScripts("onMoveCamera", [gf]);
 		
 			return;
 		}
@@ -3691,13 +3716,13 @@ class PlayState extends MusicBeatState
 		{
 			moveCamera(true);
 			callOnLuas('onMoveCamera', ['dad']);
-			scripts.executeAllFunc("onMoveCamera", [dad]);
+			callOnHScripts("onMoveCamera", [dad]);
 		}
 		else
 		{
 			moveCamera(false);
 			callOnLuas('onMoveCamera', ['boyfriend']);
-			scripts.executeAllFunc("onMoveCamera", [boyfriend]);
+			callOnHScripts("onMoveCamera", [boyfriend]);
 		}
 	}
 
@@ -3814,7 +3839,7 @@ class PlayState extends MusicBeatState
 		#end
 
 		var ret:Dynamic = callOnLuas('onEndSong', [], false);
-		scripts.executeAllFunc("onEndSong");
+		callOnHScripts("onEndSong", [], false);
 		if(ret != FunkinLua.Function_Stop && !transitioning) {
 			if (SONG.validScore)
 			{
@@ -3980,7 +4005,7 @@ class PlayState extends MusicBeatState
 
 	private function popUpScore(note:Note = null):Void
 	{
-		var noteDiff:Float = Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset) * 2.0; // Increased multiplier from 0.8 to 2.0 to make judgment stricter
+		var noteDiff:Float = Math.abs(note.strumTime - Conductor.songPosition + ClientPrefs.ratingOffset); // Increased multiplier from 0.8 to 2.0 to make judgment stricter
 		//trace(noteDiff, ' ' + Math.abs(note.strumTime - Conductor.songPosition));
 
 		// boyfriend.playAnim('hey');
@@ -4148,7 +4173,7 @@ class PlayState extends MusicBeatState
 			daLoop++;
 			if(numScore.x > xThing) xThing = numScore.x;
 			
-			scripts.executeAllFunc('popUpScore', [rating, comboSpr, numScore]);
+			callOnHScripts('popUpScore', [rating, comboSpr, numScore]);
 		}
 		comboSpr.x = xThing + 50;
 		/*
@@ -4418,7 +4443,7 @@ class PlayState extends MusicBeatState
 		}
 
 		callOnLuas('noteMiss', [notes.members.indexOf(daNote), daNote.noteData, daNote.noteType, daNote.isSustainNote]);
-		scripts.executeAllFunc('noteMiss', [daNote]);
+		callOnHScripts('noteMiss', [daNote]);
 	}
 
 	function noteMissPress(direction:Int = 1):Void //You pressed a key when there was no notes to press for this key
@@ -4465,7 +4490,7 @@ class PlayState extends MusicBeatState
 			vocals.volume = 0;
 		}
 		callOnLuas('noteMissPress', [direction]);
-		scripts.executeAllFunc("noteMissPress", [direction]);
+		callOnHScripts("noteMissPress", [direction]);
 		
 	}
 
@@ -4515,7 +4540,7 @@ class PlayState extends MusicBeatState
 		note.hitByOpponent = true;
 
 		callOnLuas('opponentNoteHit', [notes.members.indexOf(note), Math.abs(note.noteData), note.noteType, note.isSustainNote]);
-		scripts.executeAllFunc("opponentNoteHit", [note]);
+		callOnHScripts("opponentNoteHit", [note]);
 
 			note.kill();
 			notes.remove(note, true);
@@ -4623,7 +4648,7 @@ class PlayState extends MusicBeatState
 			var leData:Int = Math.round(Math.abs(note.noteData));
 			var leType:String = note.noteType;
 			callOnLuas('goodNoteHit', [notes.members.indexOf(note), leData, leType, isSus]);
-			scripts.executeAllFunc("goodNoteHit", [note]);
+			callOnHScripts("goodNoteHit", [note]);
 
 
 			note.kill();
@@ -4653,7 +4678,7 @@ class PlayState extends MusicBeatState
 
 	public function spawnNoteSplash(x:Float, y:Float, data:Int, ?note:Note = null) {
 		var skin:String = 'noteSplashes';
-		scripts.executeAllFunc("SkinNoteSplash", [skin]);
+		callOnHScripts("SkinNoteSplash", [skin]);
 		if(PlayState.SONG.splashSkin != null && PlayState.SONG.splashSkin.length > 0) skin = PlayState.SONG.splashSkin;
 
 		var hue:Float = 0;
@@ -4795,9 +4820,16 @@ class PlayState extends MusicBeatState
 			lua.call('onDestroy', []);
 			lua.stop();
 		}
-			scripts.executeAllFunc("onDestroy");
+			
+
+		for (hx in hscriptArray) {
+			hx.call("onDestroy", []);
+			hx.stop();
+		}
 
 		luaArray = [];
+		hscriptArray = [];
+		lscriptArray = [];
 
 		#if hscript
 		if(FunkinLua.hscript != null) FunkinLua.hscript = null;
@@ -4839,7 +4871,7 @@ class PlayState extends MusicBeatState
 		callOnLuas('onStepHit', []);
 		
 		scripts.setAll("curStep", curStep);
-		scripts.executeAllFunc("onStepHit", [curStep]);
+		callOnHScripts("onStepHit", [curStep]);
 	}
 
 	var lightningStrikeBeat:Int = 0;
@@ -4934,7 +4966,7 @@ class PlayState extends MusicBeatState
 		setOnLuas('curBeat', curBeat); //DAWGG?????
 		callOnLuas('onBeatHit', []);
 		scripts.setAll("curBeat", curBeat);
-		scripts.executeAllFunc("onBeatHit", [curBeat]);
+		callOnHScripts("onBeatHit", [curBeat]);
 	}
 
 	override function sectionHit()
@@ -4969,7 +5001,7 @@ class PlayState extends MusicBeatState
 		setOnLuas('curSection', curSection);
 		callOnLuas('onSectionHit', []);
 		scripts.setAll("curSection", curSection);
-		scripts.executeAllFunc("onSectionHit", [curSection]);
+		callOnHScripts("onSectionHit", [curSection]);
 	}
 
 	#if LUA_ALLOWED
@@ -5008,6 +5040,40 @@ class PlayState extends MusicBeatState
 	}
 	#end
 	
+	// public function startLuahxOnFolder(luaFile:String)
+	// {
+	// 	for (script in lscriptArray)
+	// 	{
+	// 		if(script.scriptName == luaFile) return false;
+	// 	}
+
+	// 	#if MODS_ALLOWED
+	// 	var luaToLoad:String = Paths.modFolders(luaFile);
+	// 	if(FileSystem.exists(luaToLoad))
+	// 	{
+	// 		lscriptArray.push(initLScript(luaToLoad));
+	// 		return true;
+	// 	}
+	// 	else
+	// 	{
+	// 		luaToLoad = Paths.getPreloadPath(luaFile);
+	// 		if(FileSystem.exists(luaToLoad))
+	// 		{
+	// 			lscriptArray.push(initLScript(luaToLoad));
+	// 			return true;
+	// 		}
+	// 	}
+	// 	#elseif sys
+	// 	var luaToLoad:String = Paths.getPreloadPath(luaFile);
+	// 	if(OpenFlAssets.exists(luaToLoad))
+	// 	{
+	// 		lscriptArray.push(initLScript(luaToLoad));
+	// 		return true;
+	// 	}
+	// 	#end
+	// 	return false;
+	// }
+
 	public function startHScriptsOnFolder(paths:String, name:String)
 	{
 		if (scripts == null)
@@ -5030,19 +5096,68 @@ class PlayState extends MusicBeatState
 
 		if (hx != null)
 		{
-			if (scripts.getScriptByTag(name) == null)
-				scripts.addScript(name).executeString(hx);
-			else
-			{
-				scripts.getScriptByTag(name).error("Duplacite Script Error!", '$name: Duplicate Script');
-			}
+			initIris(hx, name);
 		}
 	}
+
+	public function callOnHScripts(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
+		var returnVal = HScript.Function_Continue;
+		if(exclusions == null) exclusions = [];
+		if(excludeValues == null) excludeValues = [];
+
+		for (script in hscriptArray) {
+			if(exclusions.contains(script.scriptName))
+				continue;
+
+			var myValue = script.call(event, args);
+			if(myValue == HScript.Function_Stop && !ignoreStops)
+				break;
+			
+			if(myValue != null && myValue != HScript.Function_Continue) {
+				returnVal = myValue;
+			}
+		}
+		return returnVal;
+	}
+
+	public function callOnLScripts(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
+		var returnVal = FunkinLScript.Function_Continue;
+		if(exclusions == null) exclusions = [];
+		if(excludeValues == null) excludeValues = [];
+
+		for (script in lscriptArray) {
+			if(exclusions.contains(script.scriptName))
+				continue;
+
+			var myValue = script.call(event, args);
+			if(myValue == FunkinLScript.Function_Stop && !ignoreStops)
+				break;
+
+			if(myValue != null && myValue != FunkinLScript.Function_Continue) {
+				returnVal = myValue;
+			}
+		}
+		return returnVal;
+	}
 	
-    public function callOnHScripts(name:String, ?args:Array<Any>):Array<Dynamic>
-    {
-    return scripts.executeAllFunc(name, args); 
-    }
+	// public function callOnHScripts(event:String, args:Array<Dynamic>, ignoreStops:Bool = true, ?exclusions:Array<String>):Dynamic
+	// {
+	// 	if (exclusions == null) exclusions = [];
+	// 	var returnVal:Dynamic = HScript.Function_Continue;
+
+	// 	for (script in hscriptArray)
+	// 	{
+	// 		if (exclusions.contains(script.scriptName))
+	// 			continue;
+
+	// 		var ret:Dynamic = script.call(event, args);
+
+	// 		if (ret != null && ret != HScript.Function_Continue)
+	// 			returnVal = ret;
+	// 	}
+
+	// 	return returnVal != null ? returnVal : HScript.Function_Continue;
+	// }
     /* 
     public function callOnPython(name:String, ?parameters:Array<String>)
     {
@@ -5080,6 +5195,22 @@ class PlayState extends MusicBeatState
 		#end
 	}
 
+	public function setOnHScripts(variable:String, arg:Dynamic)
+	{
+		for (script in hscriptArray)
+		{
+			script.set(variable, arg);
+		}
+	}
+
+	public function setOnLScripts(variable:String, arg:Dynamic)
+	{
+		for (script in lscriptArray)
+		{
+			script.set(variable, arg);
+		}
+	}
+
 	function StrumPlayAnim(isDad:Bool, id:Int, time:Float) {
 		var spr:StrumNote = null;
 		if(isDad) {
@@ -5103,7 +5234,7 @@ class PlayState extends MusicBeatState
 		setOnLuas('hits', songHits);
 
 		var ret:Dynamic = callOnLuas('onRecalculateRating', [], false);
-		var reth:Dynamic = scripts.executeAllFunc("onRecalculateRating", []);
+		var reth:Dynamic = callOnHScripts("onRecalculateRating", []);
 		if(ret != FunkinLua.Function_Stop || reth != FunkinLua.Function_Stop)
 		{
 			if(totalPlayed < 1) //Prevent divide by 0
@@ -5218,11 +5349,37 @@ class PlayState extends MusicBeatState
 
 	var curLight:Int = -1;
 	var curLightEvent:Int = -1;
-	//Paths.('scripts/')
+	
+	function initIris(filePath:String, ?name:String)
+	{
+		var script:HScript = new HScript(filePath, name);
+		if (script.parsingException != null)
+		{
+			script.stop();
+			return null;
+		}
+		script.call('onCreate');
+		hscriptArray.push(script);
+		onAddScript();
+		return script;
+	}
+
+	function initLScript(filePath:String)
+	{
+		var script:FunkinLScript = new FunkinLScript(filePath);
+		if (script.Ls.parent == null)
+		{
+			script.stop();
+			return null;
+		}
+		script.call('onCreate');
+		lscriptArray.push(script);
+		onAddLScript();
+		return script;
+	}
+
 	function initScripts()
 	{
-		if (scripts == null)
-			return;
         
 		var scriptData:Map<String, String> = [];
 		
@@ -5255,10 +5412,7 @@ class PlayState extends MusicBeatState
 			{
 				var scriptName:String = CoolUtil.getFileStringFromPath(file);
 
-				if (!scriptData.exists(scriptName))
-				{
-					scriptData.set(scriptName, hx);
-				}
+				initIris(hx, scriptName);
 			}
 		}
 
@@ -5273,10 +5427,7 @@ class PlayState extends MusicBeatState
 				{
 					var scriptName:String = CoolUtil.getFileStringFromPath(file);
 	
-					if (!scriptData.exists(scriptName))
-					{
-						scriptData.set(scriptName, hx);
-					}
+					initIris(hx, scriptName);
 				}
 			}
 		
@@ -5298,42 +5449,23 @@ class PlayState extends MusicBeatState
 
 			if (hx != null)
 			{
-				if (!scriptData.exists(curStage))
-					scriptData.set(curStage, hx);
+				initIris(hx, 'stage');
 			}
 		}
 
 		if (SONG.stage != null)
-			{
-				var hx:Null<String> = null;
-	
-				for (extn in HScriptUtil.extns)
-				{
-					var path:String = Paths.getPreloadPath('stages/' + SONG.stage + '.$extn');
-	
-					if (FileSystem.exists(path))
-					{
-						hx = File.getContent(path);
-						break;
-					}
-				}
-	
-				if (hx != null)
-				{
-					if (!scriptData.exists(curStage))
-						scriptData.set(curStage, hx);
-				}
-			}
-		
-	
-
-		for (scriptName => hx in scriptData)
 		{
-			if (scripts.getScriptByTag(scriptName) == null)
-				scripts.addScript(scriptName).executeString(hx);
-			else
+			var hx:Null<String> = null;
+
+			for (extn in HScriptUtil.extns)
 			{
-				scripts.getScriptByTag(scriptName).error("Duplacite Script Error!", '$scriptName: Duplicate Script');
+				var path:String = Paths.getPreloadPath('stages/' + SONG.stage + '.$extn');
+
+				if (FileSystem.exists(path))
+				{
+					trace('Failed to display error: $path');
+					initIris(File.getContent(path), 'stage');
+				}
 			}
 		}
 	}
@@ -5369,32 +5501,7 @@ class PlayState extends MusicBeatState
 					trace(e);
 				}
 			}
-/*
-			var eventName:String = CoolUtil.getFileStringFromPath(file);
 
-			eventsPushed.push([eventName, '${json.val1}\n${json.val2}']);
-			ChartingState.eventStuff.push([eventName, '${json.val1}\n${json.val2}']);
-
-			for (extn in ScriptUtil.extns)
-			{
-				var path:String = file.replace(".json", '.$extn');
-				if (FileSystem.exists(path))
-				{
-					hxFiles.set(CoolUtil.getFileStringFromPath(path), File.getContent(path));
-					break;
-				}
-			}
-		}
-*/
-		for (scriptName => hxData in hxFiles)
-		{
-			if (scripts.getScriptByTag(scriptName) == null)
-				scripts.addScript(scriptName).executeString(hxData);
-			else
-			{
-				scripts.getScriptByTag(scriptName).error("Duplacite Script Error!", '$scriptName: Duplicate Script');
-			}
-		}
 	}
 	}
 
@@ -5402,8 +5509,6 @@ class PlayState extends MusicBeatState
 
 	public function initCharScript(name:String)
 	{
-		if (scripts == null)
-			return;
 
 		var hx:Null<String> = null;
 
@@ -5419,108 +5524,120 @@ class PlayState extends MusicBeatState
 
 		if (hx != null)
 		{
-			if (scripts.getScriptByTag(name) == null)
-				scripts.addScript(name).executeString(hx);
-			else
-				scripts.getScriptByTag(name).error("Duplacite Script Error!", '$name: Duplicate Script');
-			
+			initIris(hx, name);
 		}
 	}
 
-	function onAddScript(script:HScript)
+	function onAddScript()
 	{
-		script.set("PlayState", PlayState);
-		script.set("game", PlayState.instance);
 
-		// FUNCTIONS
-        
         // MODCHAT
-        script.set("modManager", modManager);
-
-		// ANDROID
-		#if android
-		script.set("androidc", androidc);
-		#end
-		
-       // script.set("initMod", function(?mod:modcharting.Modifier) {});
-		//  CREATION FUNCTIONS
-		script.set("onLoad", function() {});
-		script.set("onCreate", function() {});
-		//script.set("createStage", function(?stage:String) {}); // ! HAS PAUSE sb
-		script.set("onCreatePost", function() {});
-		script.set("onDestroy", function() {});
-
-		//  COUNTDOWN
-		script.set("onStartCountdown", function() {});
-		script.set("onCountdownTick", function(?tick:Int) {});
-
-		//  SONG FUNCTIONS
-		script.set("onSongStart", function() {}); // ! HAS PAUSE
-		script.set("onEndSong", function() {}); // ! HAS PAUSE
-		script.set("onBeatHit", function(?beat:Int) {});
-		script.set("onStepHit", function(?step:Int) {});
-		script.set("onSectionHit", function(?section:Int) {});
-
-		//  NOTE FUNCTIONS
-		script.set("onSpawnNote", function(?dunceNote:Note) {}); // ! HAS PAUSE
-		script.set("goodNoteHit", function(?note:Note) {});
-		script.set("opponentNoteHit", function(?note:Note) {});
-		script.set("noteMiss", function(?note:Note) {});
-
-		script.set("notesUpdate", function() {}); // ! HAS PAUSE
-
-		script.set("noteMissPress", function(?direction:Int) {});
-
-		//  EVENT FUNCTIONS
-		script.set("onEvent", function(?event:String, ?val1:Dynamic, ?val2:Dynamic) {}); // ! HAS PAUSE
-
-		//  PAUSING / RESUMING
-		script.set("onPause", function() {}); // ! HAS PAUSE
-		script.set("onResume", function() {}); // ! HAS PAUSE
-
-		//  GAMEOVER
-		script.set("onGameOver", function() {}); // ! HAS PAUSE
-
-		//  MISC
-		script.set("onUpdatePost", function(?elapsed:Float) {});
-		script.set("onMoveCamera", function(focus:String) {});
-		script.set("onRecalculateRating", function(?badHit:Bool = false) {}); // ! HAS PAUSE
-		script.set("onUpdateScore", function(?miss:Bool = false) {}); // ! HAS PAUSE
+        setOnHScripts("modManager", modManager);
+       // setOnHScripts("initMod", function(?mod:modcharting.Modifier) {})
 
 		// VARIABLES
 
-		script.set("curStep", 0);
-		script.set("curSection", 0);
-		script.set("curBeat", 0);
-		script.set("bpm", 0);
+		setOnHScripts("curStep", 0);
+		setOnHScripts("curSection", 0);
+		setOnHScripts("curBeat", 0);
+		setOnHScripts("bpm", 0);
 
 		// OBJECTS
-		script.set("camGame", camGame);
-		script.set("camHUD", camHUD);
-		script.set("camOther", camOther);
+		setOnHScripts("camGame", camGame);
+		setOnHScripts("camHUD", camHUD);
+		setOnHScripts("camOther", camOther);
 
-		script.set("camFollow", camFollow);
-		script.set("camFollowPos", camFollowPos);
+		setOnHScripts("camFollow", camFollow);
+		setOnHScripts("camFollowPos", camFollowPos);
 
 		// CHARACTERS
-		script.set("boyfriend", boyfriend);
-		script.set("dad", dad);
-		script.set("gf", gf);
+		setOnHScripts("boyfriend", boyfriend);
+		setOnHScripts("dad", dad);
+		setOnHScripts("gf", gf);
 
-		script.set("boyfriendGroup", boyfriendGroup);
-		script.set("dadGroup", dadGroup);
-		script.set("gfGroup", gfGroup);
+		setOnHScripts("boyfriendGroup", boyfriendGroup);
+		setOnHScripts("dadGroup", dadGroup);
+		setOnHScripts("gfGroup", gfGroup);
 
 		// NOTES
-		script.set("notes", notes);
-		script.set("strumLineNotes", strumLineNotes);
-		script.set("playerStrums", playerStrums);
-		script.set("opponentStrums", opponentStrums);
+		setOnHScripts("notes", notes);
+		setOnHScripts("strumLineNotes", strumLineNotes);
+		setOnHScripts("playerStrums", playerStrums);
+		setOnHScripts("opponentStrums", opponentStrums);
 
-		script.set("unspawnNotes", unspawnNotes);
+		setOnHScripts("unspawnNotes", unspawnNotes);
 
 		// MISC
-		script.set("add", function(obj:FlxBasic, ?front:Bool = false)
+		setOnHScripts("add", function(obj:FlxBasic, ?front:Bool = false)
+		{
+			if (front)
+			{
+				getInstance().add(obj);
+			}
+			else
+			{
+				if (PlayState.instance.isDead)
+				{
+					GameOverSubstate.instance.insert(GameOverSubstate.instance.members.indexOf(GameOverSubstate.instance.boyfriend), obj);
+				}
+				else
+				{
+					var position:Int = PlayState.instance.members.indexOf(PlayState.instance.gfGroup);
+					if (PlayState.instance.members.indexOf(PlayState.instance.boyfriendGroup) < position)
+					{
+						position = PlayState.instance.members.indexOf(PlayState.instance.boyfriendGroup);
+					}
+					else if (PlayState.instance.members.indexOf(PlayState.instance.dadGroup) < position)
+					{
+						position = PlayState.instance.members.indexOf(PlayState.instance.dadGroup);
+					}
+					PlayState.instance.insert(position, obj);
+				}
+			}
+		});
+	}
+
+	function onAddLScript()
+	{
+
+        // MODCHAT
+        setOnLScripts("modManager", modManager);
+       // setOnHScripts("initMod", function(?mod:modcharting.Modifier) {})
+
+		// VARIABLES
+
+		setOnLScripts("curStep", 0);
+		setOnLScripts("curSection", 0);
+		setOnLScripts("curBeat", 0);
+		setOnLScripts("bpm", 0);
+
+		// OBJECTS
+		setOnLScripts("camGame", camGame);
+		setOnLScripts("camHUD", camHUD);
+		setOnLScripts("camOther", camOther);
+
+		setOnLScripts("camFollow", camFollow);
+		setOnLScripts("camFollowPos", camFollowPos);
+
+		// CHARACTERS
+		setOnLScripts("boyfriend", boyfriend);
+		setOnLScripts("dad", dad);
+		setOnLScripts("gf", gf);
+
+		setOnLScripts("boyfriendGroup", boyfriendGroup);
+		setOnLScripts("dadGroup", dadGroup);
+		setOnLScripts("gfGroup", gfGroup);
+
+		// NOTES
+		setOnLScripts("notes", notes);
+		setOnLScripts("strumLineNotes", strumLineNotes);
+		setOnLScripts("playerStrums", playerStrums);
+		setOnLScripts("opponentStrums", opponentStrums);
+
+		setOnLScripts("unspawnNotes", unspawnNotes);
+
+		// MISC
+		setOnLScripts("add", function(obj:FlxBasic, ?front:Bool = false)
 		{
 			if (front)
 			{

@@ -35,7 +35,6 @@ import obj.StrumNote;
 import openfl.Lib;
 import openfl.filters.ShaderFilter;
 import openfl.system.Capabilities;
-import script.hscript.HScript.ScriptReturn;
 import flixel.addons.display.FlxRuntimeShader;
 import backend.songs.Conductor;
 import backend.songs.Section;
@@ -65,45 +64,33 @@ class HScriptUtil extends HScript
 {
 	public static final extns:Array<String> = ["hx", "hscript", "hsc", "hxs"];
 
-	public static function getBasicScript():HScript
+	override function setDefaultVars()
 	{
-		var script = new HScript();
+		_script.preset();
+		super.setDefaultVars();
 
 		// Main Class
-		script.set("Main", Main);
+		set("Main", Main);
 
 		// Haxe Classes
-		script.set("Std", Std);
-		script.set("Type", Type);
-		script.set("Reflect", Reflect);
-		script.set("Math", Math);
-		script.set("StringTools", StringTools);
-		script.set("Json", {parse: Json.parse, stringify: Json.stringify});
+		set("Std", Std);
+		set("Type", Type);
+		set("Reflect", Reflect);
+		set("Math", Math);
+		set("StringTools", StringTools);
+		set("Json", {parse: Json.parse, stringify: Json.stringify});
 
 		#if sys
-		script.set("FileSystem", FileSystem);
-		script.set("File", File);
-		script.set("Sys", Sys);
+		set("FileSystem", FileSystem);
+		set("File", File);
+		set("Sys", Sys);
 		#end
 
-		#if LUA_ALLOWED
-		for(i in Lua_helper.callbacks.keys()) //adds lua callbacks basic
-			script.set(i, Lua_helper.callbacks.get(i));
-	    #end
-
-		return script;
-	}
-
-	public static function setUpFlixelScript(script:HScript)
-	{
-		if (script == null)
-			return;
-
 		// OpenFL
-		script.set("Lib", Lib);
-		script.set("Capabilities", Capabilities);
-		script.set("ShaderFitler", ShaderFilter);
-		script.set('BlendMode',{
+		set("Lib", Lib);
+		set("Capabilities", Capabilities);
+		set("ShaderFitler", ShaderFilter);
+		set('BlendMode',{
 			SUBTRACT: BlendMode.SUBTRACT,
 			ADD: BlendMode.ADD,
 			MULTIPLY: BlendMode.MULTIPLY,
@@ -119,165 +106,161 @@ class HScriptUtil extends HScript
 		});
 
 		// Basic Stuff
-		//script.set("this", this);
-		script.set("state", FlxG.state);
-		script.set("camera", FlxG.camera);
-		script.set("FlxG", FlxG);
+		//set("this", this);
+		set("state", FlxG.state);
+		set("camera", FlxG.camera);
+		set("FlxG", FlxG);
 
-		script.set("newShader", Paths.getShader);
+		set("newShader", Paths.getShader);
 
-		script.set("add", function(obj:FlxBasic)
+		set("add", function(obj:FlxBasic)
 		{
 			FlxG.state.add(obj);
 		});
 		
-		script.set("addBehindGF", function(obj:flixel.FlxObject)
+		set("addBehindGF", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindGF(obj);
 		});
 		
-		script.set("addBehindBF", function(obj:flixel.FlxObject)
+		set("addBehindBF", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindBF(obj);
 		});
 		
-		script.set("addBehindDad", function(obj:flixel.FlxObject)
+		set("addBehindDad", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindDad(obj);
 		});
 
-		script.set("insert", function(postion:Int, obj:FlxBasic)
+		set("insert", function(postion:Int, obj:FlxBasic)
 		{
 			FlxG.state.insert(postion, obj);
 		});
 
-		script.set("remove", function(obj:FlxBasic)
+		set("remove", function(obj:FlxBasic)
 		{
 			FlxG.state.remove(obj);
 		});
 
-		script.set("FlxBasic", FlxBasic);
-		script.set("FlxObject", FlxObject);
+		set("FlxBasic", FlxBasic);
+		set("FlxObject", FlxObject);
 
 		// Sprites
-		script.set("FlxSprite", FlxSprite);
-		script.set("FlxGraphic", FlxGraphic);
+		set("FlxSprite", FlxSprite);
+		set("FlxGraphic", FlxGraphic);
 		
 		// Bar
-		script.set("FlxBar", FlxBar);
-		script.set("LEFT_TO_RIGHT", LEFT_TO_RIGHT);
-		script.set("RIGHT_TO_LEFT", RIGHT_TO_LEFT);
-		script.set("TOP_TO_BOTTOM", TOP_TO_BOTTOM);
-		script.set("BOTTOM_TO_TOP", BOTTOM_TO_TOP);
-		script.set("HORIZONTAL_INSIDE_OUT", HORIZONTAL_INSIDE_OUT);
-		script.set("HORIZONTAL_OUTSIDE_IN", HORIZONTAL_OUTSIDE_IN);
-		script.set("VERTICAL_INSIDE_OUT", VERTICAL_INSIDE_OUT);
-		script.set("VERTICAL_OUTSIDE_IN", VERTICAL_OUTSIDE_IN);
+		set("FlxBar", FlxBar);
+		set("LEFT_TO_RIGHT", LEFT_TO_RIGHT);
+		set("RIGHT_TO_LEFT", RIGHT_TO_LEFT);
+		set("TOP_TO_BOTTOM", TOP_TO_BOTTOM);
+		set("BOTTOM_TO_TOP", BOTTOM_TO_TOP);
+		set("HORIZONTAL_INSIDE_OUT", HORIZONTAL_INSIDE_OUT);
+		set("HORIZONTAL_OUTSIDE_IN", HORIZONTAL_OUTSIDE_IN);
+		set("VERTICAL_INSIDE_OUT", VERTICAL_INSIDE_OUT);
+		set("VERTICAL_OUTSIDE_IN", VERTICAL_OUTSIDE_IN);
 		
 		// Video
-		script.set("FlxVideo", FlxVideo);
-		script.set("FlxVideoSprite", FlxVideoSprite);
-		script.set("PsychVideoSprite", PsychVideoSprite);
-		script.set("ParkerVideoSprite", PsychVideoSprite);
-		script.set("Handle", Handle);
+		set("FlxVideo", FlxVideo);
+		set("FlxVideoSprite", FlxVideoSprite);
+		set("PsychVideoSprite", PsychVideoSprite);
+		set("ParkerVideoSprite", PsychVideoSprite);
+		set("Handle", Handle);
 
 		// Tweens
-		script.set("FlxTween", FlxTween);
-		script.set("FlxEase", FlxEase);
+		set("FlxTween", FlxTween);
+		set("FlxEase", FlxEase);
 
 		// Timer
-		script.set("FlxTimer", FlxTimer);
+		set("FlxTimer", FlxTimer);
 
 		// FlxText
-		script.set("FlxText", FlxText);
-		script.set("FlxTextFormat", FlxTextFormat);
-		script.set("FlxTextFormatMarkerPair", FlxTextFormatMarkerPair);
-		script.set("FlxTextAlign", {
+		set("FlxText", FlxText);
+		set("FlxTextFormat", FlxTextFormat);
+		set("FlxTextFormatMarkerPair", FlxTextFormatMarkerPair);
+		set("FlxTextAlign", {
 			CENTER: flixel.text.FlxText.FlxTextAlign.CENTER,
 			JUSTIFY: flixel.text.FlxText.FlxTextAlign.JUSTIFY,
 			LEFT: flixel.text.FlxText.FlxTextAlign.LEFT,
 			RIGHT: flixel.text.FlxText.FlxTextAlign.RIGHT
 		});
-		script.set("FlxTextBorderStyle", FlxTextBorderStyle);
+		set("FlxTextBorderStyle", FlxTextBorderStyle);
 
 		// Shaders
-		script.set("FlxShader", FlxShader);
-		script.set("FlxRuntimeShader", FlxRuntimeShader);
+		set("FlxShader", FlxShader);
+		set("FlxRuntimeShader", FlxRuntimeShader);
 
 		// Modchart
-		script.set("ModManager", modchart.ModManager);
-		script.set("Modifier", modchart.Modifier);
-		//script.set("HScriptModifier", modchart.HScriptModifier);
-		script.set("SubModifier", modchart.SubModifier);
-		script.set("NoteModifier", modchart.NoteModifier);
-		script.set("EventTimeline", modchart.EventTimeline);
-		script.set("StepCallbackEvent", modchart.events.StepCallbackEvent);
-		script.set("CallbackEvent", modchart.events.CallbackEvent);
-		script.set("ModEvent", modchart.events.ModEvent);
-		script.set("EaseEvent", modchart.events.EaseEvent);
-		script.set("SetEvent", modchart.events.SetEvent);
+		set("ModManager", modchart.ModManager);
+		set("Modifier", modchart.Modifier);
+		//set("HScriptModifier", modchart.HScriptModifier);
+		set("SubModifier", modchart.SubModifier);
+		set("NoteModifier", modchart.NoteModifier);
+		set("EventTimeline", modchart.EventTimeline);
+		set("StepCallbackEvent", modchart.events.StepCallbackEvent);
+		set("CallbackEvent", modchart.events.CallbackEvent);
+		set("ModEvent", modchart.events.ModEvent);
+		set("EaseEvent", modchart.events.EaseEvent);
+		set("SetEvent", modchart.events.SetEvent);
 		
 		// Color Functions
-		script.set("FlxColor", CustomFlxColor);
+		set("FlxColor", CustomFlxColor);
 		
-		script.set("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
+		set("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
 		{
 			return FlxColor.fromRGB(Red, Green, Blue, Alpha);
 		});
 
-		script.set("colorFromString", function(str:String)
+		set("colorFromString", function(str:String)
 		{
 			return FlxColor.fromString(str);
 		});
 
 		// Sounds
-		script.set("FlxSound", FlxSound);
+		set("FlxSound", FlxSound);
 		
 		// RunLuaCodes
 		#if LUA_ALLOWED
-		script.set("runLuaCode", function(str:String)
+		set("runLuaCode", function(str:String)
 		{
 		    for (script in PlayState.instance.luaArray)
 			script.executeLua(str);
 		});
 		#end
 		
-		script.set("FlxAxes", {
+		set("FlxAxes", {
 			X: flixel.util.FlxAxes.X,
 			Y: flixel.util.FlxAxes.Y,
 			XY: flixel.util.FlxAxes.XY
 		});
 
-		script.set("FlxTypedGroup", flixel.group.FlxGroup.FlxTypedGroup);
-	}
-
-	public static function setUpFNFScript(script:HScript)
-	{
-		if (script == null)
-			return;
+		set("FlxTypedGroup", flixel.group.FlxGroup.FlxTypedGroup);
 
 		// Save Data
-		script.set("ClientPrefs", ClientPrefs);
-		script.set("WeekData", WeekData);
-		script.set("Highscore", Highscore);
-		script.set("StageData", StageData);
+		set("ClientPrefs", ClientPrefs);
+		set("WeekData", WeekData);
+		set("Highscore", Highscore);
+		set("StageData", StageData);
 
 		// Assets
-		script.set("Paths", Paths);
+		set("Paths", Paths);
 
 		// Song
-		script.set("Song", Song);
-		script.set("Section", Section);
-		script.set("Conductor", Conductor);
+		set("Song", Song);
+		set("Section", Section);
+		set("Conductor", Conductor);
 
 		// Objects
-		script.set("Note", Note);
-		script.set("BGSprite", BGSprite);
-		script.set("BackgroundDancer", backend.game.stages.BackgroundDancer);
-		script.set("StrumNote", StrumNote);
-		script.set("NoteSplash", NoteSplash);
-		script.set("Character", Character);
-		script.set("Boyfriend", Boyfriend);
+		set("Note", Note);
+		set("BGSprite", BGSprite);
+		set("BackgroundDancer", backend.game.stages.BackgroundDancer);
+		set("StrumNote", StrumNote);
+		set("NoteSplash", NoteSplash);
+		set("Character", Character);
+		set("Boyfriend", Boyfriend);
+
+
 	}
 
 	public static inline function findScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String>
@@ -289,413 +272,408 @@ class HScriptUtil extends HScript
 	{
 		return CoolUtil.findFilesInPath(path, ["hxenc", "hscriptenc", "hscenc", "hxsenc"], true);
 	}
-
-	public static inline function hasPause(arr:Array<Dynamic>):Bool
-	{
-		return arr.contains(ScriptReturn.PUASE);
-	}
 }
 
 
 class HScriptState extends MusicBeatState
 {
-	var file:String = '';
-	var stateScript:FunkinHScript;
+// 	var file:String = '';
+// 	var stateScript:FunkinHScript;
 
-	public function new(fileName:String, globalss:Bool = false)
-{
-	super(false);
+// 	public function new(fileName:String, globalss:Bool = false)
+// {
+// 	super(false);
 
-	var foundFile = false;
-    stateScript = new FunkinHScript();
-	stateScript.onAddScript.push(adds);
-	trace(fileName);
-	if (globalss)
-	initScript(fileName);
-	else
-	{
-	initHScript(fileName);
-	}
+// 	var foundFile = false;
+//     stateScript = new FunkinHScript();
+// 	stateScript.onAddScript.push(adds);
+// 	trace(fileName);
+// 	if (globalss)
+// 	initScript(fileName);
+// 	else
+// 	{
+// 	initHScript(fileName);
+// 	}
 
-    stateScript.executeAllFunc("onLoad");
+//     stateScript.executeAllFunc("onLoad");
+// }
+// 	function adds(script:HScript)
+// 	{
+// 	set("this", this);
+// 	set("add", add);
+// 	set("remove", remove);
+// 	set("insert", insert);
+// 	set("members", members);
+// 	set("onLoad", function() {});
+// 	set("onCreate", function() {});
+// 	set("onCreatePost", function() {});
+// 	set("onUpdatePost", function(elapsed:Float) {});
+// 	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
+
+// 	set("get_controls", function()
+// 	{
+// 		return PlayerSettings.player1.controls;
+// 	});
+// 	set("controls", PlayerSettings.player1.controls);
+
+// 	#if android
+// 	set("_virtualpad", _virtualpad);
+// 	set("_joyStick", _joyStick);
+// 	set("addJoyStick", addJoyStick);
+// 	set("addVirtualPad", function(dpad:String, acttt:String){
+// 	addVirtualPad(stringToDPadMode(dpad), stringToActionMode(acttt));
+// 	});
+// 	set("removeVirtualPad", removeVirtualPad);
+// 	set("addVirtualPadButton", addPadCamera);
+// 	#end
+// 	}
+// 	function initHScript(name:String)
+// 	{
+// 		if (stateScript == null)
+// 			return;
+
+// 		var scriptData:Map<String, String> = [];
+
+// 		var hx:Null<String> = null;
+
+// 		for (extn in HScriptUtil.extns)
+// 		{
+// 			var path:String = Paths.modFolders('states/' + '$name.$extn');
+// 			trace(path);
+// 			if (FileSystem.exists(path))
+// 			{
+				
+// 				hx = File.getContent(path);
+// 				break;
+// 			}
+
+// 		}
+
+// 		if (stateScript.getScriptByTag(name) == null)
+// 			stateScript.addScript(name).executeString(hx);
+// 		else
+// 		{
+// 			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
+// 		}
+
+// 		//stateScript.executeAllFunc("onCreate");
+// 	}
+// 	function initScript(name:String)
+// 	{
+// 		if (stateScript == null)
+// 			return;
+
+// 		var scriptData:Map<String, String> = [];
+
+// 		var hx:Null<String> = null;
+
+// 		for (extn in HScriptUtil.extns)
+// 		{
+// 			var path:String = Paths.modFolders('states/' + name);
+// 			trace(path);
+// 			if (FileSystem.exists(path))
+// 			{
+				
+// 				hx = File.getContent(path);
+// 				break;
+// 			}
+
+// 		}
+
+// 		if (stateScript.getScriptByTag(name) == null)
+// 			stateScript.addScript(name).executeString(hx);
+// 		else
+// 		{
+// 			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
+// 		}
+
+// 		//stateScript.executeAllFunc("onCreate");
+// 	}
+// 	#if android
+// 	function stringToDPadMode(str:String):FlxDPadMode {
+// 		// 获取所有枚举构造器
+// 		var constructs = Type.getEnumConstructs(FlxDPadMode);
+		
+// 		// 检查字符串是否为有效构造器
+// 		if (constructs.indexOf(str) == -1) {
+// 			throw '无效的枚举值: $str';
+// 		}
+		
+// 		// 创建枚举实例（无参数）
+// 		return Type.createEnum(FlxDPadMode, str, []);
+// 	}
+// 	function stringToActionMode(str:String):FlxActionMode {
+// 		// 获取所有枚举构造器
+// 		var constructs = Type.getEnumConstructs(FlxActionMode);
+		
+// 		// 检查字符串是否为有效构造器
+// 		if (constructs.indexOf(str) == -1) {
+// 			throw '无效的枚举值: $str';
+// 		}
+		
+// 		// 创建枚举实例（无参数）
+// 		return Type.createEnum(FlxActionMode, str, []);
+// 	}
+// 	#end
+// 	override function create()
+// 	{
+// 		// UPDATE: realised I should be using the "on" prefix just so if a script needs to call an internal function it doesnt cause issues
+// 		// (Also need to figure out how to give the super to the classes incase that's needed in the on[function] funcs though honestly thats what the post functions are for)
+// 		// I'd love to modify HScript to add override specifically for troll engine hscript
+// 		// THSCript...
+
+// 		// onCreate is used when the script is created so lol
+// 		if (stateScript.executeAllFunc("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
+// 			return;
+
+// 		super.create();
+// 		stateScript.executeAllFunc("onCreatePost");
+// 	}
+
+// 	override function update(e:Float)
+// 	{
+// 		if (stateScript.executeAllFunc("onUpdate", [e]) == FunkinLua.Function_Stop)
+// 			return;
+
+// 		super.update(e);
+
+// 		stateScript.executeAllFunc("onUpdatePost", [e]);
+// 	}
+
+// 	static var switchToDeprecation = false;
+
+// 	override function switchTo(s:FlxState)
+// 	{
+// 		if (!switchToDeprecation)
+// 		{
+// 			trace("switchTo is deprecated. Consider using startOutro");
+// 			switchToDeprecation = true;
+// 		}
+// 		if (stateScript.executeAllFunc("onSwitchTo", [s]) == FunkinLua.Function_Stop)
+// 			return false;
+
+// 		super.switchTo(s);
+
+// 		stateScript.executeAllFunc("onSwitchToPost", [s]);
+// 		return true;
+// 	}
+
+// 	override function startOutro(onOutroFinished:() -> Void)
+// 	{
+// 		final currentState = FlxG.state;
+
+// 		if (stateScript.executeAllFunc("onStartOutro", [onOutroFinished]) == FunkinLua.Function_Stop)
+// 			return;
+
+// 		if (FlxG.state == currentState) // if "onOutroFinished" wasnt called by the func above ^ then call onOutroFinished for it
+// 			onOutroFinished(); // same as super.startOutro(onOutroFinished)
+
+// 		stateScript.executeAllFunc("onStartOutroPost", []);
+// 	}
+
+// 	override function beatHit()
+// 	{
+// 		stateScript.executeAllFunc("onBeatHit");
+// 		super.beatHit();
+// 	}
+
+// 	override function stepHit()
+// 	{
+// 		stateScript.executeAllFunc("onStepHit");
+// 		super.stepHit();
+// 	}
+
+// 	override function destroy()
+// 	{
+// 		if (stateScript.executeAllFunc("onDestroy", []) == FunkinLua.Function_Stop)
+// 			return;
+
+// 		super.destroy();
+
+// 		stateScript.executeAllFunc("onDestroyPost", []);
+// 	}
 }
-	function adds(script:HScript)
-	{
-	script.set("this", this);
-	script.set("add", add);
-	script.set("remove", remove);
-	script.set("insert", insert);
-	script.set("members", members);
-	script.set("onLoad", function() {});
-	script.set("onCreate", function() {});
-	script.set("onCreatePost", function() {});
-	script.set("onUpdatePost", function(elapsed:Float) {});
-	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
 
-	script.set("get_controls", function()
-	{
-		return PlayerSettings.player1.controls;
-	});
-	script.set("controls", PlayerSettings.player1.controls);
 
-	#if android
-	script.set("_virtualpad", _virtualpad);
-	script.set("_joyStick", _joyStick);
-	script.set("addJoyStick", addJoyStick);
-	script.set("addVirtualPad", function(dpad:String, acttt:String){
-	addVirtualPad(stringToDPadMode(dpad), stringToActionMode(acttt));
-	});
-	script.set("removeVirtualPad", removeVirtualPad);
-	script.set("addVirtualPadButton", addPadCamera);
-	#end
-	}
-	function initHScript(name:String)
-	{
-		if (stateScript == null)
-			return;
+// class HScriptSubstate extends MusicBeatSubstate
+// {
+// 	var substateScript:FunkinHScript;
 
-		var scriptData:Map<String, String> = [];
+// 	public function new(ScriptName:String, globalss:Bool = false)
+// 	{
+// 		super();
+		
+// 		substateScript = new FunkinHScript();
+// 		substateScript.onAddScript.push(adds);
+// 		trace(ScriptName);
+// 		if (globalss)
+// 		initScript(ScriptName);
+// 		else
+// 		{
+// 		initHScript(ScriptName);
+// 		}
 
-		var hx:Null<String> = null;
+// 		substateScript.executeAllFunc("onLoad");
+// 	}
 
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('states/' + '$name.$extn');
-			trace(path);
-			if (FileSystem.exists(path))
-			{
+// 	function adds(script:HScript)
+// 	{
+// 	set("this", this);
+// 	set("add", add);
+// 	set("remove", remove);
+// 	set("insert", insert);
+// 	set("members", members);
+// 	set("onLoad", function() {});
+// 	set("onCreate", function() {});
+// 	set("onCreatePost", function() {});
+// 	set("onUpdatePost", function(elapsed:Float) {});
+// 	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
+
+// 	set("get_controls", function()
+// 	{
+// 		return PlayerSettings.player1.controls;
+// 	});
+// 	set("controls", PlayerSettings.player1.controls);
+
+// 	#if android
+// 	set("addVirtualPad", function(dpad:String, acttt:String){
+// 	addVirtualPad(stringToDPadMode(dpad), stringToActionMode(acttt));
+// 	});
+// 	set("removeVirtualPad", removeVirtualPad);
+// 	set("addVirtualPadButton", addPadCamera);
+// 	#end
+// 	}
+// 	function initHScript(name:String)
+// 	{
+// 		if (substateScript == null)
+// 			return;
+
+// 		var scriptData:Map<String, String> = [];
+
+// 		var hx:Null<String> = null;
+
+// 		for (extn in HScriptUtil.extns)
+// 		{
+// 			var path:String = Paths.modFolders('states/' + '$name.$extn');
+// 			trace(path);
+// 			if (FileSystem.exists(path))
+// 			{
 				
-				hx = File.getContent(path);
-				break;
-			}
+// 				hx = File.getContent(path);
+// 				break;
+// 			}
 
-		}
+// 		}
 
-		if (stateScript.getScriptByTag(name) == null)
-			stateScript.addScript(name).executeString(hx);
-		else
-		{
-			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
-		}
+// 		if (substateScript.getScriptByTag(name) == null)
+// 			substateScript.addScript(name).executeString(hx);
+// 		else
+// 		{
+// 			substateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
+// 		}
 
-		//stateScript.executeAllFunc("onCreate");
-	}
-	function initScript(name:String)
-	{
-		if (stateScript == null)
-			return;
+// 		//substateScript.executeAllFunc("onCreate");
+// 	}
+// 	function initScript(name:String)
+// 	{
+// 		if (substateScript == null)
+// 			return;
 
-		var scriptData:Map<String, String> = [];
+// 		var scriptData:Map<String, String> = [];
 
-		var hx:Null<String> = null;
+// 		var hx:Null<String> = null;
 
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('states/' + name);
-			trace(path);
-			if (FileSystem.exists(path))
-			{
+// 		for (extn in HScriptUtil.extns)
+// 		{
+// 			var path:String = Paths.modFolders('states/' + name);
+// 			trace(path);
+// 			if (FileSystem.exists(path))
+// 			{
 				
-				hx = File.getContent(path);
-				break;
-			}
+// 				hx = File.getContent(path);
+// 				break;
+// 			}
 
-		}
+// 		}
 
-		if (stateScript.getScriptByTag(name) == null)
-			stateScript.addScript(name).executeString(hx);
-		else
-		{
-			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
-		}
+// 		if (substateScript.getScriptByTag(name) == null)
+// 			substateScript.addScript(name).executeString(hx);
+// 		else
+// 		{
+// 			substateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
+// 		}
 
-		//stateScript.executeAllFunc("onCreate");
-	}
-	#if android
-	function stringToDPadMode(str:String):FlxDPadMode {
-		// 获取所有枚举构造器
-		var constructs = Type.getEnumConstructs(FlxDPadMode);
+// 		//substateScript.executeAllFunc("onCreate");
+// 	}
+// 	#if android
+// 	function stringToDPadMode(str:String):FlxDPadMode {
+// 		// 获取所有枚举构造器
+// 		var constructs = Type.getEnumConstructs(FlxDPadMode);
 		
-		// 检查字符串是否为有效构造器
-		if (constructs.indexOf(str) == -1) {
-			throw '无效的枚举值: $str';
-		}
+// 		// 检查字符串是否为有效构造器
+// 		if (constructs.indexOf(str) == -1) {
+// 			throw '无效的枚举值: $str';
+// 		}
 		
-		// 创建枚举实例（无参数）
-		return Type.createEnum(FlxDPadMode, str, []);
-	}
-	function stringToActionMode(str:String):FlxActionMode {
-		// 获取所有枚举构造器
-		var constructs = Type.getEnumConstructs(FlxActionMode);
+// 		// 创建枚举实例（无参数）
+// 		return Type.createEnum(FlxDPadMode, str, []);
+// 	}
+// 	function stringToActionMode(str:String):FlxActionMode {
+// 		// 获取所有枚举构造器
+// 		var constructs = Type.getEnumConstructs(FlxActionMode);
 		
-		// 检查字符串是否为有效构造器
-		if (constructs.indexOf(str) == -1) {
-			throw '无效的枚举值: $str';
-		}
+// 		// 检查字符串是否为有效构造器
+// 		if (constructs.indexOf(str) == -1) {
+// 			throw '无效的枚举值: $str';
+// 		}
 		
-		// 创建枚举实例（无参数）
-		return Type.createEnum(FlxActionMode, str, []);
-	}
-	#end
-	override function create()
-	{
-		// UPDATE: realised I should be using the "on" prefix just so if a script needs to call an internal function it doesnt cause issues
-		// (Also need to figure out how to give the super to the classes incase that's needed in the on[function] funcs though honestly thats what the post functions are for)
-		// I'd love to modify HScript to add override specifically for troll engine hscript
-		// THSCript...
+// 		// 创建枚举实例（无参数）
+// 		return Type.createEnum(FlxActionMode, str, []);
+// 	}
+// 	#end
 
-		// onCreate is used when the script is created so lol
-		if (stateScript.executeAllFunc("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
-			return;
+// 	override function create()
+// 	{
+// 		// UPDATE: realised I should be using the "on" prefix just so if a script needs to call an internal function it doesnt cause issues
+// 		// (Also need to figure out how to give the super to the classes incase that's needed in the on[function] funcs though honestly thats what the post functions are for)
+// 		// I'd love to modify HScript to add override specifically for troll engine hscript
+// 		// THSCript...
 
-		super.create();
-		stateScript.executeAllFunc("onCreatePost");
-	}
+// 		// onCreate is used when the script is created so lol
+// 		if (substateScript.executeAllFunc("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
+// 			return;
 
-	override function update(e:Float)
-	{
-		if (stateScript.executeAllFunc("onUpdate", [e]) == FunkinLua.Function_Stop)
-			return;
+// 		super.create();
+// 		substateScript.executeAllFunc("onCreatePost");
+// 	}
 
-		super.update(e);
-
-		stateScript.executeAllFunc("onUpdatePost", [e]);
-	}
-
-	static var switchToDeprecation = false;
-
-	override function switchTo(s:FlxState)
-	{
-		if (!switchToDeprecation)
-		{
-			trace("switchTo is deprecated. Consider using startOutro");
-			switchToDeprecation = true;
-		}
-		if (stateScript.executeAllFunc("onSwitchTo", [s]) == FunkinLua.Function_Stop)
-			return false;
-
-		super.switchTo(s);
-
-		stateScript.executeAllFunc("onSwitchToPost", [s]);
-		return true;
-	}
-
-	override function startOutro(onOutroFinished:() -> Void)
-	{
-		final currentState = FlxG.state;
-
-		if (stateScript.executeAllFunc("onStartOutro", [onOutroFinished]) == FunkinLua.Function_Stop)
-			return;
-
-		if (FlxG.state == currentState) // if "onOutroFinished" wasnt called by the func above ^ then call onOutroFinished for it
-			onOutroFinished(); // same as super.startOutro(onOutroFinished)
-
-		stateScript.executeAllFunc("onStartOutroPost", []);
-	}
-
-	override function beatHit()
-	{
-		stateScript.executeAllFunc("onBeatHit");
-		super.beatHit();
-	}
-
-	override function stepHit()
-	{
-		stateScript.executeAllFunc("onStepHit");
-		super.stepHit();
-	}
-
-	override function destroy()
-	{
-		if (stateScript.executeAllFunc("onDestroy", []) == FunkinLua.Function_Stop)
-			return;
-
-		super.destroy();
-
-		stateScript.executeAllFunc("onDestroyPost", []);
-	}
-}
-
-
-class HScriptSubstate extends MusicBeatSubstate
-{
-	var substateScript:FunkinHScript;
-
-	public function new(ScriptName:String, globalss:Bool = false)
-	{
-		super();
+// 	override function update(e:Float)
+// 	{
+// 		if (substateScript.executeAllFunc("update", [e]) == FunkinLua.Function_Stop)
+// 			return; 
 		
-		substateScript = new FunkinHScript();
-		substateScript.onAddScript.push(adds);
-		trace(ScriptName);
-		if (globalss)
-		initScript(ScriptName);
-		else
-		{
-		initHScript(ScriptName);
-		}
+// 		super.update(e);
+// 		substateScript.executeAllFunc("updatePost", [e]);
+// 	}
 
-		substateScript.executeAllFunc("onLoad");
-	}
-
-	function adds(script:HScript)
-	{
-	script.set("this", this);
-	script.set("add", add);
-	script.set("remove", remove);
-	script.set("insert", insert);
-	script.set("members", members);
-	script.set("onLoad", function() {});
-	script.set("onCreate", function() {});
-	script.set("onCreatePost", function() {});
-	script.set("onUpdatePost", function(elapsed:Float) {});
-	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
-
-	script.set("get_controls", function()
-	{
-		return PlayerSettings.player1.controls;
-	});
-	script.set("controls", PlayerSettings.player1.controls);
-
-	#if android
-	script.set("addVirtualPad", function(dpad:String, acttt:String){
-	addVirtualPad(stringToDPadMode(dpad), stringToActionMode(acttt));
-	});
-	script.set("removeVirtualPad", removeVirtualPad);
-	script.set("addVirtualPadButton", addPadCamera);
-	#end
-	}
-	function initHScript(name:String)
-	{
-		if (substateScript == null)
-			return;
-
-		var scriptData:Map<String, String> = [];
-
-		var hx:Null<String> = null;
-
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('states/' + '$name.$extn');
-			trace(path);
-			if (FileSystem.exists(path))
-			{
-				
-				hx = File.getContent(path);
-				break;
-			}
-
-		}
-
-		if (substateScript.getScriptByTag(name) == null)
-			substateScript.addScript(name).executeString(hx);
-		else
-		{
-			substateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
-		}
-
-		//substateScript.executeAllFunc("onCreate");
-	}
-	function initScript(name:String)
-	{
-		if (substateScript == null)
-			return;
-
-		var scriptData:Map<String, String> = [];
-
-		var hx:Null<String> = null;
-
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('states/' + name);
-			trace(path);
-			if (FileSystem.exists(path))
-			{
-				
-				hx = File.getContent(path);
-				break;
-			}
-
-		}
-
-		if (substateScript.getScriptByTag(name) == null)
-			substateScript.addScript(name).executeString(hx);
-		else
-		{
-			substateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
-		}
-
-		//substateScript.executeAllFunc("onCreate");
-	}
-	#if android
-	function stringToDPadMode(str:String):FlxDPadMode {
-		// 获取所有枚举构造器
-		var constructs = Type.getEnumConstructs(FlxDPadMode);
+// 	override function close(){
+// 		if (substateScript != null)
+// 			substateScript.executeAllFunc("onClose");
 		
-		// 检查字符串是否为有效构造器
-		if (constructs.indexOf(str) == -1) {
-			throw '无效的枚举值: $str';
-		}
-		
-		// 创建枚举实例（无参数）
-		return Type.createEnum(FlxDPadMode, str, []);
-	}
-	function stringToActionMode(str:String):FlxActionMode {
-		// 获取所有枚举构造器
-		var constructs = Type.getEnumConstructs(FlxActionMode);
-		
-		// 检查字符串是否为有效构造器
-		if (constructs.indexOf(str) == -1) {
-			throw '无效的枚举值: $str';
-		}
-		
-		// 创建枚举实例（无参数）
-		return Type.createEnum(FlxActionMode, str, []);
-	}
-	#end
+// 		return super.close();
+// 	}
 
-	override function create()
-	{
-		// UPDATE: realised I should be using the "on" prefix just so if a script needs to call an internal function it doesnt cause issues
-		// (Also need to figure out how to give the super to the classes incase that's needed in the on[function] funcs though honestly thats what the post functions are for)
-		// I'd love to modify HScript to add override specifically for troll engine hscript
-		// THSCript...
+// 	override function destroy()
+// 	{
+// 		if (substateScript != null){
+// 			substateScript.executeAllFunc("onDestroy");
+// 			substateScript.destroy();
+// 		}
+// 		substateScript = null;
 
-		// onCreate is used when the script is created so lol
-		if (substateScript.executeAllFunc("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
-			return;
-
-		super.create();
-		substateScript.executeAllFunc("onCreatePost");
-	}
-
-	override function update(e:Float)
-	{
-		if (substateScript.executeAllFunc("update", [e]) == FunkinLua.Function_Stop)
-			return; 
-		
-		super.update(e);
-		substateScript.executeAllFunc("updatePost", [e]);
-	}
-
-	override function close(){
-		if (substateScript != null)
-			substateScript.executeAllFunc("onClose");
-		
-		return super.close();
-	}
-
-	override function destroy()
-	{
-		if (substateScript != null){
-			substateScript.executeAllFunc("onDestroy");
-			substateScript.destroy();
-		}
-		substateScript = null;
-
-		return super.destroy();
-	}
-}
+// 		return super.destroy();
+// 	}
+// }
 class CustomFlxColor
 {
 	// These aren't part of FlxColor but i thought they could be useful

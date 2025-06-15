@@ -1,8 +1,9 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <project>
 	<!-- _________________________ Application Settings _________________________ -->
 
-	<app title="Friday Night Funkin': Parker Engine" file="Pk Engine" packageName="com.ajwwk.pkengine" package="com.ajwwk.pkengine" main="Main" version="0.2.8" company="Ajwwk" />
+	<app title="Friday Night Funkin': Parker Engine" file="Pk Engine" packageName="com.laoan.pkengine" package="com.laoan.pkengine" main="Main" version="0.2.8" company="Ajwwk" />
 
 	<!--Switch Export with Unique ApplicationID and Icon-->
 	<set name="APP_ID" value="0x0100f6c013bbc000" />
@@ -130,6 +131,7 @@
 	<!--In case you want to use the addons package-->
 	<haxelib name="flixel-addons" />
 	<haxelib name="hscript" />
+	<haxelib name="hscript-iris" />
 	<define name="hscriptPos" />
 
 	<!--In case you want to use the ui package-->
@@ -138,12 +140,8 @@
 	<haxelib name="flxgif" />
 	<haxelib name="hxvlc" if="VIDEOS_ALLOWED" />
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
-        <haxelib name="extension-androidtools" if="android"/>
+	<haxelib name="lscript"/>
 	<haxelib name="faxe" if='switch'/>
-	
-	<!--Set this to the engine you're using!-->
-    <define name="PSYCH" />
-	<!--<define name="PSYCHVERSION" value="0.6.3h"/>-->
 	
 	<!--<haxelib name="polymod"/> -->
 	<haxelib name="discord_rpc" if="desktop"/>
@@ -191,12 +189,12 @@
 
 	<!--Enable this for Nape release builds for a serious peformance improvement-->
 	<haxedef name="NAPE_RELEASE_BUILD" unless="debug" />
-	<certificate path="key.keystore" password="psychengine" alias="psychport" alias-password="psychengine" if="android" unless="debug" />
-	
+
 	<!--Used for Izzy Engine's crash handler-->
 	<haxedef name="HXCPP_CHECK_POINTER" if="CRASH_HANDLER" />
 	<haxedef name="HXCPP_STACK_LINE" if="CRASH_HANDLER" />
-
+	<!-- Do whatever you want I'm tired uninstall and install everytime -->
+	<certificate path="key.keystore" password="psychengine" alias="psychport" alias-password="psychengine" if="android" unless="debug" />
 	<!--Place custom nodes like icons here (higher priority to override the HaxeFlixel icon)-->
 	
 	<icon path="art/icon16.png" size='16'/>

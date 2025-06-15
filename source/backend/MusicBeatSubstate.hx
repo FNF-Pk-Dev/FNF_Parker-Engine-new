@@ -5,7 +5,10 @@ import flixel.FlxG;
 import flixel.FlxSubState;
 import flixel.FlxBasic;
 import flixel.FlxSprite;
-
+#if sys
+import sys.FileSystem;
+import sys.io.File;
+#end
 #if android
 import flixel.input.actions.FlxActionInput;
 import android.FlxVirtualPad;
@@ -13,7 +16,6 @@ import android.FlxVirtualPad;
 
 class MusicBeatSubstate extends FlxSubState
 {
-	public var script:FunkinHScript;
 	public function new()
 	{
 		super();
@@ -31,6 +33,59 @@ class MusicBeatSubstate extends FlxSubState
 
 	inline function get_controls():Controls
 		return PlayerSettings.player1.controls;
+
+	public var scripted:Bool = false;
+	public var scriptName:String = 'Placeholder';
+	public var script:OScriptState;
+
+	public function setUpScript(s:String = 'Placeholder')
+	{
+		scripted = true;
+		scriptName = s;
+
+		var scriptFile = HScript.getPath('substates/menu/$scriptName');
+
+		if (FileSystem.exists(scriptFile))
+		{
+			script = OScriptState.fromFile(scriptFile);
+			trace('$scriptName script [$scriptFile] found!');
+		}
+		else
+		{
+			trace('$scriptName script [$scriptFile] is null!');
+		}
+
+		setOnScript('add', this.add);
+		setOnScript('close', close);
+		setOnScript('this', this);
+		callOnScript('onCreate', []);
+	}
+
+	inline function isHardcodedState() return (script != null && !script.customMenu) || (script == null);
+
+	inline function setOnScript(name:String, value:Dynamic)
+	{
+		if (script != null) script.set(name, value);
+	}
+
+	public function callOnScript(name:String, vars:Array<Any>, ignoreStops:Bool = false)
+	{
+		var returnVal:Dynamic = HScript.Function_Continue;
+		if (script != null)
+		{
+			var ret:Dynamic = script.call(name, vars);
+			if (ret == HScript.Function_Halt)
+			{
+				ret = returnVal;
+				if (!ignoreStops) return returnVal;
+			};
+
+			if (ret != HScript.Function_Continue && ret != null) returnVal = ret;
+
+			if (returnVal == null) returnVal = HScript.Function_Continue;
+		}
+		return returnVal;
+	}
 
 	#if android
 	var _virtualpad:FlxVirtualPad;
@@ -72,6 +127,7 @@ class MusicBeatSubstate extends FlxSubState
 	    }
 		#end
 
+		callOnScript('onDestroy', []);
 		super.destroy();
 	}
 
