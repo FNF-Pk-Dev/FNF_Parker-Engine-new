@@ -23,7 +23,7 @@ jobs:
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4.1.7
 
       - uses: krdlab/setup-haxe@master
         with:
@@ -32,38 +32,36 @@ jobs:
       - name: Install Haxelib
         run: |
           haxelib setup C:/haxelib
-          haxelib install hxcpp > nul
-          haxelib install lime 8.0.2
-          haxelib install openfl
-          haxelib --never install flixel
+          haxelib git hxcpp https://github.com/AnDevGO/hxcpp_h.git > nul
+          haxelib git lime https://github.com/AnDevGO/lime.git
+          haxelib git openfl https://github.com/AnDevGO/openfl.git
+          haxelib --never git flixel https://github.com/FNF-Pk-Dev/flixel.git
           haxelib run lime setup flixel
           haxelib run lime setup
           haxelib install flixel-tools
-          haxelib install flixel-ui
-          haxelib install flixel-addons
+          haxelib install flixel-ui 2.6.1
+          haxelib install flixel-addons 3.2.2
           haxelib install tjson
           haxelib install hxjsonast
-          haxelib install hxvlc
-          haxelib install hxluajit
-          haxelib git fnf-modcharting-tools https://github.com/FNF-Pk-Dev/FNF-Modcharting-Tools-Fix
+          haxelib install hxvlc 1.9.1
+          haxelib git lscript https://github.com/SrtHero278/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
-          haxelib git hxCodec https://github.com/FNF-Pk-Dev/hxCodec
-          haxelib git linc_luajit https://github.com/mcagabe19/linc_luajit-legacy.git
-          haxelib git hxpy https://github.com/FNF-Pk-Dev/hxpy.git
+          haxelib git linc_luajit https://github.com/AnDevGo/linc_luajit_h.git
           haxelib install hscript
+          haxelib install hscript-iris
           haxelib git hscript-ex https://github.com/ianharrigan/hscript-ex
           haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
           haxelib install hxcpp-debug-server
-          haxelib set lime 8.0.2
+          haxelib set lime git
           haxelib list
         shell: cmd
       - name: Create Version Tag
         run: echo "${{github.run_id}}" > VERSION
       - name: Compile
-        run: haxelib run lime build windows --app-version="4.0.0-${{ github.run_id}}"
+        run: haxelib run lime build windows
       - name: Publish Artifact
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@main
         with:
           name: windowsBuild
           path: export/release/windows/bin
