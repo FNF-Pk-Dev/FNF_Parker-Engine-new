@@ -1,8 +1,7 @@
 package;
 
-import funkin.*;
-import funkin.states.MusicBeatState;
-import funkin.states.FadeTransitionSubstate;
+import backend.MusicBeatState;
+import backend.CustomTilesTransition;
 
 import flixel.FlxG;
 import flixel.FlxState;
@@ -17,17 +16,8 @@ import Sys.time as getTime;
 import haxe.Timer.stamp as getTime;
 #end
 
-#if MULTICORE_LOADING
-import sys.thread.Thread;
-import sys.thread.Mutex;
-#end
-
-#if DO_AUTO_UPDATE
-import funkin.states.UpdaterState;
-#end
-
-#if discord_rpc
-import funkin.api.Discord.DiscordClient;
+#if desktop
+import backend.Discord.DiscordClient;
 import lime.app.Application;
 #end
 
@@ -35,7 +25,7 @@ using StringTools;
 
 // Loads the title screen, alongside some other stuff.
 
-class StartupState extends FlxTransitionableState
+class StartupState extends MusicBeatState
 {
 	public static var muteKeys:Array<FlxKey> = [FlxKey.ZERO];
 	public static var volumeDownKeys:Array<FlxKey> = [FlxKey.NUMPADMINUS, FlxKey.MINUS];
@@ -47,10 +37,6 @@ class StartupState extends FlxTransitionableState
 	public function new()
 	{
 		super();
-		// this.canBeScripted = false; // vv wait this isnt a musicbeatstate LOL!
-
-		persistentDraw = true;
-		persistentUpdate = true;
 	}
 
 	private static var loaded = false;
@@ -59,12 +45,6 @@ class StartupState extends FlxTransitionableState
 		if (loaded)
 			return;
 		loaded = true;
-
-		funkin.input.PlayerSettings.init();
-
-		#if hscript
-		funkin.scripts.FunkinHScript.init();
-		#end
 
 		ClientPrefs.initialize();
 		ClientPrefs.load();
@@ -102,21 +82,6 @@ class StartupState extends FlxTransitionableState
 		);
 		#end
 
-		#if DO_AUTO_UPDATE
-		UpdaterState.getRecentGithubRelease();
-		UpdaterState.checkOutOfDate();
-		UpdaterState.clearTemps("./");
-		#end
-
-		#if html5
-		Paths.initPaths();
-		#end
-		
-		#if MODS_ALLOWED
-		Paths.pushGlobalContent();
-		Paths.getModDirectories();
-		Paths.loadRandomMod();
-		#end
 
 		Paths.getAllStrings();
 		
@@ -132,38 +97,9 @@ class StartupState extends FlxTransitionableState
 		FlxTransitionableState.defaultTransOut = FadeTransitionSubstate;
 	}
 
-	override function create()
-	{
-		#if tgt
-		this.transIn = FadeTransitionSubstate;
-		//this.transOut = FadeTransitionSubstate;
-		FlxTransitionableState.skipNextTransOut = true;
-
-		warning = new FlxSprite(0, 0, Paths.image("warning"));
-		warning.scale.set(0.65, 0.65);
-		warning.updateHitbox();
-		warning.screenCenter();
-		add(warning);
-		
-		#else
-		this.transIn = null;
-		this.transOut = null;
-		// TODO: Default Flixel Startup Animation :]
-		#end
-
-		super.create();
-	}
-
-	#if tgt
-	private var warning:FlxSprite;
-	#end
-
 	private var step:Int = 0;
 	private var loadingTime:Float = getTime();
 
-	#if MULTICORE_LOADING
-	private var loadingMutex:Null<Mutex> = null;
-	#end
 
 	inline private function doLoading()
 	{
