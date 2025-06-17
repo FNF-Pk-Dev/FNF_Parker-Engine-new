@@ -26,22 +26,33 @@ import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
 #end
-
+import haxe.Json;
 import haxe.io.Bytes;
 import haxe.zip.Uncompress;
 import haxe.crypto.Md5;
+import haxe.Reflect;
 
+// 将字符串转换为 FlxState 实例
+
+
+// 使用示例
+var stateInstance = stringToState("TitleState");
+if (stateInstance != null) {
+    addChild(stateInstance);
+}
 using StringTools;
-
+typedef FNFGameData =
+{
+	width:Int,
+	height:Int,
+	initState:String,
+	skipSplash:Bool
+}
 class Main extends Sprite
 {
 	var game = {
-		width: 1280, // WINDOW width
-		height: 720, // WINDOW height
-		initialState: states.TitleState, // initial game state
 		zoom: -1.0, // game state bounds
 		framerate: 60, // default framerate
-		skipSplash: true, // if the default flixel splash screen should be skipped
 		#if android
 		startFullscreen: true // if the game should start at fullscreen mode
 		#elseif desktop
@@ -52,6 +63,8 @@ class Main extends Sprite
 	public static var fpsVar:FPS;
 
 	public var scripts:FunkinHScript;
+
+	var GameJSON:FNFGameData;
 
 	// You can pretty much ignore everything from here on - your code should go in your states.
 
@@ -99,22 +112,25 @@ class Main extends Sprite
 
 	private function setupGame():Void
 	{
-		#if (openfl <= "9.2.0")
-		var stageWidth:Int = Lib.current.stage.stageWidth;
-		var stageHeight:Int = Lib.current.stage.stageHeight;
+		// #if (openfl <= "9.2.0")
+		// var stageWidth:Int = Lib.current.stage.stageWidth;
+		// var stageHeight:Int = Lib.current.stage.stageHeight;
 
-		if (game.zoom == -1.0)
-		{
-			var ratioX:Float = stageWidth / game.width;
-			var ratioY:Float = stageHeight / game.height;
-			game.zoom = Math.min(ratioX, ratioY);
-			game.width = Math.ceil(stageWidth / game.zoom);
-			game.height = Math.ceil(stageHeight / game.zoom);
-		}
-		#end
-	
+		// if (game.zoom == -1.0)
+		// {
+		// 	var ratioX:Float = stageWidth / game.width;
+		// 	var ratioY:Float = stageHeight / game.height;
+		// 	game.zoom = Math.min(ratioX, ratioY);
+		// 	game.width = Math.ceil(stageWidth / game.zoom);
+		// 	game.height = Math.ceil(stageHeight / game.zoom);
+		// }
+		// #end 
+		//what old
+
+		GameJSON = Json.parse(Paths.getTextFromFile('game.json'));
+
 		ClientPrefs.loadDefaultKeys();
-		addChild(new FNFGame(game.width, game.height, #if (mobile && MODS_ALLOWED) !CopyState.checkExistingFiles() ? CopyState : #end game.initialState, #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
+		addChild(new FNFGame(GameJSON.width, GameJSON.height, #if (mobile && MODS_ALLOWED) !CopyState.checkExistingFiles() ? CopyState : #end (GameJSON.initState == "TitleState") ? states.TitleState : OScriptState.fromFile(Paths.modFolders('states/$GameJSON.initState')), #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, GameJSON.skipSplash, game.startFullscreen));
 
 		fpsVar = new FPS(10, 3, 0xFFFFFF);
 		#if !mobile
