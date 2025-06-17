@@ -128,17 +128,6 @@ class Main extends Sprite
 			fpsVar.visible = ClientPrefs.showFPS;
 		}
 
-
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('global.$extn');
-			
-			if (FileSystem.exists(path))
-			initIris(File.getContent(path), 'GLOBAL');
-		}
-
-		//inScripts();
-
 		#if html5
 		FlxG.autoPause = false;
 		FlxG.mouse.visible = false;
@@ -159,8 +148,15 @@ class Main extends Sprite
 				DiscordClient.shutdown();
 			});
 		}
-		//Lib.application.window.fullscreen = false;
 		#end
+
+		for (extn in HScriptUtil.extns)
+		{
+			var path:String = Paths.modFolders('global.$extn');
+			
+			if (FileSystem.exists(path))
+			initIris(File.getContent(path), 'GLOBAL');
+		}
 		
 	}
 
