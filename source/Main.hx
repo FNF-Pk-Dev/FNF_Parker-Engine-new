@@ -32,14 +32,6 @@ import haxe.zip.Uncompress;
 import haxe.crypto.Md5;
 import haxe.Reflect;
 
-// 将字符串转换为 FlxState 实例
-
-
-// 使用示例
-var stateInstance = stringToState("TitleState");
-if (stateInstance != null) {
-    addChild(stateInstance);
-}
 using StringTools;
 typedef FNFGameData =
 {
