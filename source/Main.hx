@@ -168,7 +168,7 @@ class Main extends Sprite
 			script.stop();
 			return null;
 		}
-		onAddScript();
+		onAddScript(script);
 		script.call('onCreate');
 		return script;
 	}
