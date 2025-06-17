@@ -47,7 +47,7 @@ jobs:
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git linc_luajit https://github.com/AnDevGo/linc_luajit_h.git
           haxelib install hscript
-          haxelib git hscript-iris https://github.com/Ajwyunsx/hscript-iris
+          haxelib install hscript-iris
           haxelib git hscript-ex https://github.com/ianharrigan/hscript-ex
           haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
           haxelib install hxcpp-debug-server
