@@ -32,18 +32,16 @@ import haxe.zip.Uncompress;
 import haxe.crypto.Md5;
 
 using StringTools;
-typedef FNFGameData =
-{
-	width:Int,
-	height:Int,
-	initState:String,
-	skipSplash:Bool
-}
+
 class Main extends Sprite
 {
 	var game = {
+		width: 1280,
+		height: 720,
+		initState: StartupState.
 		zoom: -1.0, // game state bounds
 		framerate: 60, // default framerate
+		skipSplash: true,
 		#if android
 		startFullscreen: true // if the game should start at fullscreen mode
 		#elseif desktop
@@ -118,10 +116,8 @@ class Main extends Sprite
 		// #end 
 		//what old
 
-		GameJSON = Json.parse(Paths.getTextFromFile('game.json'));
-
 		ClientPrefs.loadDefaultKeys();
-		addChild(new FNFGame(GameJSON.width, GameJSON.height, #if (mobile && MODS_ALLOWED) !CopyState.checkExistingFiles() ? CopyState : #end (GameJSON.initState == "TitleState") ? states.TitleState : OScriptState.fromFile(Paths.modFolders('states/$GameJSON.initState')), #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, GameJSON.skipSplash, game.startFullscreen));
+		addChild(new FNFGame(game.width, game.height, #if (mobile && MODS_ALLOWED) !CopyState.checkExistingFiles() ? CopyState : #end game.initState, #if (flixel < "5.0.0") game.zoom, #end game.framerate, game.framerate, game.skipSplash, game.startFullscreen));
 
 		fpsVar = new FPS(10, 3, 0xFFFFFF);
 		#if !mobile
