@@ -30,7 +30,6 @@ import haxe.Json;
 import haxe.io.Bytes;
 import haxe.zip.Uncompress;
 import haxe.crypto.Md5;
-import haxe.Reflect;
 
 using StringTools;
 typedef FNFGameData =
