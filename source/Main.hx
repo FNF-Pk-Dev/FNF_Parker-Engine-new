@@ -168,6 +168,7 @@ class Main extends Sprite
 			script.stop();
 			return null;
 		}
+		onAddScript();
 		script.call('onCreate');
 		return script;
 	}
@@ -176,26 +177,6 @@ class Main extends Sprite
     public static function useUnpackedData(data:Bytes) {
         trace("Using unpacked data in memory, length: " + data.length);
     }
-	function inScripts() {
-		if (scripts == null)
-			return;
-
-		var scriptData:Map<String, String> = [];
-
-		var hx:Null<String> = null;
-
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('global.$extn');
-
-			if (FileSystem.exists(path))
-			{
-				hx = File.getContent(path);
-				break;
-			}
-
-		}
-	}
 	
 
 	private function onEnterFrame(e:Event):Void 
@@ -208,9 +189,6 @@ class Main extends Sprite
 	function onAddScript(script:HScript) {
 		script.set("this", Main);
 		script.set("fnfgame", game);
-	    script.set("onCreate", function() {});
-		script.set("onCreatePost", function() {});
-		script.set("onUpdatePost", function(elapsed:Float) {});
 	}
 
 	// Code was entirely made by sqirra-rng for their fnf engine named "Izzy Engine", big props to them!!!
@@ -226,7 +204,7 @@ class Main extends Sprite
 		dateNow = dateNow.replace(" ", "_");
 		dateNow = dateNow.replace(":", "'");
 
-		path = "./crash/" + "PsychEngine_" + dateNow + ".txt";
+		path = "./crash/" + "PkEngine_" + dateNow + ".txt";
 
 		for (stackItem in callStack)
 		{
