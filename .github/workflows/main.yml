@@ -69,7 +69,7 @@ jobs:
           haxelib install tjson
           haxelib install hxjsonast
           haxelib install hscript
-          haxelib install hscript-iris
+          haxelib git hscript-iris https://github.com/Ajwyunsx/hscript-iris
           haxelib install hxvlc 1.9.1
           haxelib git lscript https://github.com/SrtHero278/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
