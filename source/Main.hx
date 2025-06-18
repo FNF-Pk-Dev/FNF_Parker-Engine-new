@@ -53,8 +53,6 @@ class Main extends Sprite
 
 	public var scripts:FunkinHScript;
 
-	var GameJSON:FNFGameData;
-
 	// You can pretty much ignore everything from here on - your code should go in your states.
 
 	public static function main():Void
