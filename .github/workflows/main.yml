@@ -70,7 +70,7 @@ jobs:
           haxelib install hscript
           haxelib install hscript-iris
           haxelib install hxvlc 1.9.1
-          haxelib git lscript https://github.com/swordcubes-grave-of-shite/lscript
+          haxelib git lscript https://github.com/Ajwyunsx/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
           haxelib git linc_luajit https://github.com/AnDevGo/linc_luajit_h
