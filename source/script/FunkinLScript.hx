@@ -228,9 +228,9 @@ class FunkinLScript {
     }
 
     public function call(method:String, ?args:Array<Dynamic>):Dynamic {
-        if (closed) return FunkinLua.Function_Continue;
+        if (closed) return Function_Continue;
         var result = lua.callFunc(method, args ?? []);
-        return result != null ? result : FunkinLua.Function_Continue;
+        return result != null ? result : Function_Continue;
     }
 
     public function setParent(parent:Dynamic):Void {
