@@ -38,7 +38,7 @@ class Main extends Sprite
 	var game = {
 		width: 1280,
 		height: 720,
-		initState: StartupState.
+		initState: StartupState,
 		zoom: -1.0, // game state bounds
 		framerate: 60, // default framerate
 		skipSplash: true,
