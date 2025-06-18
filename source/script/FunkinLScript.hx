@@ -55,7 +55,7 @@ class FunkinLScript {
             try {
                 code = File.getContent(filePath);
             } catch (e:Dynamic) {
-                Logs.error('Failed to read script file at ${filePath}: ${e}');
+                PlayState.instance.addTextToDebug('Failed to read script file at ${filePath}: ${e}',FlxColor.RED);
                 code = script; // Fallback to raw input
                 filePath = null;
                 scriptName = 'FunkinLScript';
@@ -67,7 +67,7 @@ class FunkinLScript {
         filePath = null;
         scriptName = 'FunkinLScript';
         var code = script; // No file system, treat as raw code
-        Logs.warn("File system access is disabled. Treating input as raw Lua code.");
+        PlayState.instance.addTextToDebug("File system access is disabled. Treating input as raw Lua code.", FlxColor.RED);
         #end
 
         // Apply FlxColor workarounds
