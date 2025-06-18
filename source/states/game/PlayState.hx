@@ -5040,39 +5040,39 @@ class PlayState extends MusicBeatState
 	}
 	#end
 	
-	// public function startLuahxOnFolder(luaFile:String)
-	// {
-	// 	for (script in lscriptArray)
-	// 	{
-	// 		if(script.scriptName == luaFile) return false;
-	// 	}
+	public function startLuahxOnFolder(luaFile:String)
+	{
+		for (script in lscriptArray)
+		{
+			if(script.scriptName == luaFile) return false;
+		}
 
-	// 	#if MODS_ALLOWED
-	// 	var luaToLoad:String = Paths.modFolders(luaFile);
-	// 	if(FileSystem.exists(luaToLoad))
-	// 	{
-	// 		lscriptArray.push(initLScript(luaToLoad));
-	// 		return true;
-	// 	}
-	// 	else
-	// 	{
-	// 		luaToLoad = Paths.getPreloadPath(luaFile);
-	// 		if(FileSystem.exists(luaToLoad))
-	// 		{
-	// 			lscriptArray.push(initLScript(luaToLoad));
-	// 			return true;
-	// 		}
-	// 	}
-	// 	#elseif sys
-	// 	var luaToLoad:String = Paths.getPreloadPath(luaFile);
-	// 	if(OpenFlAssets.exists(luaToLoad))
-	// 	{
-	// 		lscriptArray.push(initLScript(luaToLoad));
-	// 		return true;
-	// 	}
-	// 	#end
-	// 	return false;
-	// }
+		#if MODS_ALLOWED
+		var luaToLoad:String = Paths.modFolders(luaFile);
+		if(FileSystem.exists(luaToLoad))
+		{
+			lscriptArray.push(initLScript(luaToLoad));
+			return true;
+		}
+		else
+		{
+			luaToLoad = Paths.getPreloadPath(luaFile);
+			if(FileSystem.exists(luaToLoad))
+			{
+				lscriptArray.push(initLScript(luaToLoad));
+				return true;
+			}
+		}
+		#elseif sys
+		var luaToLoad:String = Paths.getPreloadPath(luaFile);
+		if(OpenFlAssets.exists(luaToLoad))
+		{
+			lscriptArray.push(initLScript(luaToLoad));
+			return true;
+		}
+		#end
+		return false;
+	}
 
 	public function startHScriptsOnFolder(paths:String, name:String)
 	{
