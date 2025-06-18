@@ -194,14 +194,14 @@ class FunkinLScript {
     private function setupErrorHandlers():Void {
         var location = filePath != null ? filePath : "inline script";
         lua.parseError = (err:String) -> {
-            Logs.error('Failed to parse script at ${location}: ${err}');
+            PlayState.instance.addTextToDebug('Failed to parse script at ${location}: ${err}', FlxColor.RED);
         };
         lua.functionError = (func:String, err:String) -> {
-            Logs.error('Failed to call function "${func}" at ${location}: ${err}');
+            PlayState.instance.addTextToDebug('Failed to call function "${func}" at ${location}: ${err}', FlxColor.RED);
         };
         lua.tracePrefix = scriptName;
         lua.print = (line:Int, s:String) -> {
-            Logs.trace('${scriptName}:${line}: ${s}');
+            PlayState.instance.addTextToDebug('${scriptName}:${line}: ${s}', FlxColor.WHITE);
         };
     }
 
@@ -249,14 +249,14 @@ class FunkinLScript {
 
     public function new(script:String, unsafe:Bool = false) {
         scriptName = Path.withoutDirectory(script);
-        Logs.warn("LUA support is disabled. Script functionality is limited.");
+        PlayState.instance.addTextToDebug("LUA support is disabled. Script functionality is limited.", FlxColor.YELLOW);
     }
 
     public function execute():Void {}
     public function get(name:String):Dynamic return null;
     public function set(name:String, value:Dynamic):Void {}
     public function setClass(value:Class<Dynamic>):Void {}
-    public function call(method:String, ?args:Array<Dynamic>):Dynamic return FunkinLua.Function_Continue;
+    public function call(method:String, ?args:Array<Dynamic>):Dynamic return Function_Continue;
     public function setParent(parent:Dynamic):Void {}
     public function close():Void {}
     #end
