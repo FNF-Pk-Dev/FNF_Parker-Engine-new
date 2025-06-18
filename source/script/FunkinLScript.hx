@@ -1,11 +1,11 @@
 package script;
 
 #if LUA_ALLOWED
-import lscript.LScript;
+import flixel.util.FlxSignal.FlxTypedSignal;
+import haxe.io.Path;
 import llua.Lua;
-import llua.LuaL;
-import llua.State;
-import llua.Convert;
+import lscript.CustomConvert;
+import lscript.LScript;
 #end
 import flixel.FlxBasic;
 import flixel.FlxG;
@@ -22,119 +22,239 @@ import flixel.util.FlxColor;
 import flixel.ui.FlxBar;
 import flixel.math.FlxMath;
 import openfl.display.BlendMode;
+import openfl.filters.ShaderFilter;
+import openfl.system.Capabilities;
+import openfl.Lib;
+import flixel.addons.display.FlxRuntimeShader;
 import flixel.util.FlxTimer;
 import hxvlc.flixel.FlxVideoSprite;
 import hxvlc.flixel.FlxVideo;
 import hxvlc.util.Handle;
 import haxe.Json;
-import flixel.addons.display.FlxRuntimeShader;
-import openfl.Lib;
-import openfl.filters.ShaderFilter;
-import openfl.system.Capabilities;
 #if sys
 import sys.FileSystem;
 import sys.io.File;
+import Sys;
 #end
 
-class FunkinLScript
-{
+class FunkinLScript {
     #if LUA_ALLOWED
-    public var Ls:LScript;
-    #end
-    
-    public var scriptName:String = '';
-    public static var Function_Stop:Dynamic = 1;
-	public static var Function_Continue:Dynamic = 0;
-    public function new(script:String) {
-		
-		Ls = new LScript(File.getContent(script));
-		
-		scriptName = script;
-		Ls.parent = this;
-		Ls.setVar("FlxG", flixel.FlxG);
-		Ls.setVar("FlxSprite", flixel.FlxSprite);
-	        Ls.setVar("FlxGraphic", FlxGraphic);
-	        Ls.setVar("FlxBasic", FlxBasic);
-		Ls.setVar("FlxObject", FlxObject);
-	        Ls.setVar("FlxVideo", FlxVideo);
-		Ls.setVar("FlxVideoSprite", FlxVideoSprite);
-		Ls.setVar("PsychVideoSprite", PsychVideoSprite);
-		Ls.setVar("ParkerVideoSprite", PsychVideoSprite);
-		Ls.setVar("Handle", Handle);
-		Ls.setVar("FlxTween", FlxTween);
-		Ls.setVar("FlxEase", FlxEase);
-		Ls.setVar("FlxTimer", FlxTimer);
-		Ls.setVar("FlxText", FlxText);
-		Ls.setVar("FlxTextFormat", FlxTextFormat);
-	        Ls.setVar("FlxShader", FlxShader);
-		Ls.setVar("FlxRuntimeShader", FlxRuntimeShader);
-	        Ls.setVar("FlxSound", FlxSound);
-	        Ls.setVar("FlxAxes", {
-			X: flixel.util.FlxAxes.X,
-			Y: flixel.util.FlxAxes.Y,
-			XY: flixel.util.FlxAxes.XY
-		});
-	        Ls.setVar("Lib", Lib);
-		Ls.setVar("Capabilities", Capabilities);
-		Ls.setVar("ShaderFitler", ShaderFilter);
-		Ls.setVar('BlendMode',{
-			SUBTRACT: BlendMode.SUBTRACT,
-			ADD: BlendMode.ADD,
-			MULTIPLY: BlendMode.MULTIPLY,
-			ALPHA: BlendMode.ALPHA,
-			DARKEN: BlendMode.DARKEN,
-			DIFFERENCE: BlendMode.DIFFERENCE,
-			INVERT: BlendMode.INVERT,
-			HARDLIGHT: BlendMode.HARDLIGHT,
-			LIGHTEN: BlendMode.LIGHTEN,
-			OVERLAY: BlendMode.OVERLAY,
-			SHADER: BlendMode.SHADER,
-			SCREEN: BlendMode.SCREEN
-		});
-	        Ls.setVar("Std", Std);
-		Ls.setVar("Type", Type);
-		Ls.setVar("Reflect", Reflect);
-		Ls.setVar("Math", Math);
-		Ls.setVar("StringTools", StringTools);
-		Ls.setVar("Json", {parse: Json.parse, stringify: Json.stringify});
-		Ls.setVar("PlayState", PlayState);
-		Ls.setVar("game", PlayState.instance);
-	        Ls.setVar("Paths", Paths);
-	        Ls.setVar("ClientPrefs", ClientPrefs);
-	        Ls.setVar("Note", Note);
-		Ls.setVar("StrumNote", StrumNote);
-		Ls.setVar("NoteSplash", NoteSplash);
-		Ls.setVar("Character", Character);
-		Ls.setVar("Boyfriend", Boyfriend);
-	        Ls.setVar("Section", Section);
-	        Ls.setVar("Conductor", Conductor);
-	        Ls.setVar("WeekData", WeekData);
-		Ls.setVar("Highscore", Highscore);
-		Ls.setVar("StageData", StageData);
-	        Ls.setVar("Song", Song);
-	        #if sys
-		Ls.setVar("FileSystem", FileSystem);
-		Ls.setVar("File", File);
-		Ls.setVar("Sys", Sys);
-		#end
-		Ls.execute();
-		Ls.callFunc("onCreate");
-	}
-	public function call(func:String, ?args:Array<Dynamic>):Dynamic {
-        var ret:Dynamic = Function_Continue;
+    private var lua:LScript;
+    public var scriptName(default, null):String;
+    private var filePath:Null<String>;
+    private var closed:Bool = false;
 
-        var result = Ls.callFunc(func, args);
-		ret = (result != null && result.returnValue != null) ? result.returnValue : Function_Continue;
+    public function new(script:String, unsafe:Bool = false) {
+        #if sys
+        var code:String;
+        filePath = FileSystem.exists(script) ? script : null;
+        scriptName = filePath != null ? Path.withoutDirectory(script) : 'FunkinLScript';
 
-	    return ret;
-	}
-    public function set(variable:String, data:Dynamic) {
-        Ls.setVar(variable, data);
+        // Load script content
+        if (filePath != null) {
+            try {
+                code = File.getContent(filePath);
+            } catch (e:Dynamic) {
+                Logs.error('Failed to read script file at ${filePath}: ${e}');
+                code = script; // Fallback to raw input
+                filePath = null;
+                scriptName = 'FunkinLScript';
+            }
+        } else {
+            code = script; // Treat input as raw Lua code
+        }
+        #else
+        filePath = null;
+        scriptName = 'FunkinLScript';
+        var code = script; // No file system, treat as raw code
+        Logs.warn("File system access is disabled. Treating input as raw Lua code.");
+        #end
+
+        // Apply FlxColor workarounds
+        code = applyColorWorkarounds(code);
+
+        // Initialize Lua
+        lua = new LScript(code, unsafe);
+        setupLuaEnvironment();
+        setupErrorHandlers();
     }
-    public function stop() {
-        if(Ls != null) {
-            //Ls.stop();
+
+    private function applyColorWorkarounds(code:String):String {
+        var workarounds:Map<String, String> = [
+            "FlxColor:fromRGB(" => "FlxColor:new():setRGB(",
+            "FlxColor.fromRGB(" => "FlxColor:new():setRGB(",
+            "FlxColor:fromRGBFloat(" => "FlxColor:new():setRGBFloat(",
+            "FlxColor.fromRGBFloat(" => "FlxColor:new():setRGBFloat(",
+            "FlxColor:fromHSV(" => "FlxColor:new():setHSV(",
+            "FlxColor.fromHSV(" => "FlxColor:new():setHSV(",
+            "FlxColor:fromHSB(" => "FlxColor:new():setHSB(",
+            "FlxColor.fromHSB(" => "FlxColor:new():setHSB(",
+            "FlxColor:fromCMYK(" => "FlxColor:new():setCMYK(",
+            "FlxColor.fromCMYK(" => "FlxColor:new():setCMYK("
+        ];
+        for (from => to in workarounds) {
+            code = StringTools.replace(code, from, to);
+        }
+        return code;
+    }
+
+    private function setupLuaEnvironment():Void {
+        lua.parent = this;
+
+        // Core Flixel classes
+        setVars([
+            ["FlxG", FlxG],
+            ["FlxSprite", FlxSprite],
+            ["FlxGraphic", FlxGraphic],
+            ["FlxBasic", FlxBasic],
+            ["FlxObject", FlxObject],
+            // Video and media
+            ["FlxVideo", FlxVideo],
+            ["FlxVideoSprite", FlxVideoSprite],
+            ["PsychVideoSprite", PsychVideoSprite],
+            ["ParkerVideoSprite", PsychVideoSprite],
+            ["Handle", Handle],
+            // Animation and effects
+            ["FlxTween", FlxTween],
+            ["FlxEase", FlxEase],
+            ["FlxTimer", FlxTimer],
+            // UI and text
+            ["FlxText", FlxText],
+            ["FlxTextFormat", FlxTextFormat],
+            // Shaders and graphics
+            ["FlxShader", FlxShader],
+            ["FlxRuntimeShader", FlxRuntimeShader],
+            ["ShaderFilter", ShaderFilter],
+            // Sound
+            ["FlxSound", FlxSound],
+            // Axes enum
+            ["FlxAxes", { X: flixel.util.FlxAxes.X, Y: flixel.util.FlxAxes.Y, XY: flixel.util.FlxAxes.XY }],
+            // OpenFL utilities
+            ["Lib", Lib],
+            ["Capabilities", Capabilities],
+            // Blend modes
+            ["BlendMode", {
+                SUBTRACT: BlendMode.SUBTRACT,
+                ADD: BlendMode.ADD,
+                MULTIPLY: BlendMode.MULTIPLY,
+                ALPHA: BlendMode.ALPHA,
+                DARKEN: BlendMode.DARKEN,
+                DIFFERENCE: BlendMode.DIFFERENCE,
+                INVERT: BlendMode.INVERT,
+                HARDLIGHT: BlendMode.HARDLIGHT,
+                LIGHTEN: BlendMode.LIGHTEN,
+                OVERLAY: BlendMode.OVERLAY,
+                SHADER: BlendMode.SHADER,
+                SCREEN: BlendMode.SCREEN
+            }],
+            // Standard Haxe utilities
+            ["Std", Std],
+            ["Type", Type],
+            ["Reflect", Reflect],
+            ["Math", Math],
+            ["StringTools", StringTools],
+            ["Json", { parse: Json.parse, stringify: Json.stringify }],
+            // Game-specific classes
+            ["PlayState", PlayState],
+            ["game", PlayState.instance],
+            ["Paths", Paths],
+            ["ClientPrefs", ClientPrefs],
+            ["Note", Note],
+            ["StrumNote", StrumNote],
+            ["NoteSplash", NoteSplash],
+            ["Character", Character],
+            ["Boyfriend", Boyfriend],
+            ["Section", Section],
+            ["Conductor", Conductor],
+            ["WeekData", WeekData],
+            ["Highscore", Highscore],
+            ["StageData", StageData],
+            ["Song", Song]
+        ]);
+
+        #if sys
+        // System utilities
+        setVars([
+            ["FileSystem", FileSystem],
+            ["File", File],
+            ["Sys", Sys]
+        ]);
+        #end
+    }
+
+    private function setVars(vars:Array<Array<Dynamic>>):Void {
+        for (v in vars) {
+            lua.setVar(v[0], v[1]);
         }
     }
 
+    private function setupErrorHandlers():Void {
+        var location = filePath != null ? filePath : "inline script";
+        lua.parseError = (err:String) -> {
+            Logs.error('Failed to parse script at ${location}: ${err}');
+        };
+        lua.functionError = (func:String, err:String) -> {
+            Logs.error('Failed to call function "${func}" at ${location}: ${err}');
+        };
+        lua.tracePrefix = scriptName;
+        lua.print = (line:Int, s:String) -> {
+            Logs.trace('${scriptName}:${line}: ${s}');
+        };
+    }
+
+    public function execute():Void {
+        if (closed) return;
+        lua.execute();
+        call("onCreate", []);
+    }
+
+    public function get(name:String):Dynamic {
+        if (closed) return null;
+        return lua.getVar(name);
+    }
+
+    public function set(name:String, value:Dynamic):Void {
+        if (closed) return;
+        lua.setVar(name, value);
+    }
+
+    public function setClass(value:Class<Dynamic>):Void {
+        if (closed) return;
+        var className = Type.getClassName(value).split('.').pop();
+        lua.setVar(className, value);
+    }
+
+    public function call(method:String, ?args:Array<Dynamic>):Dynamic {
+        if (closed) return FunkinLua.Function_Continue;
+        var result = lua.callFunc(method, args ?? []);
+        return result != null ? result : FunkinLua.Function_Continue;
+    }
+
+    public function setParent(parent:Dynamic):Void {
+        if (closed) return;
+        lua.parent = parent;
+    }
+
+    public function close():Void {
+        if (closed) return;
+        closed = true;
+        Lua.close(lua.luaState);
+        lua = null;
+    }
+    #else
+    public var scriptName(default, null):String;
+
+    public function new(script:String, unsafe:Bool = false) {
+        scriptName = Path.withoutDirectory(script);
+        Logs.warn("LUA support is disabled. Script functionality is limited.");
+    }
+
+    public function execute():Void {}
+    public function get(name:String):Dynamic return null;
+    public function set(name:String, value:Dynamic):Void {}
+    public function setClass(value:Class<Dynamic>):Void {}
+    public function call(method:String, ?args:Array<Dynamic>):Dynamic return FunkinLua.Function_Continue;
+    public function setParent(parent:Dynamic):Void {}
+    public function close():Void {}
+    #end
 }
