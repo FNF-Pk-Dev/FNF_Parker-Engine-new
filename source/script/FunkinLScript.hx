@@ -238,7 +238,7 @@ class FunkinLScript {
         lua.parent = parent;
     }
 
-    public function close():Void {
+    public function stop():Void {
         if (closed) return;
         closed = true;
         Lua.close(lua.luaState);
@@ -258,6 +258,6 @@ class FunkinLScript {
     public function setClass(value:Class<Dynamic>):Void {}
     public function call(method:String, ?args:Array<Dynamic>):Dynamic return Function_Continue;
     public function setParent(parent:Dynamic):Void {}
-    public function close():Void {}
+    public function stop():Void {}
     #end
 }
