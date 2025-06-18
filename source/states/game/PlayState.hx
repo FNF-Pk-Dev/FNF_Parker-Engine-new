@@ -5367,7 +5367,7 @@ class PlayState extends MusicBeatState
 	function initLScript(filePath:String)
 	{
 		var script:FunkinLScript = new FunkinLScript(filePath);
-		if (script.Lua.parent == null)
+		if (script.lua.parent == null)
 		{
 			script.stop();
 			return null;
