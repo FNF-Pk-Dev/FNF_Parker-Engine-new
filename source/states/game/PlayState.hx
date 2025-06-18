@@ -919,39 +919,39 @@ class PlayState extends MusicBeatState
 
 	    //lscript
 
-		// var filesPushed:Array<String> = [];
-		// var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('scripts/')];
+		 var filesPushed:Array<String> = [];
+		 var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('scripts/')];
 
-		// #if MODS_ALLOWED
-		// foldersToCheck.insert(0, Paths.mods('scripts/'));
-		// if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-		// 	foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
+		 #if MODS_ALLOWED
+		 foldersToCheck.insert(0, Paths.mods('scripts/'));
+		 if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+		 	foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
 
-		// for(mod in Paths.getGlobalMods())
-		// 	foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
-		// #end
+		 for(mod in Paths.getGlobalMods())
+		 	foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
+		 #end
 
-		// for (folder in foldersToCheck)
-		// {
-		// 	if(FileSystem.exists(folder))
-		// 	{
-		// 		for (file in FileSystem.readDirectory(folder))
-		// 		{
-		// 			if(file.endsWith('.luahx') && !filesPushed.contains(file))
-		// 			{
-		// 				lscriptArray.push(initLScript(folder + file));
-		// 				filesPushed.push(file);
-		// 			}
-		// 		}
-		// 	}
-		// }
+		 for (folder in foldersToCheck)
+		 {
+		 	if(FileSystem.exists(folder))
+		 	{
+		 		for (file in FileSystem.readDirectory(folder))
+		 		{
+		 			if(file.endsWith('.luahx') && !filesPushed.contains(file))
+		 			{
+		 				lscriptArray.push(initLScript(folder + file));
+		 				filesPushed.push(file);
+		 			}
+		 		}
+		 	}
+		 }
 
 
 		// STAGE SCRIPTS
 		#if (MODS_ALLOWED && LUA_ALLOWED)
 		startLuasOnFolder('stages/' + curStage + '.lua');
 		#end
-		// startLuahxOnFolder('stages/' + curStage + '.luahx');
+		 startLuahxOnFolder('stages/' + curStage + '.luahx');
 
 		var gfVersion:String = SONG.gfVersion;
 		if(gfVersion == null || gfVersion.length < 1)
@@ -1301,18 +1301,18 @@ class PlayState extends MusicBeatState
 			startLuasOnFolder('custom_events/' + event + '.lua');
 		}
 		#end
-		// for (notetype in noteTypeMap.keys())
-		// {
-		// 	startLuahxOnFolder('custom_notetypes/' + notetype + '.luahx');
-		// }
-		// for (event in eventPushedMap.keys())
-		// {
-		// 	startLuahxOnFolder('custom_events/' + event + '.luahx');
-		// }
-		/*for (notetype in noteTypeMap.keys())
+		 for (notetype in noteTypeMap.keys())
+		 {
+		 	startLuahxOnFolder('custom_notetypes/' + notetype + '.luahx');
+		 }
+		 for (event in eventPushedMap.keys())
+		 {
+		 	startLuahxOnFolder('custom_events/' + event + '.luahx');
+		 }
+		for (notetype in noteTypeMap.keys())
 		{
 			startHScriptsOnFolder('custom_notetypes/', notetype);
-		}*/
+		}
 		for (event in eventPushedMap.keys())
 		{
 			startHScriptsOnFolder('custom_events/', event);
