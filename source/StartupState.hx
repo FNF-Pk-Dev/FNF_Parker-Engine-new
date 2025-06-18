@@ -21,7 +21,7 @@ using StringTools;
 // 垃圾写法
 class StartupState extends MusicBeatState
 {
-	public static var nextState:Class<FlxState> = funkin.states.TitleState;
+	public static var nextState:Class<FlxState> = states.TitleState;
 
 	public function new()
 	{
