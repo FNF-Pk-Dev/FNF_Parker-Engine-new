@@ -70,7 +70,7 @@ class CopyState extends MusicBeatState
 		checkExistingFiles();
 		if (maxLoopTimes <= 0)
 		{
-			MusicBeatState.switchState(new TitleState());
+			MusicBeatState.switchState(new StartupState());
 			return;
 		}
 
