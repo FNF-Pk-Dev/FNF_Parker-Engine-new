@@ -50,7 +50,6 @@ jobs:
         uses: actions/cache/restore@main
         with:
           path: |
-            ~/haxelib
             ~/.gradle
             export/release/android/haxe
             export/release/android/obj
