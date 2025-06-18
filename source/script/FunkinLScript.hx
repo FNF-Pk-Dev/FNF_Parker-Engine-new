@@ -39,7 +39,10 @@ import Sys;
 
 class FunkinLScript {
     #if LUA_ALLOWED
-    private var lua:LScript;
+    public static var Function_Stop:Dynamic = 1;
+	public static var Function_Continue:Dynamic = 0;
+	public static var Function_Halt:Dynamic = 2;
+    public var lua:LScript;
     public var scriptName(default, null):String;
     private var filePath:Null<String>;
     private var closed:Bool = false;
