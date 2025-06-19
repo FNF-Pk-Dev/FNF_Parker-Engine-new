@@ -937,7 +937,7 @@ class PlayState extends MusicBeatState
 		 	{
 		 		for (file in FileSystem.readDirectory(folder))
 		 		{
-		 			if(file.endsWith('.luahx') && !filesPushed.contains(file))
+		 			if(file.endsWith('.lscript') && !filesPushed.contains(file))
 		 			{
 		 				lscriptArray.push(initLScript(folder + file));
 		 				filesPushed.push(file);
@@ -951,7 +951,7 @@ class PlayState extends MusicBeatState
 		#if (MODS_ALLOWED && LUA_ALLOWED)
 		startLuasOnFolder('stages/' + curStage + '.lua');
 		#end
-		 startLuahxOnFolder('stages/' + curStage + '.luahx');
+		 startLuahxOnFolder('stages/' + curStage + '.lscript');
 
 		var gfVersion:String = SONG.gfVersion;
 		if(gfVersion == null || gfVersion.length < 1)
@@ -1303,11 +1303,11 @@ class PlayState extends MusicBeatState
 		#end
 		 for (notetype in noteTypeMap.keys())
 		 {
-		 	startLuahxOnFolder('custom_notetypes/' + notetype + '.luahx');
+		 	startLuahxOnFolder('custom_notetypes/' + notetype + '.lscript');
 		 }
 		 for (event in eventPushedMap.keys())
 		 {
-		 	startLuahxOnFolder('custom_events/' + event + '.luahx');
+		 	startLuahxOnFolder('custom_events/' + event + '.lscript');
 		 }
 		for (notetype in noteTypeMap.keys())
 		{
