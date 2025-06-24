@@ -48,7 +48,6 @@ class FunkinLScript {
     private var closed:Bool = false;
 
     public function new(script:String, unsafe:Bool = false) {
-        #if sys
         var code:String;
         filePath = FileSystem.exists(script) ? script : null;
         scriptName = filePath != null ? Path.withoutDirectory(script) : 'FunkinLScript';
@@ -66,12 +65,6 @@ class FunkinLScript {
         } else {
             code = script; // Treat input as raw Lua code
         }
-        #else
-        filePath = null;
-        scriptName = 'FunkinLScript';
-        var code = script; // No file system, treat as raw code
-        PlayState.instance.addTextToDebug("File system access is disabled. Treating input as raw Lua code.", FlxColor.RED);
-        #end
 
         // Apply FlxColor workarounds
         code = applyColorWorkarounds(code);
