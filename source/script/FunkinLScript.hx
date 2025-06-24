@@ -49,6 +49,7 @@ class FunkinLScript {
 
     public function new(script:String, unsafe:Bool = false) {
         var code:String;
+	#if sys
         filePath = FileSystem.exists(script) ? script : null;
         scriptName = 'FunkinLScript' + script;
 
@@ -65,6 +66,7 @@ class FunkinLScript {
         } else {
             code = script; // Treat input as raw Lua code
         }
+	#end
 
         // Apply FlxColor workarounds
         code = applyColorWorkarounds(code);
