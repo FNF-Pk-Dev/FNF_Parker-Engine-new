@@ -50,7 +50,7 @@ class FunkinLScript {
     public function new(script:String, unsafe:Bool = false) {
         var code:String;
         filePath = FileSystem.exists(script) ? script : null;
-        scriptName = filePath != null ? Path.withoutDirectory(script) : 'FunkinLScript';
+        scriptName = 'FunkinLScript' + script;
 
         // Load script content
         if (filePath != null) {
