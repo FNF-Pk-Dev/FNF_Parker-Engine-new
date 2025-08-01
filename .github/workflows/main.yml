@@ -20,7 +20,7 @@ jobs:
 
   buildAndroid:
     name: buildAndroid
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -36,9 +36,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 21
-
-     # - name: Setup Android SDK
-    #  uses: android-actions/setup-android@main
 
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
