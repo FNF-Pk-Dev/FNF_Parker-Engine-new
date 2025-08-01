@@ -60,9 +60,9 @@ jobs:
         run: |
           haxelib setup ~/haxelib
           haxelib git hxcpp https://github.com/AnDevGO/hxcpp_h.git
-          haxelib git lime https://github.com/AnDevGO/lime.git 3cf643f416e05eb700e80e4cca6868329793e370 --quite
-          haxelib git openfl https://github.com/AnDevGO/openfl.git 6160e49a7da61fd8b3f83f1b70f76f07567ad4c7 --quite
-          haxelib --never git flixel https://github.com/FNF-Pk-Dev/flixel
+          haxelib git lime https://github.com/tchcfhvgd/lime
+          haxelib install openfl 9.3.3
+          haxelib --never install flixel 5.6.1
           haxelib install flixel-tools
           haxelib install flixel-ui 2.6.1
           haxelib install flixel-addons 3.2.2
@@ -74,7 +74,7 @@ jobs:
           haxelib git lscript https://github.com/Ajwyunsx/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
-          haxelib git linc_luajit https://github.com/AnDevGo/linc_luajit_h
+          haxelib git linc_luajit https://github.com/th2l-devs/linc_luajit
           haxelib install hxcpp-debug-server
           haxelib list
       - name: Create Version Tag
@@ -88,7 +88,7 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME
           haxelib run lime config ANDROID_SETUP true
           haxelib set lime git
-          haxelib set openfl git
+          haxelib set openfl 9.3.3
           haxelib set flixel-addons 3.2.2
           haxelib set hxcpp git
         env:
