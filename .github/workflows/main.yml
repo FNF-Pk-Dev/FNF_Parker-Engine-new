@@ -60,8 +60,8 @@ jobs:
         run: |
           haxelib setup ~/haxelib
           haxelib git hxcpp https://github.com/AnDevGO/hxcpp_h.git
-          haxelib git lime https://github.com/AnDevGO/lime.git
-          haxelib git openfl https://github.com/AnDevGO/openfl.git
+          haxelib git lime https://github.com/AnDevGO/lime.git 3cf643f416e05eb700e80e4cca6868329793e370 --quite
+          haxelib git openfl https://github.com/AnDevGO/openfl.git 6160e49a7da61fd8b3f83f1b70f76f07567ad4c7 --quite
           haxelib --never git flixel https://github.com/FNF-Pk-Dev/flixel
           haxelib install flixel-tools
           haxelib install flixel-ui 2.6.1
