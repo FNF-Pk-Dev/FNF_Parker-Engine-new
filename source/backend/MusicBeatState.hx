@@ -59,19 +59,33 @@ class MusicBeatState extends FlxUIState
 
 	public function callOnScript(name:String, vars:Array<Any>, ignoreStops:Bool = false)
 	{
+<<<<<<< HEAD
 		var returnVal:Dynamic = GlobalScript.Function_Continue;
 		if (script != null)
 		{
 			var ret:Dynamic = script.call(name, vars);
 			if (ret == GlobalScript.Function_Halt)
+=======
+		var returnVal:Dynamic = HScript.Function_Continue;
+		if (script != null)
+		{
+			var ret:Dynamic = script.call(name, vars);
+			if (ret == HScript.Function_Halt)
+>>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 			{
 				ret = returnVal;
 				if (!ignoreStops) return returnVal;
 			};
 
+<<<<<<< HEAD
 			if (ret != GlobalScript.Function_Continue && ret != null) returnVal = ret;
 
 			if (returnVal == null) returnVal = GlobalScript.Function_Continue;
+=======
+			if (ret != HScript.Function_Continue && ret != null) returnVal = ret;
+
+			if (returnVal == null) returnVal = HScript.Function_Continue;
+>>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		}
 		return returnVal;
 	}

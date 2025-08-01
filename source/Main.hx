@@ -156,7 +156,11 @@ class Main extends Sprite
 			var path:String = Paths.modFolders('global.$extn');
 			
 			if (FileSystem.exists(path))
+<<<<<<< HEAD
 			initIris(Paths.getContent(path), 'GLOBAL');
+=======
+			initIris(File.getContent(path), 'GLOBAL');
+>>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		}
 		
 	}
