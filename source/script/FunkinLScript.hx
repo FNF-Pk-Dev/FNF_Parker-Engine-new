@@ -45,6 +45,8 @@ class FunkinLScript extends GlobalScript {
     private var filePath:Null<String>;
     private var closed:Bool = false;
 
+    public static final defaultVars:Map<String, Dynamic> = new Map<String, Dynamic>();
+
     public function new(script:String, unsafe:Bool = false) {
         var code:String;
         filePath = script;
@@ -54,9 +56,12 @@ class FunkinLScript extends GlobalScript {
         //code = applyColorWorkarounds();
 
         // Initialize Lua
-        lua = new LScript(applyColorWorkarounds(Paths.getContent(filePath)), unsafe);
-        lua.parent = this;
+        lua = new LScript(Paths.getContent(filePath), unsafe);
         setupLuaEnvironment();
+
+        for (variable => arg in defaultVars)
+			set(variable, arg);
+
         setupErrorHandlers();
     }
 
@@ -183,6 +188,7 @@ class FunkinLScript extends GlobalScript {
 			final state:PlayState = PlayState.instance;
 
 			setVars([
+                ["modManager", state.modManager], //lol ModChart
 				["global", state.variables],
 				["setGlobalFunc", (name:String, func:Dynamic) -> state.variables.set(name, func)],
 				["callGlobalFunc", function(name:String, ?args:Dynamic)
@@ -210,6 +216,10 @@ class FunkinLScript extends GlobalScript {
             ["FlxTypedGroup", flixel.group.FlxTypedGroup],
         ]);
 
+        set("add", FlxG.state.add);
+		set("remove", FlxG.state.remove);
+		set("insert", FlxG.state.insert);
+		set("members", FlxG.state.members);
 
 
         #if sys

@@ -112,7 +112,7 @@ class PlayState extends MusicBeatState
 	];
 
 	//event variables
-	private var isCameraOnForcedPos:Bool = false;
+	public var isCameraOnForcedPos:Bool = false;
 
 	#if (haxe >= "4.0.0")
 	public var boyfriendMap:Map<String, Boyfriend> = new Map();
@@ -331,9 +331,6 @@ class PlayState extends MusicBeatState
 	private var controlArray:Array<String>;
 
 	var precacheList:Map<String, String> = new Map<String, String>();
-	var backupGpu:Bool;
-	// Cnm 为什么Modifier不享受gpu效果,开了直接消失
-	
 	// stores the last judgement object
 	public static var lastRating:FlxSprite;
 	// stores the last combo sprite object
@@ -606,56 +603,7 @@ class PlayState extends MusicBeatState
 
 				phillyStreet = new BGSprite('philly/street', -40, 50);
 				add(phillyStreet);
-/*
-			case 'limo': //Week 4
-				var skyBG:BGSprite = new BGSprite('limo/limoSunset', -120, -50, 0.1, 0.1);
-				add(skyBG);
 
-				if(!ClientPrefs.lowQuality) {
-					limoMetalPole = new BGSprite('gore/metalPole', -500, 220, 0.4, 0.4);
-					add(limoMetalPole);
-
-					bgLimo = new BGSprite('limo/bgLimo', -150, 480, 0.4, 0.4, ['background limo pink'], true);
-					add(bgLimo);
-
-					limoCorpse = new BGSprite('gore/noooooo', -500, limoMetalPole.y - 130, 0.4, 0.4, ['Henchmen on rail'], true);
-					add(limoCorpse);
-
-					limoCorpseTwo = new BGSprite('gore/noooooo', -500, limoMetalPole.y, 0.4, 0.4, ['henchmen death'], true);
-					add(limoCorpseTwo);
-
-					grpLimoDancers = new FlxTypedGroup<BackgroundDancer>();
-					add(grpLimoDancers);
-
-					for (i in 0...5)
-					{
-						var dancer:BackgroundDancer = new BackgroundDancer((370 * i) + 170, bgLimo.y - 400);
-						dancer.scrollFactor.set(0.4, 0.4);
-						grpLimoDancers.add(dancer);
-					}
-
-					limoLight = new BGSprite('gore/coldHeartKiller', limoMetalPole.x - 180, limoMetalPole.y - 80, 0.4, 0.4);
-					add(limoLight);
-
-					grpLimoParticles = new FlxTypedGroup<BGSprite>();
-					add(grpLimoParticles);
-
-					//PRECACHE BLOOD
-					var particle:BGSprite = new BGSprite('gore/stupidBlood', -400, -400, 0.4, 0.4, ['blood'], false);
-					particle.alpha = 0.01;
-					grpLimoParticles.add(particle);
-					resetLimoKill();
-
-					//PRECACHE SOUND
-					precacheList.set('dancerdeath', 'sound');
-				}
-
-				limo = new BGSprite('limo/limoDrive', -120, 550, 1, 1, ['Limo stage'], true);
-
-				fastCar = new BGSprite('limo/fastCarLol', -300, 160);
-				fastCar.active = true;
-				limoKillingState = 0;
-*/
 			case 'mall': //Week 5 - Cocoa, Eggnog
 				var bg:BGSprite = new BGSprite('christmas/bgWalls', -1000, -500, 0.2, 0.2);
 				bg.setGraphicSize(Std.int(bg.width * 0.8));
@@ -951,7 +899,7 @@ class PlayState extends MusicBeatState
 		#if (MODS_ALLOWED && LUA_ALLOWED)
 		startLuasOnFolder('stages/' + curStage + '.lua');
 		#end
-		 startLuahxOnFolder('stages/' + curStage + '.lscript');
+		startLuahxOnFolder('stages/' + curStage + '.lscript');
 
 		var gfVersion:String = SONG.gfVersion;
 		if(gfVersion == null || gfVersion.length < 1)
@@ -1125,6 +1073,9 @@ class PlayState extends MusicBeatState
 		generateSong(SONG.song);
 		modManager = new ModManager(this);
 
+		setDefaultLScripts("modManager", modManager);
+		setDefaultHScripts("modManager", modManager);
+
 		#if LUA_ALLOWED
 		for (notetype in noteTypeMap.keys())
 		{
@@ -1144,6 +1095,22 @@ class PlayState extends MusicBeatState
 		}
 		#end
 		
+		for (notetype in noteTypeMap.keys())
+		{
+			var luaToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.lscript');
+			if(FileSystem.exists(luaToLoad))
+			{
+				lscriptArray.push(initLScript(luaToLoad));
+			}
+			else
+			{
+				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.lscript');
+				if(FileSystem.exists(luaToLoad))
+				{
+					lscriptArray.push(initLScript(luaToLoad));
+				}
+			}
+		}
 		
 		for (notetype in noteTypeMap.keys())
 			{
@@ -1355,6 +1322,34 @@ class PlayState extends MusicBeatState
 			}
 		}
 		#end
+
+		// SONG SPECIFIC SCRIPTS
+		var filesPushed:Array<String> = [];
+		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('data/' + Paths.formatToSongPath(SONG.song) + '/')];
+
+		#if MODS_ALLOWED
+		foldersToCheck.insert(0, Paths.mods('data/' + Paths.formatToSongPath(SONG.song) + '/'));
+		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/data/' + Paths.formatToSongPath(SONG.song) + '/'));
+
+		for(mod in Paths.getGlobalMods())
+			foldersToCheck.insert(0, Paths.mods(mod + '/data/' + Paths.formatToSongPath(SONG.song) + '/' ));// using push instead of insert because these should run after everything else
+		#end
+
+		for (folder in foldersToCheck)
+		{
+			if(FileSystem.exists(folder))
+			{
+				for (file in FileSystem.readDirectory(folder))
+				{
+					if(file.endsWith('.lscript') && !filesPushed.contains(file))
+					{
+						lscriptArray.push(initLScript(folder + file));
+						filesPushed.push(file);
+					}
+				}
+			}
+		}
 		
 
 		var daSong:String = Paths.formatToSongPath(curSong);
@@ -1973,7 +1968,7 @@ class PlayState extends MusicBeatState
 			modManager.registerDefaultModifiers();
 			callOnLuas('postModifierRegister', []);
 			callOnScripts('postModifierRegister', []);
-			Modcharts.loadModchart(modManager, SONG.song);
+			//Modcharts.loadModchart(modManager, SONG.song);
 
 			if (ClientPrefs.middleScroll)
 			{
@@ -2828,9 +2823,7 @@ class PlayState extends MusicBeatState
 
 		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause)
 		{
-			var ret:Dynamic = callOnLuas('onPause', [], false);
-			var retH:Dynamic = callOnScripts("onPause", []);
-			if(ret != GlobalScript.Function_Stop || retH != GlobalScript.Function_Stop) {
+			if(callOnScriptAll('onPause', [], false) != GlobalScript.Function_Stop) {
 				openPauseMenu();
 			}
 		}
@@ -5001,7 +4994,7 @@ class PlayState extends MusicBeatState
 		
 		setOnLuas('curSection', curSection);
 		callOnLuas('onSectionHit', []);
-		scripts.setAll("curSection", curSection);
+		setOnHScripts("curSection", curSection);
 		callOnScripts("onSectionHit", [curSection]);
 	}
 
@@ -5100,6 +5093,16 @@ class PlayState extends MusicBeatState
 			initIris(hx, name);
 		}
 	}
+
+	public function callOnScriptAll(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
+		var returnH = callOnHScripts(event, args, ignoreStops, exclusions, excludeValues);
+		var returnL = callOnLScripts(event, args, ignoreStops, exclusions, excludeValues);
+		var returnLua = callOnLuas(event, args, ignoreStops, exclusions, excludeValues);
+
+        return returnH;
+		return returnL;
+		return returnLua;
+	}
 	
 	public function callOnScripts(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
 		var returnH = callOnHScripts(event, args, ignoreStops, exclusions, excludeValues);
@@ -5197,10 +5200,19 @@ class PlayState extends MusicBeatState
 
 	public function setOnLScripts(variable:String, arg:Dynamic)
 	{
-		for (script in lscriptArray)
-		{
-			script.set(variable, arg);
+		for (i in 0...lscriptArray.length) {
+			lscriptArray[i].set(variable, arg);
 		}
+	}
+
+	public function setDefaultLScripts(variable:String, arg:Dynamic){
+		FunkinLScript.defaultVars.set(variable, arg);
+		return setOnLScripts(variable, arg);
+	}
+
+	public function setDefaultHScripts(variable:String, arg:Dynamic){
+		HScript.defaultVars.set(variable, arg);
+		return setOnHScripts(variable, arg);
 	}
 
 	function StrumPlayAnim(isDad:Bool, id:Int, time:Float) {
@@ -5362,65 +5374,238 @@ class PlayState extends MusicBeatState
 		lscriptArray.push(script);
 		onAddLScript();
 		script.execute();
-        script.setParent(this);
- && ClientPrefs.lowQuality && !ClientPrefs.globalAntialiasing) {
-							unlock = true;
-						}
-					case 'debugger':
-						if(Paths.formatToSongPath(SONG.song) == 'test' && !usedPractice) {
-							unlock = true;
-						}
-				}
+		script.setParent(this);
+        return script;
+	}
 
-				if(unlock) {
-					Achievements.unlockAchievement(achievementName);
-					return achievementName;
+	function initScripts()
+	{
+        
+		var scriptData:Map<String, String> = [];
+		
+		var scriptEncodedData:Map<String, String> = [];
+
+		// SONG && GLOBAL SCRIPTS AND ENCODED
+		var filesAssets:Array<String> = SONG.song == null ? [] : HScriptUtil.findScriptsInDir(Paths.getPreloadPath("data/" + Paths.formatToSongPath(SONG.song)));
+		var files:Array<String> = SONG.song == null ? [] : HScriptUtil.findScriptsInDir(Paths.modFolders("data/" + Paths.formatToSongPath(SONG.song)));
+
+		if (FileSystem.exists(Paths.getPreloadPath("scripts")))
+		{
+			for (_ in HScriptUtil.findScriptsInDir(Paths.getPreloadPath("scripts")))
+				filesAssets.push(_);
+		}
+		
+		if (FileSystem.exists(Paths.modFolders("scripts")))
+		{
+			for (_ in HScriptUtil.findScriptsInDir(Paths.modFolders("scripts")))
+				files.push(_);
+		}
+		
+		for (file in filesAssets)
+		{
+			var hx:Null<String> = null;
+
+			if (FileSystem.exists(file))
+				hx = File.getContent(file);
+
+			if (hx != null)
+			{
+				var scriptName:String = CoolUtil.getFileStringFromPath(file);
+
+				initIris(hx, scriptName);
+			}
+		}
+
+		for (file in files)
+			{
+				var hx:Null<String> = null;
+	
+				if (FileSystem.exists(file))
+					hx = File.getContent(file);
+	
+				if (hx != null)
+				{
+					var scriptName:String = CoolUtil.getFileStringFromPath(file);
+	
+					initIris(hx, scriptName);
+				}
+			}
+		
+		// STAGE SCRIPTS AND ENCODED
+		if (SONG.stage != null)
+		{
+			var hx:Null<String> = null;
+
+			for (extn in HScriptUtil.extns)
+			{
+				var path:String = Paths.modFolders('stages/' + SONG.stage + '.$extn');
+
+				if (FileSystem.exists(path))
+				{
+					hx = File.getContent(path);
+					break;
+				}
+			}
+
+			if (hx != null)
+			{
+				initIris(hx, 'stage');
+			}
+		}
+
+		if (SONG.stage != null)
+		{
+			var hx:Null<String> = null;
+
+			for (extn in HScriptUtil.extns)
+			{
+				var path:String = Paths.getPreloadPath('stages/' + SONG.stage + '.$extn');
+
+				if (FileSystem.exists(path))
+				{
+					trace('Failed to display error: $path');
+					initIris(File.getContent(path), 'stage');
 				}
 			}
 		}
-		return null;
-	}
-	#end
-
-	var curLight:Int = -1;
-	var curLightEvent:Int = -1;
-	
-	function initIris(filePath:String, ?name:String)
-	{
-		var script:HScript = new HScript(filePath, name);
-		if (script.parsingException != null)
-		{
-			script.stop();
-			return null;
-		}
-		script.call('onCreate');
-		hscriptArray.push(script);
-		onAddScript();
-		return script;
 	}
 
-	function initLScript(filePath:String)
+	private var eventsPushed:Array<Dynamic> = [];
+
+	public function initSongEvents()
 	{
-		var script:FunkinLScript = new FunkinLScript(filePath);
-<<<<<<< HEAD
-		lscriptArray.push(script);
-		onAddLScript();
-		script.execute();
-        script.setParent(this);
-=======
-		if (script.lua.parent == null)
+		if (!FileSystem.exists(Paths.modFolders("scripts/events")))
+			return;
+
+		var jsonFiles:Array<String> = CoolUtil.findFilesInPath(Paths.modFolders("scripts/events"), ["json"], true, false);
+
+		var hxFiles:Map<String, String> = [];
+
+		if (FileSystem.exists(Paths.modFolders('scripts/events/${Paths.formatToSongPath(SONG.song)}')))
 		{
-			script.stop();
-			return null;
+			for (file in CoolUtil.findFilesInPath(Paths.modFolders('scripts/events/${Paths.formatToSongPath(SONG.song)}'), ["json"], true, true))
+				jsonFiles.push(file);
 		}
-		script.call('onCreate');
-		lscriptArray.push(script);
-		onAddLScript();
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
-ep", 0);
-		setOnLScripts("curSection", 0);
-		setOnLScripts("curBeat", 0);
-		setOnLScripts("bpm", 0);
+
+		for (file in jsonFiles)
+		{
+			var json:{val1:String, val2:String} = {val1: null, val2: null};
+			if (FileSystem.exists(file))
+			{
+				try
+				{
+					json = cast Json.parse(File.getContent(file));
+				}
+				catch (e)
+				{
+					trace(e);
+				}
+			}
+
+	}
+	}
+
+	function initEventScript(name:String) {}
+
+	public function initCharScript(name:String)
+	{
+
+		var hx:Null<String> = null;
+
+		for (extn in HScriptUtil.extns)
+		{
+			var path = Paths.modFolders('characters/' + name + '.$extn');
+            if (FileSystem.exists(path))
+			{
+				hx = File.getContent(path);
+				break;
+			}
+		}
+
+		if (hx != null)
+		{
+			initIris(hx, name);
+		}
+	}
+
+	function onAddScript()
+	{
+
+        // MODCHAT
+        setDefaultLScripts("modManager", modManager);
+       // setOnHScripts("initMod", function(?mod:modcharting.Modifier) {})
+
+		// VARIABLES
+
+		setOnHScripts("curStep", this.curStep);
+		setOnHScripts("curSection", this.curSection);
+		setOnHScripts("curBeat", this.curBeat);
+		setOnHScripts("bpm", Conductor.bpm);
+
+		// OBJECTS
+		setOnHScripts("camGame", camGame);
+		setOnHScripts("camHUD", camHUD);
+		setOnHScripts("camOther", camOther);
+
+		setOnHScripts("camFollow", camFollow);
+		setOnHScripts("camFollowPos", camFollowPos);
+
+		// CHARACTERS
+		setOnHScripts("boyfriend", boyfriend);
+		setOnHScripts("dad", dad);
+		setOnHScripts("gf", gf);
+
+		setOnHScripts("boyfriendGroup", boyfriendGroup);
+		setOnHScripts("dadGroup", dadGroup);
+		setOnHScripts("gfGroup", gfGroup);
+
+		// NOTES
+		setOnHScripts("notes", notes);
+		setOnHScripts("strumLineNotes", strumLineNotes);
+		setOnHScripts("playerStrums", playerStrums);
+		setOnHScripts("opponentStrums", opponentStrums);
+
+		setOnHScripts("unspawnNotes", unspawnNotes);
+
+		// MISC
+		setOnHScripts("add", function(obj:FlxBasic, ?front:Bool = false)
+		{
+			if (front)
+			{
+				getInstance().add(obj);
+			}
+			else
+			{
+				if (PlayState.instance.isDead)
+				{
+					GameOverSubstate.instance.insert(GameOverSubstate.instance.members.indexOf(GameOverSubstate.instance.boyfriend), obj);
+				}
+				else
+				{
+					var position:Int = PlayState.instance.members.indexOf(PlayState.instance.gfGroup);
+					if (PlayState.instance.members.indexOf(PlayState.instance.boyfriendGroup) < position)
+					{
+						position = PlayState.instance.members.indexOf(PlayState.instance.boyfriendGroup);
+					}
+					else if (PlayState.instance.members.indexOf(PlayState.instance.dadGroup) < position)
+					{
+						position = PlayState.instance.members.indexOf(PlayState.instance.dadGroup);
+					}
+					PlayState.instance.insert(position, obj);
+				}
+			}
+		});
+	}
+
+	function onAddLScript()
+	{
+
+		// VARIABLES
+
+		setOnLScripts("curStep", this.curStep);
+		setOnLScripts("curSection", this.curSection);
+		setOnLScripts("curBeat", this.curBeat);
+		setOnLScripts("bpm", Conductor.bpm);
 
 		// OBJECTS
 		setOnLScripts("camGame", camGame);

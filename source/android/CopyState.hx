@@ -123,10 +123,7 @@ class CopyState extends MusicBeatState
 				FlxG.sound.play(Paths.sound('confirmMenu')).onComplete = () ->
 				{
 					MusicBeatState.switchState(new TitleState());
-<<<<<<< HEAD
 					 //Sys.exit(0);
-=======
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 				};
 			}
 

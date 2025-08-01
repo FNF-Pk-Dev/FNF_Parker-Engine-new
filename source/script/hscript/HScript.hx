@@ -298,6 +298,8 @@ class HScript extends Script
 	public var name:Null<String> = "_hscript";
 	public var parentLua:FunkinLua;
 
+	public static final defaultVars:Map<String, Dynamic> = new Map<String, Dynamic>();
+
 	var _group:Null<FunkinHScript>;
 
 	public static final exts:Array<String> = ['hx', 'hxs', 'hscript'];
@@ -383,6 +385,9 @@ class HScript extends Script
 		_script.interp.showPosOnLog = false;
 
 		setDefaultVars();
+
+		for (variable => arg in defaultVars)
+			set(variable, arg);
 
 		if (additionalVars != null)
 		{

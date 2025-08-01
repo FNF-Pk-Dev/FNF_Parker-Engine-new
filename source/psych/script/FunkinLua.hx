@@ -80,13 +80,7 @@ typedef LuaTweenOptions = {
 	ease:EaseFunction
 }
 
-<<<<<<< HEAD
 class FunkinLua extends GlobalScript {
-=======
-class FunkinLua {
-	public static var Function_Stop:Dynamic = "##PSYCHLUA_FUNCTIONSTOP";
-	public static var Function_Continue:Dynamic = "##PSYCHLUA_FUNCTIONCONTINUE";
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 	public static var Function_StopLua:Dynamic = "##PSYCHLUA_FUNCTIONSTOPLUA";
 
 	static final instanceStr:Dynamic = "##PSYCHLUA_STRINGTOOBJ";
@@ -3440,11 +3434,7 @@ class FunkinLua {
 		}
 	}
 	
-<<<<<<< HEAD
 	public static function getTypeByString(?type:String = '') {
-=======
-	function getTypeByString(?type:String = '') {
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		switch(type.toLowerCase().trim())
 		{
 			case 'backward': return FlxTweenType.BACKWARD;
@@ -3456,11 +3446,7 @@ class FunkinLua {
 	}
 
 	//Better optimized than using some getProperty shit or idk
-<<<<<<< HEAD
 	public static function getFlxEaseByString(?ease:String = '') {
-=======
-	function getFlxEaseByString(?ease:String = '') {
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		switch(ease.toLowerCase().trim()) {
 			case 'backin': return FlxEase.backIn;
 			case 'backinout': return FlxEase.backInOut;
@@ -3502,11 +3488,7 @@ class FunkinLua {
 		return FlxEase.linear;
 	}
 
-<<<<<<< HEAD
 	public static function blendModeFromString(blend:String):BlendMode {
-=======
-	function blendModeFromString(blend:String):BlendMode {
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		switch(blend.toLowerCase().trim()) {
 			case 'add': return ADD;
 			case 'alpha': return ALPHA;
@@ -3526,11 +3508,7 @@ class FunkinLua {
 		return NORMAL;
 	}
 
-<<<<<<< HEAD
 	public static function cameraFromString(cam:String):FlxCamera {
-=======
-	function cameraFromString(cam:String):FlxCamera {
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		switch(cam.toLowerCase()) {
 			case 'camhud' | 'hud': return PlayState.instance.camHUD;
 			case 'camother' | 'other': return PlayState.instance.camOther;
@@ -3574,20 +3552,12 @@ class FunkinLua {
 	public var lastCalledFunction:String = '';
 	public static var lastCalledScript:FunkinLua = null;
 	public function call(func:String, args:Array<Dynamic>):Dynamic {
-<<<<<<< HEAD
 		if(closed) return GlobalScript.Function_Continue;
-=======
-		if(closed) return Function_Continue;
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 
 		lastCalledFunction = func;
 		lastCalledScript = this;
 		try {
-<<<<<<< HEAD
 			if(lua == null) return GlobalScript.Function_Continue;
-=======
-			if(lua == null) return Function_Continue;
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 
 			Lua.getglobal(lua, func);
 			var type:Int = Lua.type(lua, -1);
@@ -3597,11 +3567,7 @@ class FunkinLua {
 					luaTrace("ERROR (" + func + "): attempt to call a " + typeToString(type) + " value", false, false, FlxColor.RED);
 
 				Lua.pop(lua, 1);
-<<<<<<< HEAD
 				return GlobalScript.Function_Continue;
-=======
-				return Function_Continue;
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 			}
 
 			for (arg in args) Convert.toLua(lua, arg);
@@ -3611,20 +3577,12 @@ class FunkinLua {
 			if (status != Lua.LUA_OK) {
 				var error:String = getErrorMessage(status);
 				luaTrace("ERROR (" + func + "): " + error, false, false, FlxColor.RED);
-<<<<<<< HEAD
 				return GlobalScript.Function_Continue;
-=======
-				return Function_Continue;
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 			}
 
 			// If successful, pass and then return the result.
 			var result:Dynamic = cast Convert.fromLua(lua, -1);
-<<<<<<< HEAD
 			if (result == null) result = GlobalScript.Function_Continue;
-=======
-			if (result == null) result = Function_Continue;
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 
 			Lua.pop(lua, 1);
 			if(closed) stop();
@@ -3633,11 +3591,7 @@ class FunkinLua {
 		catch (e:Dynamic) {
 			trace(e);
 		}
-<<<<<<< HEAD
 		return GlobalScript.Function_Continue;
-=======
-		return Function_Continue;
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 	}
 
 	static function addAnimByIndices(obj:String, name:String, prefix:String, indices:String, framerate:Int = 24, loop:Bool = false)
@@ -3841,24 +3795,15 @@ class LuaSState extends MusicBeatState
 	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
 	
 	public function callOnLuas(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
-<<<<<<< HEAD
 		var returnVal = GlobalScript.Function_Continue;
-=======
-		var returnVal = FunkinLua.Function_Continue;
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		#if LUA_ALLOWED
 		if(exclusions == null) exclusions = [];
 		if(excludeValues == null) excludeValues = [];
 
 
 			var myValue = lua.call(event, args);
-<<<<<<< HEAD
 
 			if(myValue != null && myValue != GlobalScript.Function_Continue) {
-=======
-			
-			if(myValue != null && myValue != FunkinLua.Function_Continue) {
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 				returnVal = myValue;
 			}
 		#end
@@ -3934,11 +3879,7 @@ class LuaSState extends MusicBeatState
 		// THSCript...
 
 		// onCreate is used when the script is created so lol
-<<<<<<< HEAD
 		if (callOnLuas("onCreate", []) == GlobalScript.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
-=======
-		if (callOnLuas("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 			return;
 
 		super.create();
@@ -3947,11 +3888,7 @@ class LuaSState extends MusicBeatState
 
 	override function update(e:Float)
 	{
-<<<<<<< HEAD
 		if (callOnLuas("onUpdate", [e]) == GlobalScript.Function_Stop)
-=======
-		if (callOnLuas("onUpdate", [e]) == FunkinLua.Function_Stop)
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 			return;
 
 		super.update(e);
@@ -3973,11 +3910,7 @@ class LuaSState extends MusicBeatState
 
 	override function destroy()
 	{
-<<<<<<< HEAD
 		if (callOnLuas("onDestroy", []) == GlobalScript.Function_Stop)
-=======
-		if (callOnLuas("onDestroy", []) == FunkinLua.Function_Stop)
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 			return;
 
 		super.destroy();
