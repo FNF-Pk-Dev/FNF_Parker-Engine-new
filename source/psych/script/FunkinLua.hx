@@ -145,13 +145,8 @@ class FunkinLua {
 
 		// Lua shit
 		set('Function_StopLua', Function_StopLua);
-<<<<<<< HEAD
 		set('Function_Stop', GlobalScript.Function_Stop);
 		set('Function_Continue', GlobalScript.Function_Continue);
-=======
-		set('Function_Stop', Function_Stop);
-		set('Function_Continue', Function_Continue);
->>>>>>> c97f37f672a5792d4329f81e4d405bc1b37536e1
 		set('luaDebugMode', false);
 		set('luaDeprecatedWarnings', true);
 		set('inChartEditor', false);

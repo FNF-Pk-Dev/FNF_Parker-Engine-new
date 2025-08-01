@@ -298,10 +298,6 @@ class HScript extends Script
 	public var name:Null<String> = "_hscript";
 	public var parentLua:FunkinLua;
 
-	public static var Function_Stop:Dynamic = 1;
-	public static var Function_Continue:Dynamic = 0;
-	public static var Function_Halt:Dynamic = 2;
-
 	var _group:Null<FunkinHScript>;
 
 	public static final exts:Array<String> = ['hx', 'hxs', 'hscript'];
@@ -414,10 +410,10 @@ class HScript extends Script
 	}
 
 	override function call(func:String, ?args:Array<Dynamic>):Dynamic {
-		var ret:Dynamic = Function_Continue;
+		var ret:Dynamic = GlobalScript.Function_Continue;
 		if (exists(func)) {
 			var result = _script.call(func, args);
-			ret = (result != null && result.returnValue != null) ? result.returnValue : Function_Continue;
+			ret = (result != null && result.returnValue != null) ? result.returnValue : GlobalScript.Function_Continue;
 		}
 		return ret;
 	}
