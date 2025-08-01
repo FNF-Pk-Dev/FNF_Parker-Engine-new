@@ -1,0 +1,14 @@
+{
+	"loadingrunx":820,
+	"loadingruny":230,
+	"loadingRunSprite":"loadingRun",
+	"loadingrunfps":24,
+	"loadingrunloop":true,
+	"scaleloadingrun":0.3,
+	"loadingrunaddbyprefix":"bf running",
+	"loadingRunvisible":true,
+	"backgroundSprite":"",
+	"backgroundvisible":false,
+	"loadbarvisible":false,
+	"fadeTime":0.5
+}
