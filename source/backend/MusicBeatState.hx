@@ -143,9 +143,13 @@ class MusicBeatState extends FlxUIState
 			case HITBOX:
 			   if(ClientPrefs.hitboxmode == 'New'){
 				controls.setNewHitBox(androidc.newhbox);
-				}else{
+				}else if(ClientPrefs.hitboxmode == 'Gradient'){
 				controls.setGradientHitBox(androidc.ghbox);
-		                }
+				}else if(ClientPrefs.hitboxmode == 'Old'){
+				controls.setOldHitBox(androidc.oldhbox);
+		        }else {
+				controls.setHitBox(androidc.hbox);
+			}
 			default:
 		}
 

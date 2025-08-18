@@ -66,6 +66,7 @@ class AndroidControls extends FlxSpriteGroup {
 	public var hbox:FlxHitbox;
 	public var newhbox:FlxNewHitbox;
 	public var ghbox:Gradient;
+	public var oldhbox:Old;
 	public var vpad:FlxVirtualPad;
 
 	var config:Config;
@@ -89,8 +90,12 @@ class AndroidControls extends FlxSpriteGroup {
 			case HITBOX:
 		    if(ClientPrefs.hitboxmode == 'New'){
 		    initControler(5);
-		    }else{
+		    }else if(ClientPrefs.hitboxmode == 'Gradient'){
 		    initControler(6);
+		    }else if(ClientPrefs.hitboxmode == 'Classic'){
+		    initControler(4);
+		    }else if(ClientPrefs.hitboxmode == 'Old'){
+		    initControler(7);
 		    }
 			case KEYBOARD:// nothing
 		}
@@ -120,6 +125,9 @@ class AndroidControls extends FlxSpriteGroup {
 			case 6:
 			  ghbox = new Gradient(4, Std.int(FlxG.width / 4), FlxG.height, [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000]);
 			  add(ghbox);
+			case 7:
+				oldhbox = new Old();
+				add(oldhbox);
 			default:
 				vpad = new FlxVirtualPad(RIGHT_FULL, NONE, 0.75, ClientPrefs.globalAntialiasing);	
 				add(vpad);					

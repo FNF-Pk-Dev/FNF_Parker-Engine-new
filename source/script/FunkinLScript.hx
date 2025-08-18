@@ -45,6 +45,8 @@ class FunkinLScript extends GlobalScript {
     private var filePath:Null<String>;
     private var closed:Bool = false;
 
+    public var foreground : FlxTypedGroup<FlxBasic>;
+
     public static final defaultVars:Map<String, Dynamic> = new Map<String, Dynamic>();
 
     public function new(script:String, unsafe:Bool = false) {
@@ -86,6 +88,8 @@ class FunkinLScript extends GlobalScript {
 
     private function setupLuaEnvironment():Void 
     {
+        foreground = new FlxTypedGroup<FlxBasic>();
+
         // Core Flixel classes
         setVars([
             ["Function_Stop", GlobalScript.Function_Stop],
@@ -158,7 +162,7 @@ class FunkinLScript extends GlobalScript {
             ["Highscore", Highscore],
             ["StageData", StageData],
             ["Song", Song],
-            ["import", function(className:String) {
+            ["import", function(className:String) {  //原来构思script不能用呵呵
                 var classSplit:Array<String> = className.split(".");
                 var daClassName = classSplit[classSplit.length-1]; // last one
 
@@ -220,6 +224,7 @@ class FunkinLScript extends GlobalScript {
 		set("remove", FlxG.state.remove);
 		set("insert", FlxG.state.insert);
 		set("members", FlxG.state.members);
+        set('foreground', foreground);
 
 
         #if sys

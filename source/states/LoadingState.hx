@@ -68,6 +68,7 @@ class LoadingState extends MusicBeatState
 	var loadBar:FlxSprite;
 	override function create()
 	{
+		CoolUtil.precacheImage("ui/diaTrans");
 	
 	    loadingRunJSON = Json.parse(Paths.getTextFromFile('images/loading/loading.json'));
 	

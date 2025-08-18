@@ -140,7 +140,8 @@
 	<haxelib name="flxgif" />
 	<haxelib name="hxvlc" if="VIDEOS_ALLOWED" />
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
-	<haxelib name="lscript"/>
+	<haxelib name="lscript" if="LUA_ALLOWED"/>
+	<haxelib name="hxpy" />
 	<haxelib name="faxe" if='switch'/>
 	
 	<!--<haxelib name="polymod"/> -->

@@ -342,7 +342,7 @@ class PlayState extends MusicBeatState
 	{
 		//trace('Playback Rate: ' + playbackRate);
 		Paths.clearStoredMemory();
-		CoolUtil.precacheImage("ui/diaTrans");
+		//CoolUtil.precacheImage("ui/diaTrans");
 
 		// for lua
 		instance = this;
@@ -2823,9 +2823,7 @@ class PlayState extends MusicBeatState
 
 		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause)
 		{
-			if(callOnScriptAll('onPause', [], false) != GlobalScript.Function_Stop) {
-				openPauseMenu();
-			}
+			openPauseMenu();
 		}
 
 		if (FlxG.keys.anyJustPressed(debugKeysChart) && !endingSong && !inCutscene)
@@ -3196,6 +3194,10 @@ class PlayState extends MusicBeatState
 
 	function openPauseMenu()
 	{
+
+		if(callOnScriptAll('onPause', []) == GlobalScript.Function_Stop) 
+			return;
+		
 		persistentUpdate = false;
 		persistentDraw = true;
 		paused = true;
@@ -5370,7 +5372,7 @@ class PlayState extends MusicBeatState
 
 	function initLScript(filePath:String)
 	{
-		var script:FunkinLScript = new FunkinLScript(filePath);
+		var script:FunkinLScript = new FunkinLScript(filePath, true);
 		lscriptArray.push(script);
 		onAddLScript();
 		script.execute();

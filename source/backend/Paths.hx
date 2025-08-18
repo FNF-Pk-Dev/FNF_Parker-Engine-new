@@ -30,7 +30,15 @@ import lime.utils.Assets;
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
 #end
-
+#if sys
+#end
+#if cpp
+import cpp.vm.Gc;
+#elseif hl
+import hl.Gc;
+#elseif neko
+import neko.vm.Gc;
+#end
 using StringTools;
 
 class Paths
@@ -71,6 +79,29 @@ class Paths
 		'assets/shared/music/breakfast.$SOUND_EXT',
 		'assets/shared/music/tea-time.$SOUND_EXT',
 	];
+
+	@:noCompletion private inline static function _gc(major:Bool) {
+		#if (cpp || neko)
+		Gc.run(major);
+		#elseif hl
+		Gc.major();
+		#end
+	}
+
+	@:noCompletion public inline static function compress() {
+		#if cpp
+		Gc.compact();
+		#elseif hl
+		Gc.major();
+		#elseif neko
+		Gc.run(true);
+		#end
+	}
+
+	public inline static function gc(major:Bool = false, repeat:Int = 1) {
+		while(repeat-- > 0) _gc(major);
+	}
+
 	/// haya I love you for the base cache dump I took to the max
 	public static function clearUnusedMemory() {
 		// clear non local assets in the tracked assets list
@@ -92,11 +123,8 @@ class Paths
 			}
 		}
 		// run the garbage collector for good measure lmfao
-		#if cpp
-                cpp.NativeGc.enable(true);
-                cpp.NativeGc.run(true);
-                cpp.NativeGc.enterGCFreeZone();
-                #end
+		compress();
+		gc(true);
 		System.gc();
 	}
 
@@ -125,11 +153,8 @@ class Paths
 			}
 		}
 		// flags everything to be cleared out next unused memory clear
-		#if cpp
-                cpp.NativeGc.enable(true);
-                cpp.NativeGc.run(true);
-                cpp.NativeGc.enterGCFreeZone();
-                #end
+		compress();
+		gc(true);
 		localTrackedAssets = [];
 		openfl.Assets.cache.clear("songs");
 		CoolUtil.precacheImage("ui/diaTrans");

@@ -44,7 +44,7 @@ class HitboxSettingsSubState extends BaseOptionsMenu
 			'hitboxmode',
 			'string',
 			'New',
-			['Classic', 'New', 'Gradient']);
+			['Classic', 'New', 'Gradient', 'Old']);
 		  addOption(option);
 
 		var option:Option = new Option('NewHitbox Mode:',

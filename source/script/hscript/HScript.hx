@@ -296,11 +296,12 @@ class HScript extends Script
 	public var _script:Iris;
 	public var parsingException:Null<String> = null;
 	public var name:Null<String> = "_hscript";
-	public var parentLua:FunkinLua;
+	public var parentLua:psych.script.FunkinLua;
 
 	public static final defaultVars:Map<String, Dynamic> = new Map<String, Dynamic>();
 
 	var _group:Null<FunkinHScript>;
+	public var foreground :FlxTypedGroup<FlxBasic>;
 
 	public static final exts:Array<String> = ['hx', 'hxs', 'hscript'];
 
@@ -379,6 +380,8 @@ class HScript extends Script
 	{
 		scriptType = ScriptType.HSCRIPT;
 		scriptName = names;
+
+		foreground = new FlxTypedGroup<FlxBasic>();
 
 		_script = new Iris(script, {name: names, autoRun: false, autoPreset: false});
 		_script.interp = new InterpPro(FlxG.state);
@@ -526,12 +529,7 @@ class HScript extends Script
 	{
 		_script.preset();
 
-		#if LUA_ALLOWED
-		if (Lua_helper.callbacks != null) {
-			for (i => value in Lua_helper.callbacks) // 直接遍历键值对
-				set(i, value);
-		}
-		#end
+		
 
 		set("StringTools", StringTools);
 
@@ -568,6 +566,7 @@ class HScript extends Script
 		set("remove", FlxG.state.remove);
 		set("insert", FlxG.state.insert);
 		set("members", FlxG.state.members);
+		set('foreground', foreground);
 
 		set('FlxCameraFollowStyle', flixel.FlxCamera.FlxCameraFollowStyle);
 		set("FlxTextBorderStyle", flixel.text.FlxText.FlxTextBorderStyle);
@@ -643,6 +642,13 @@ class HScript extends Script
 						Lua_helper.add_callback(script.lua, name, func);
 				FunkinLua.customFunctions.set(name, func);
 			});
+			#end
+
+			#if LUA_ALLOWED
+			if (Lua_helper.callbacks != null) {
+				for (i => value in Lua_helper.callbacks) // 直接遍历键值对
+					set(i, value);
+			}
 			#end
 		}
 
