@@ -318,6 +318,7 @@ class PlayState extends MusicBeatState
 	public static var instance:PlayState;
 	public var luaArray:Array<FunkinLua> = [];
 	public var lscriptArray:Array<FunkinLScript> = [];
+	public var pscriptArray:Array<FunkinPython> = [];
 	public var hscriptArray:Array<HScript> = [];
 	private var luaDebugGroup:FlxTypedGroup<DebugLuaText>;
 	public var introSoundsSuffix:String = '';
@@ -865,7 +866,7 @@ class PlayState extends MusicBeatState
 		}
 		#end
 
-	    //lscript
+	    //lscript and pscript
 
 		 var filesPushed:Array<String> = [];
 		 var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('scripts/')];
@@ -892,6 +893,18 @@ class PlayState extends MusicBeatState
 		 			}
 		 		}
 		 	}
+
+			if(FileSystem.exists(folder))
+		 	{
+		 		for (file in FileSystem.readDirectory(folder))
+		 		{
+		 			if(file.endsWith('.py') && !filesPushed.contains(file))
+		 			{
+		 				pscriptArray.push(initPScript(folder + file));
+		 				filesPushed.push(file);
+		 			}
+		 		}
+		 	}
 		 }
 
 
@@ -900,6 +913,8 @@ class PlayState extends MusicBeatState
 		startLuasOnFolder('stages/' + curStage + '.lua');
 		#end
 		startLuahxOnFolder('stages/' + curStage + '.lscript');
+
+		startPyOnFolder('stages/' + curStage + '.py');
 
 		var gfVersion:String = SONG.gfVersion;
 		if(gfVersion == null || gfVersion.length < 1)
@@ -1110,6 +1125,19 @@ class PlayState extends MusicBeatState
 					lscriptArray.push(initLScript(luaToLoad));
 				}
 			}
+			var pyToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.py');
+			if(FileSystem.exists(pyToLoad))
+			{
+				pscriptArray.push(initPScript(pyToLoad));
+			}
+			else
+			{
+				pyToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.py');
+				if(FileSystem.exists(pyToLoad))
+				{
+					pscriptArray.push(initPScript(pyToLoad));
+				}
+			}
 		}
 		
 		for (notetype in noteTypeMap.keys())
@@ -1266,14 +1294,16 @@ class PlayState extends MusicBeatState
 			startLuasOnFolder('custom_events/' + event + '.lua');
 		}
 		#end
-		 for (notetype in noteTypeMap.keys())
-		 {
-		 	startLuahxOnFolder('custom_notetypes/' + notetype + '.lscript');
-		 }
-		 for (event in eventPushedMap.keys())
-		 {
-		 	startLuahxOnFolder('custom_events/' + event + '.lscript');
-		 }
+		for (notetype in noteTypeMap.keys())
+		{
+			startLuahxOnFolder('custom_notetypes/' + notetype + '.lscript');
+			startPyOnFolder('custom_notetypes/' + notetype + '.py');
+		}
+		for (event in eventPushedMap.keys())
+		{
+			startLuahxOnFolder('custom_events/' + event + '.lscript');
+			startPyOnFolder('custom_events/' + event + '.py');
+		}
 		for (notetype in noteTypeMap.keys())
 		{
 			startHScriptsOnFolder('custom_notetypes/', notetype);
@@ -1345,6 +1375,18 @@ class PlayState extends MusicBeatState
 					if(file.endsWith('.lscript') && !filesPushed.contains(file))
 					{
 						lscriptArray.push(initLScript(folder + file));
+						filesPushed.push(file);
+					}
+				}
+			}
+
+			if(FileSystem.exists(folder))
+			{
+				for (file in FileSystem.readDirectory(folder))
+				{
+					if(file.endsWith('.py') && !filesPushed.contains(file))
+					{
+						pscriptArray.push(initPScript(folder + file));
 						filesPushed.push(file);
 					}
 				}
@@ -4816,6 +4858,12 @@ class PlayState extends MusicBeatState
 			lua.call('onDestroy', []);
 			lua.stop();
 		}
+
+
+		for (py in pscriptArray) {
+			py.call('onDestroy', []);
+			py.stop();
+		}
 			
 
 		for (hx in hscriptArray) {
@@ -4826,6 +4874,7 @@ class PlayState extends MusicBeatState
 		luaArray = [];
 		hscriptArray = [];
 		lscriptArray = [];
+		pscriptArray = [];
 
 		#if hscript
 		if(FunkinLua.hscript != null) FunkinLua.hscript = null;
@@ -5035,6 +5084,40 @@ class PlayState extends MusicBeatState
 		return false;
 	}
 	#end
+
+	public function startPyOnFolder(pyFile:String)
+	{
+		for (script in pscriptArray)
+		{
+			if(script.scriptName == pyFile) return false;
+		}
+
+		#if MODS_ALLOWED
+		var pyToLoad:String = Paths.modFolders(pyFile);
+		if(FileSystem.exists(pyToLoad))
+		{
+			pscriptArray.push(initPScript(pyToLoad));
+			return true;
+		}
+		else
+		{
+			pyToLoad = Paths.getPreloadPath(pyFile);
+			if(FileSystem.exists(pyToLoad))
+			{
+				pscriptArray.push(initPScript(pyToLoad));
+				return true;
+			}
+		}
+		#elseif sys
+		var pyToLoad:String = Paths.getPreloadPath(pyFile);
+		if(OpenFlAssets.exists(pyToLoad))
+		{
+			pscriptArray.push(initPScript(pyToLoad));
+			return true;
+		}
+		#end
+		return false;
+	}
 	
 	public function startLuahxOnFolder(luaFile:String)
 	{
@@ -5099,19 +5182,23 @@ class PlayState extends MusicBeatState
 	public function callOnScriptAll(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
 		var returnH = callOnHScripts(event, args, ignoreStops, exclusions, excludeValues);
 		var returnL = callOnLScripts(event, args, ignoreStops, exclusions, excludeValues);
+		var returnP = callOnPScripts(event, args, ignoreStops, exclusions, excludeValues);
 		var returnLua = callOnLuas(event, args, ignoreStops, exclusions, excludeValues);
 
         return returnH;
 		return returnL;
+		return returnP;
 		return returnLua;
 	}
 	
 	public function callOnScripts(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
 		var returnH = callOnHScripts(event, args, ignoreStops, exclusions, excludeValues);
 		var returnL = callOnLScripts(event, args, ignoreStops, exclusions, excludeValues);
+		var returnP = callOnPScripts(event, args, ignoreStops, exclusions, excludeValues);
 
         return returnH;
 		return returnL;
+		return returnP;
 	}
 
 
@@ -5154,13 +5241,26 @@ class PlayState extends MusicBeatState
 		}
 		return returnVal;
 	}
-	
-    /* 
-    public function callOnPython(name:String, ?parameters:Array<String>)
-    {
-    FunkinPython.setFunction(name, parameters); 
-    }
-    */
+
+	public function callOnPScripts(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
+		var returnVal = GlobalScript.Function_Continue;
+		if(exclusions == null) exclusions = [];
+		if(excludeValues == null) excludeValues = [];
+
+		for (script in pscriptArray) {
+			if(exclusions.contains(script.scriptName))
+				continue;
+
+			var myValue = script.call(event, args);
+			if(myValue == GlobalScript.Function_Stop && !ignoreStops)
+				break;
+
+			if(myValue != null && myValue != GlobalScript.Function_Continue) {
+				returnVal = myValue;
+			}
+		}
+		return returnVal;
+	}
 
 	public function callOnLuas(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
 		var returnVal = GlobalScript.Function_Continue;
@@ -5182,6 +5282,12 @@ class PlayState extends MusicBeatState
 		}
 		#end
 		return returnVal;
+	}
+
+	public function setOnScripts(variable:String, arg:Dynamic)
+	{
+		setOnLScripts(variable, arg);
+		setOnPScripts(variable, arg);
 	}
 
 	public function setOnLuas(variable:String, arg:Dynamic) {
@@ -5207,12 +5313,24 @@ class PlayState extends MusicBeatState
 		}
 	}
 
+	public function setOnPScripts(variable:String, arg:Dynamic)
+	{
+		for (i in 0...pscriptArray.length) {
+			pscriptArray[i].set(variable, arg);
+		}
+	}
+
 	public function setDefaultLScripts(variable:String, arg:Dynamic){
 		FunkinLScript.defaultVars.set(variable, arg);
 		return setOnLScripts(variable, arg);
 	}
 
 	public function setDefaultHScripts(variable:String, arg:Dynamic){
+		HScript.defaultVars.set(variable, arg);
+		return setOnHScripts(variable, arg);
+	}
+
+	public function setDefaultPScripts(variable:String, arg:Dynamic){
 		HScript.defaultVars.set(variable, arg);
 		return setOnHScripts(variable, arg);
 	}
@@ -5374,7 +5492,17 @@ class PlayState extends MusicBeatState
 	{
 		var script:FunkinLScript = new FunkinLScript(filePath, true);
 		lscriptArray.push(script);
-		onAddLScript();
+		onAddSScript();
+		script.execute();
+		script.setParent(this);
+        return script;
+	}
+
+	function initPScript(filePath:String)
+	{
+		var script:FunkinPython = new FunkinPython(filePath);
+		pscriptArray.push(script);
+		onAddSScript();
 		script.execute();
 		script.setParent(this);
         return script;
@@ -5599,43 +5727,43 @@ class PlayState extends MusicBeatState
 		});
 	}
 
-	function onAddLScript()
+	function onAddSScript()
 	{
 
 		// VARIABLES
 
-		setOnLScripts("curStep", this.curStep);
-		setOnLScripts("curSection", this.curSection);
-		setOnLScripts("curBeat", this.curBeat);
-		setOnLScripts("bpm", Conductor.bpm);
+		setOnScripts("curStep", this.curStep);
+		setOnScripts("curSection", this.curSection);
+		setOnScripts("curBeat", this.curBeat);
+		setOnScripts("bpm", Conductor.bpm);
 
 		// OBJECTS
-		setOnLScripts("camGame", camGame);
-		setOnLScripts("camHUD", camHUD);
-		setOnLScripts("camOther", camOther);
+		setOnScripts("camGame", camGame);
+		setOnScripts("camHUD", camHUD);
+		setOnScripts("camOther", camOther);
 
-		setOnLScripts("camFollow", camFollow);
-		setOnLScripts("camFollowPos", camFollowPos);
+		setOnScripts("camFollow", camFollow);
+		setOnScripts("camFollowPos", camFollowPos);
 
 		// CHARACTERS
-		setOnLScripts("boyfriend", boyfriend);
-		setOnLScripts("dad", dad);
-		setOnLScripts("gf", gf);
+		setOnScripts("boyfriend", boyfriend);
+		setOnScripts("dad", dad);
+		setOnScripts("gf", gf);
 
-		setOnLScripts("boyfriendGroup", boyfriendGroup);
-		setOnLScripts("dadGroup", dadGroup);
-		setOnLScripts("gfGroup", gfGroup);
+		setOnScripts("boyfriendGroup", boyfriendGroup);
+		setOnScripts("dadGroup", dadGroup);
+		setOnScripts("gfGroup", gfGroup);
 
 		// NOTES
-		setOnLScripts("notes", notes);
-		setOnLScripts("strumLineNotes", strumLineNotes);
-		setOnLScripts("playerStrums", playerStrums);
-		setOnLScripts("opponentStrums", opponentStrums);
+		setOnScripts("notes", notes);
+		setOnScripts("strumLineNotes", strumLineNotes);
+		setOnScripts("playerStrums", playerStrums);
+		setOnScripts("opponentStrums", opponentStrums);
 
-		setOnLScripts("unspawnNotes", unspawnNotes);
+		setOnScripts("unspawnNotes", unspawnNotes);
 
 		// MISC
-		setOnLScripts("add", function(obj:FlxBasic, ?front:Bool = false)
+		setOnScripts("add", function(obj:FlxBasic, ?front:Bool = false)
 		{
 			if (front)
 			{
