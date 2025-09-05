@@ -47,7 +47,7 @@ jobs:
           haxelib setup ~/haxelib
           haxelib git hxcpp https://github.com/HomuHomu833/hxcpp
           haxelib git lime https://github.com/HomuHomu833/lime int-delta
-          haxelib install openfl 9.3.3
+          haxelib install openfl 9.2.2
           haxelib git flixel https://github.com/FNF-Pk-Dev/flixel
           haxelib install flixel-tools
           haxelib install flixel-ui 2.6.1
@@ -89,6 +89,7 @@ jobs:
         with:
           name: buildAndroid
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
+
 
 
 
