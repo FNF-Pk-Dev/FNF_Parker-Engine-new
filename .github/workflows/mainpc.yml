@@ -35,7 +35,7 @@ jobs:
           haxelib git hxcpp https://github.com/HomuHomu833/hxcpp
           haxelib git lime https://github.com/HomuHomu833/lime int-delta
           haxelib install openfl 9.2.2
-          haxelib --never install flixel 5.6.1
+          haxelib git flixel https://github.com/FNF-Pk-Dev/flixel
           haxelib install flixel-tools
           haxelib install flixel-ui 2.6.1
           haxelib install flixel-addons 3.2.2
@@ -65,3 +65,4 @@ jobs:
           name: windowsBuild
           path: export/release/windows/bin
   
+
