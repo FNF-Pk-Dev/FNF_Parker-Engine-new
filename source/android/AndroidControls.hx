@@ -67,7 +67,7 @@ class AndroidControls extends FlxSpriteGroup {
 	public var newhbox:FlxNewHitbox;
 	public var ghbox:Gradient;
 	public var oldhbox:Old;
-	public var vpad:FlxVirtualPad;
+	public var vpad:FlxTouchPad;
 
 	var config:Config;
 
