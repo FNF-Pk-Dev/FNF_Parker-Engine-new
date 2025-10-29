@@ -103,6 +103,7 @@ class MusicBeatState extends FlxUIState
 
 	#if android
 	public var _touchpad:FlxTouchPad;
+	public var _virtualpad:FlxTouchPad = _touchpad;
 	public var _joyStick:FlxJoyStick;
 	public var androidc:AndroidControls;
 	public var trackedinputsUI:Array<FlxActionInput> = [];
