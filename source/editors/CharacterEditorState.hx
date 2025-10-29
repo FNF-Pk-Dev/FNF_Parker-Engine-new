@@ -202,7 +202,7 @@ class CharacterEditorState extends MusicBeatState
 		reloadCharacterOptions();
 
 		#if android
-		addVirtualPad(FULL, FULL);
+		addTouchPad("FULL", "CHARACTER_EDITOR");
 		addPadCamera();
 		#end
 
