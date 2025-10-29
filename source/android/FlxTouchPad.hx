@@ -77,19 +77,12 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		return createTouchButton(x, y, Frames, ColorS);
 	}
 	
-	public function createTouchButton(x:Float, y:Float, Frames:String, ?ColorS:Int = 0xFFFFFF, ?Sizeable = false, ?ExtraSizeable:Bool = false):MobileButton {
-	    var button = new MobileButton(x, y);
+	private function createButton(X:Float, Y:Float, Graphic:String, ?Color:FlxColor = 0xFFFFFF):TouchButton
+	{
+		var button = new MobileButton(X, Y);
 		button.label = new FlxSprite();
-		final buttonPath:Dynamic = 'assets/moblie/MobileButton/TouchPad/original/${Frames.toUpperCase()}';
-		final bgPath:Dynamic = 'assets/moblie/MobileButton/TouchPad/original/bg';
-			
-		if (Frames == "modding" && FileSystem.exists(buttonPath)) button.loadGraphic(buttonPath);
-		if (Frames == "modding" && !FileSystem.exists(buttonPath)) button.loadGraphic('assets/moblie/MobileButton/TouchPad/original/${Frames.toUpperCase()}');
-		else if (FileSystem.exists(bgPath)) button.loadGraphic(bgPath);
-		else button.loadGraphic('assets/moblie/MobileButton/TouchPad/original/bg');
-		
-		if (Frames != "modding" && FileSystem.exists(buttonPath)) button.label.loadGraphic(buttonPath);
-		else if (Frames != "modding" && !FileSystem.exists(buttonPath)) button.label.loadGraphic('assets/moblie/MobileButton/TouchPad/original/${Frames.toUpperCase()}');
+		button.loadGraphic(Paths.image('MobileButton/TouchPad/original/bg', "moblie"));
+		button.label.loadGraphic(Paths.image('MobileButton/TouchPad/original/${Graphic.toUpperCase()}', "moblie"));
 
 		button.scale.set(0.243, 0.243);
 		button.updateHitbox();
@@ -105,10 +98,10 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		button.immovable = true;
 		button.solid = button.moves = false;
 		button.label.antialiasing = button.antialiasing = ClientPrefs.globalAntialiasing;
-		button.tag = Frames.toUpperCase();
-		if (ColorS != -1) button.color = ColorS;
-		button.parentAlpha = ClientPrefs.virtualPadAlpha;
-
+		button.tag = Graphic.toUpperCase();
+		button.color = Color;
+		button.parentAlpha = button.alpha;
+		
 		return button;
 	}
 
