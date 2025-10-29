@@ -104,17 +104,17 @@ class AndroidControls extends FlxSpriteGroup {
 	function initControler(vpadMode:Int) {
 		switch (vpadMode){
 			case 0:
-				vpad = new MobilePad("RIGHT_FULL", "controlExtend");
+				vpad = new FlxTouchPad("RIGHT_FULL", "controlExtend");
 				add(vpad);					
 			case 1:
-				vpad = new MobilePad("FULL", "controlExtend");
+				vpad = new FlxTouchPad("FULL", "controlExtend");
 				add(vpad);		
 			case 2:
-				vpad = new MobilePad("RIGHT_FULL", "controlExtend");
+				vpad = new FlxTouchPad("RIGHT_FULL", "controlExtend");
 				vpad = config.loadcustom(vpad);
 				add(vpad);	
 			case 3:
-				vpad = new MobilePad("DUO", "controlExtend");
+				vpad = new FlxTouchPad("DUO", "controlExtend");
 				add(vpad);
 			case 4:
 				hbox = new FlxHitbox(0.75, ClientPrefs.globalAntialiasing);
