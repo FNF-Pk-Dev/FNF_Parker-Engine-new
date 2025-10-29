@@ -248,7 +248,7 @@ class AndroidControlsMenu extends MusicBeatState
 		}
 	}
 
-	function movebutton(touch:flixel.input.touch.FlxTouch, button:moblie.flixel.MobileButton) {
+	function movebutton(touch:flixel.input.touch.FlxTouch, button:android.flixel.MobileButton) {
 		button.x = touch.x - vpad.buttonUp.width / 2;
 		button.y = touch.y - vpad.buttonUp.height / 2;
 		bindbutton = button;
