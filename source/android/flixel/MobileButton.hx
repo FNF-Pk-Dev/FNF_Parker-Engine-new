@@ -4,7 +4,7 @@ import flixel.input.FlxInput;
 import flixel.input.FlxPointer;
 import flixel.input.IFlxInput;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
-import shaders.flixel.system.FlxShader;
+import android.flixel.system.FlxShader;
 #if mac
 import flixel.input.mouse.FlxMouseButton;
 #end
