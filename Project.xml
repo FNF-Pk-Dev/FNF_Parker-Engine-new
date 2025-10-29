@@ -54,7 +54,7 @@
 	<define name="TITLE_SCREEN_EASTER_EGG" if="officialBuild"/> <!-- DELETE THE if="officialBuild" for enabling this on an unofficial build -->
 	<define name="CRASH_HANDLER" if="desktop release || android" />
 	
-	<section if="moblie">
+	<section if="android">
 		<assets path="mobile"         rename="assets/mobile"        exclude="*.ogg" if="web"/>
 		<assets path="mobile"         rename="assets/mobile"        exclude="*.mp3" unless="web"/>
 	</section>
@@ -209,4 +209,5 @@
 	<icon path="art/icon64.png" size='64'/>
 	<icon path="art/iconOG.png" />
 </project>
+
 
