@@ -41,27 +41,27 @@ class OptionsState extends MusicBeatState
 		switch(label) {
 			case 'Note Colors':
 				#if android
-				removeVirtualPad();
+				removeTouchPad();
 				#end
 				openSubState(new options.NotesSubState());
 			case 'Controls':
 				#if android
-				removeVirtualPad();
+				removeTouchPad();
 				#end
 				openSubState(new options.ControlsSubState());
 			case 'Graphics':
 				#if android
-				removeVirtualPad();
+				removeTouchPad();
 				#end
 				openSubState(new options.GraphicsSettingsSubState());
 			case 'Visuals and UI':
 				#if android
-				removeVirtualPad();
+				removeTouchPad();
 				#end
 				openSubState(new options.VisualsUISubState());
 			case 'Gameplay':
 				#if android
-				removeVirtualPad();
+				removeTouchPad();
 				#end
 				openSubState(new options.GameplaySettingsSubState());
 				//放心吧 ，没用了
