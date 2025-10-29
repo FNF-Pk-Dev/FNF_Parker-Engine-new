@@ -68,11 +68,6 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		}
 
 		switch (Action){
-			case "controlExtend":
-				if (Type.getClass(FlxG.state) != PlayState || Type.getClass(FlxG.state) == PlayState && ClientPrefs.extraKeys >= 1) actions.add(add(buttonExtra1 = createMobileButton(FlxG.width * 0.5 - 44, FlxG.height * 0.5 - 127 * 0.5, "f", 0xFF0000)));
-				if (Type.getClass(FlxG.state) != PlayState || Type.getClass(FlxG.state) == PlayState && ClientPrefs.extraKeys >= 2) actions.add(add(buttonExtra2 = createMobileButton(FlxG.width * 0.5 - 44, FlxG.height * 0.5 - 127 * 0.5, "g", 0xFFFF00)));
-				if (Type.getClass(FlxG.state) != PlayState || Type.getClass(FlxG.state) == PlayState && ClientPrefs.extraKeys >= 3) actions.add(add(buttonExtra3 = createMobileButton(FlxG.width * 0.5 - 44, FlxG.height * 0.5 - 127 * 0.5, "x", 0x99062D)));
-				if (Type.getClass(FlxG.state) != PlayState || Type.getClass(FlxG.state) == PlayState && ClientPrefs.extraKeys >= 4) actions.add(add(buttonExtra4 = createMobileButton(FlxG.width * 0.5 - 44, FlxG.height * 0.5 - 127 * 0.5, "y", 0x4A35B9)));
 			case "NONE":
 		}
 	}
