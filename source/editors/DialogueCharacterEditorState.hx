@@ -162,7 +162,7 @@ class DialogueCharacterEditorState extends MusicBeatState
 		updateCharTypeBox();
 
 		#if android
-		addVirtualPad(FULL, A_B_X_Y);
+		addTouchPad("FULL", "A_B_X_Y");
 		addPadCamera();
 		#end
 		
@@ -546,7 +546,7 @@ class DialogueCharacterEditorState extends MusicBeatState
 			//lots of Ifs lol get trolled
 			var offsetAdd:Int = 1;
 			var speed:Float = 300;
-			if(FlxG.keys.pressed.SHIFT #if android || _virtualpad.buttonB.justPressed #end) {
+			if(FlxG.keys.pressed.SHIFT #if android || _touchpad.buttonB.justPressed #end) {
 				speed = 1200;
 				offsetAdd = 10;
 			}
@@ -618,7 +618,7 @@ class DialogueCharacterEditorState extends MusicBeatState
 					hudGroup.visible = !hudGroup.visible;
 				}
 			}
-			if(FlxG.keys.justPressed.R #if android || _virtualpad.buttonY.justPressed #end) {
+			if(FlxG.keys.justPressed.R #if android || _touchpad.buttonY.justPressed #end) {
 				camGame.zoom = 1;
 				mainGroup.setPosition(0, 0);
 				hudGroup.visible = true;
