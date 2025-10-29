@@ -20,10 +20,10 @@ class MobileData
 		save = new FlxSave();
 		save.bind('MobileControls', CoolUtil.getSavePath());
 
-		readDirectory(Paths.getPreloadPath('mobile/MobileButton/DPadModes'), dpadModes);
-		readDirectory(Paths.getPreloadPath('mobile/MobileButton/ActionModes'), actionModes);
+		readDirectory(Paths.getPreloadPath('moblie/MobileButton/DPadModes'), dpadModes);
+		readDirectory(Paths.getPreloadPath('moblie/MobileButton/ActionModes'), actionModes);
 		#if MODS_ALLOWED
-		for (folder in directoriesWithFile(Paths.getPreloadPath(), 'mobile/MobileButton/'))
+		for (folder in directoriesWithFile(Paths.getPreloadPath(), 'moblie/MobileButton/'))
 		{
 			readDirectory(Path.join([folder, 'DPadModes']), dpadModes);
 			readDirectory(Path.join([folder, 'ActionModes']), actionModes);
