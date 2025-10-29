@@ -80,7 +80,7 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 	public function createTouchButton(x:Float, y:Float, Frames:String, ?ColorS:Int = 0xFFFFFF, ?Sizeable = false, ?ExtraSizeable:Bool = false):MobileButton {
 	    var button = new MobileButton(x, y);
 		button.label = new FlxSprite();
-		final buttonPath:Dynamic = 'assets/moblie/touchpad/original/${Frames.toUpperCase()}');
+		final buttonPath:Dynamic = 'assets/moblie/touchpad/original/${Frames.toUpperCase()}';
 		final bgPath:Dynamic = 'assets/moblie/touchpad/original/bg';
 			
 		if (Frames == "modding" && FileSystem.exists(buttonPath)) button.loadGraphic(buttonPath);
