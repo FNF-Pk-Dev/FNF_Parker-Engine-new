@@ -17,7 +17,7 @@ import android.FlxHitbox;
 import android.FlxNewHitbox;
 import android.hitboxskin.*;
 import android.FlxTouchPad;
-//import flixel.ui.FlxButton;
+import flixel.ui.FlxButton;
 import android.flixel.MobileButton;
 import android.flixel.FlxButton as FlxNewButton;
 #end
@@ -430,6 +430,13 @@ class Controls extends FlxActionSet
 		action.add(input);
 	}
 	
+	public function addbuttonuOldNOTES(action:FlxActionDigital, button:FlxButton, state:FlxInputState) 
+	{
+		var input = new FlxActionInputDigitalIFlxInput(button, state);
+		trackedinputsNOTES.push(input);
+		action.add(input);
+	}
+	
 	//rework later
 	public function addButtonNOTES(action:FlxActionDigital, button:FlxNewButton, state:FlxInputState)
 	{
@@ -453,10 +460,10 @@ class Controls extends FlxActionSet
 
 	public function setHitBox(hitbox:FlxHitbox) 
 	{
-		inline forEachBound(Control.NOTE_UP, (action, state) -> addbuttonuNOTES(action, hitbox.buttonUp, state));
-		inline forEachBound(Control.NOTE_DOWN, (action, state) -> addbuttonuNOTES(action, hitbox.buttonDown, state));
-		inline forEachBound(Control.NOTE_LEFT, (action, state) -> addbuttonuNOTES(action, hitbox.buttonLeft, state));
-		inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addbuttonuNOTES(action, hitbox.buttonRight, state));	
+		inline forEachBound(Control.NOTE_UP, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonUp, state));
+		inline forEachBound(Control.NOTE_DOWN, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonDown, state));
+		inline forEachBound(Control.NOTE_LEFT, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonLeft, state));
+		inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonRight, state));	
 	}
 	
 	
