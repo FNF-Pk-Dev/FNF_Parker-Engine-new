@@ -77,7 +77,7 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		return createTouchButton(x, y, Frames, ColorS);
 	}
 	
-	private function createButton(X:Float, Y:Float, Graphic:String, ?Color:FlxColor = 0xFFFFFF):TouchButton
+	private function createTouchButton(X:Float, Y:Float, Graphic:String, ?Color:FlxColor = 0xFFFFFF):TouchButton
 	{
 		var button = new MobileButton(X, Y);
 		button.label = new FlxSprite();
