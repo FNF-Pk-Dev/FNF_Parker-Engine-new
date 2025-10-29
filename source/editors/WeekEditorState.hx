@@ -641,7 +641,7 @@ class WeekEditorFreeplayState extends MusicBeatState
 		changeSelection();
 
 		#if android
-		addVirtualPad(UP_DOWN, NONE);
+		addTouchPad("UP_DOWN", "NONE");
 		#end
 
 		super.create();
