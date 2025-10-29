@@ -11,6 +11,7 @@ import android.FlxHitbox;
 import android.FlxNewHitbox;
 import android.AndroidControls.Config;
 import android.FlxTouchPad;
+import android.flixel.MobileButton;
 
 using StringTools;
 
