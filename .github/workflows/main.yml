@@ -20,7 +20,7 @@ jobs:
 
   buildAndroid:
     name: buildAndroid
-    runs-on: ubuntu-24.04
+    runs-on: macos-15
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -133,6 +133,7 @@ jobs:
             export/release/android/obj/
           restore-keys: |
             cache-build-android
+
 
 
 
