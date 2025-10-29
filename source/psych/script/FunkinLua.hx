@@ -3799,14 +3799,6 @@ class LuaSState extends MusicBeatState
 	startLuasOnFolder('states/' + fileName + '.lua');
 	}
 
-	#if android
-	setOnLuas("addVirtualPad", function(dpad:String, acttt:String){
-	addVirtualPad(stringToDPadMode(dpad), stringToActionMode(acttt));
-	});
-	setOnLuas("removeVirtualPad", removeVirtualPad);
-	setOnLuas("addVirtualPadButton", addPadCamera);
-	#end
-
     callOnLuas("onLoad", []);
 }
 	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
