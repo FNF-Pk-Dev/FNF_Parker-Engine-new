@@ -84,12 +84,12 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		final bgPath:Dynamic = 'assets/moblie/touchpad/original/bg';
 			
 		if (Frames == "modding" && FileSystem.exists(buttonPath)) button.loadGraphic(buttonPath);
-		if (Frames == "modding" && !FileSystem.exists(buttonPath)) button.loadGraphic('assets/moblie/touchpad/original/${Frames.toUpperCase()}'));
+		if (Frames == "modding" && !FileSystem.exists(buttonPath)) button.loadGraphic('assets/moblie/touchpad/original/${Frames.toUpperCase()}');
 		else if (FileSystem.exists(bgPath)) button.loadGraphic(bgPath);
 		else button.loadGraphic('assets/moblie/touchpad/original/bg');
 		
 		if (Frames != "modding" && FileSystem.exists(buttonPath)) button.label.loadGraphic(buttonPath);
-		else if (Frames != "modding" && !FileSystem.exists(buttonPath)) button.label.loadGraphic('assets/moblie/touchpad/original/${Frames.toUpperCase()}'));
+		else if (Frames != "modding" && !FileSystem.exists(buttonPath)) button.label.loadGraphic('assets/moblie/touchpad/original/${Frames.toUpperCase()}');
 
 		button.scale.set(0.243, 0.243);
 		button.updateHitbox();
