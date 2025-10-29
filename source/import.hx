@@ -1,5 +1,13 @@
 #if !macro
 import backend.Paths;
+
+#if sys
+import sys.*;
+import sys.io.*;
+#elseif js
+import js.html.*;
+#end
+
 import backend.songs.Section.SwagSection;
 import backend.songs.Song.SwagSong;
 import backend.game.WeekData.WeekFile;
