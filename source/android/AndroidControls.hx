@@ -30,7 +30,7 @@ class Config {
 		return save.data.buttonsmode[0];
 	}
 
-	public function savecustom(_pad:FlxVirtualPad) {
+	public function savecustom(_pad:FlxTouchPad) {
 		if (save.data.buttons == null)
 		{
 			save.data.buttons = new Array();
@@ -47,7 +47,7 @@ class Config {
 		save.flush();
 	}
 
-	public function loadcustom(_pad:FlxVirtualPad):FlxVirtualPad {
+	public function loadcustom(_pad:FlxTouchPad):FlxTouchPad {
 		if (save.data.buttons == null) 
 			return _pad;
 		var tempCount:Int = 0;
