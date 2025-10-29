@@ -80,16 +80,16 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 	public function createTouchButton(x:Float, y:Float, Frames:String, ?ColorS:Int = 0xFFFFFF, ?Sizeable = false, ?ExtraSizeable:Bool = false):MobileButton {
 	    var button = new MobileButton(x, y);
 		button.label = new FlxSprite();
-		final buttonPath:Dynamic = 'assets/moblie/touchpad/original/${Frames.toUpperCase()}';
-		final bgPath:Dynamic = 'assets/moblie/touchpad/original/bg';
+		final buttonPath:Dynamic = 'assets/moblie/TouchPad/original/${Frames.toUpperCase()}';
+		final bgPath:Dynamic = 'assets/moblie/TouchPad/original/bg';
 			
 		if (Frames == "modding" && FileSystem.exists(buttonPath)) button.loadGraphic(buttonPath);
-		if (Frames == "modding" && !FileSystem.exists(buttonPath)) button.loadGraphic('assets/moblie/touchpad/original/${Frames.toUpperCase()}');
+		if (Frames == "modding" && !FileSystem.exists(buttonPath)) button.loadGraphic('assets/moblie/TouchPad/original/${Frames.toUpperCase()}');
 		else if (FileSystem.exists(bgPath)) button.loadGraphic(bgPath);
-		else button.loadGraphic('assets/moblie/touchpad/original/bg');
+		else button.loadGraphic('assets/moblie/TouchPad/original/bg');
 		
 		if (Frames != "modding" && FileSystem.exists(buttonPath)) button.label.loadGraphic(buttonPath);
-		else if (Frames != "modding" && !FileSystem.exists(buttonPath)) button.label.loadGraphic('assets/moblie/touchpad/original/${Frames.toUpperCase()}');
+		else if (Frames != "modding" && !FileSystem.exists(buttonPath)) button.label.loadGraphic('assets/moblie/TouchPad/original/${Frames.toUpperCase()}');
 
 		button.scale.set(0.243, 0.243);
 		button.updateHitbox();
