@@ -29,7 +29,7 @@ class AndroidControlsMenu extends MusicBeatState
 	var controlitems:Array<String> = ['Pad-Right','Pad-Left','Pad-Custom','Duo','Hitbox','Keyboard'];
 	var curSelected:Int = 0;
 	var buttonistouched:Bool = false;
-	var bindbutton:android.flixel.MobileButton;
+	var bindbutton:MobileButton;
 	var config:Config;
 
 	override public function create():Void
@@ -248,7 +248,7 @@ class AndroidControlsMenu extends MusicBeatState
 		}
 	}
 
-	function movebutton(touch:flixel.input.touch.FlxTouch, button:android.flixel.MobileButton) {
+	function movebutton(touch:flixel.input.touch.FlxTouch, button:MobileButton) {
 		button.x = touch.x - vpad.buttonUp.width / 2;
 		button.y = touch.y - vpad.buttonUp.height / 2;
 		bindbutton = button;
