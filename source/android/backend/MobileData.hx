@@ -31,7 +31,7 @@ class MobileData
 		#end
 	}
 
-	public static function setMobilePadCustom(mobilePad:MobilePad):Void
+	public static function setMobilePadCustom(mobilePad:FlxTouchPad):Void
 	{
 		if (save.data.buttons == null)
 		{
@@ -52,7 +52,7 @@ class MobileData
 		save.flush();
 	}
 
-	public static function getMobilePadCustom(mobilePad:MobilePad):MobilePad
+	public static function getMobilePadCustom(mobilePad:FlxTouchPad):FlxTouchPad
 	{
 		var tempCount:Int = 0;
 
