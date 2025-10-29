@@ -29,7 +29,7 @@ class AndroidControlsMenu extends MusicBeatState
 	var controlitems:Array<String> = ['Pad-Right','Pad-Left','Pad-Custom','Duo','Hitbox','Keyboard'];
 	var curSelected:Int = 0;
 	var buttonistouched:Bool = false;
-	var bindbutton:FlxButton;
+	var bindbutton:android.flixel.MobileButton;
 	var config:Config;
 
 	override public function create():Void
