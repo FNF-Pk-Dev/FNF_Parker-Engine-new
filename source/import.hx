@@ -33,6 +33,7 @@ import script.hscript.*;
 // States
 import android.backend.*;
 import android.*;
+import android.flixel.*;
 
 import flixel.system.FlxSound;
 import flixel.FlxG;
