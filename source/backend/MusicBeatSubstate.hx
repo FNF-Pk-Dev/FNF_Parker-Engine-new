@@ -11,7 +11,7 @@ import sys.io.File;
 #end
 #if android
 import flixel.input.actions.FlxActionInput;
-import android.FlxVirtualPad;
+import android.FlxTouchPad;
 #end
 
 class MusicBeatSubstate extends FlxSubState
@@ -88,16 +88,16 @@ class MusicBeatSubstate extends FlxSubState
 	}
 
 	#if android
-	var _virtualpad:FlxVirtualPad;
+	var _touchpad:FlxTouchPad;
 	var trackedinputsUI:Array<FlxActionInput> = [];
 	var trackedinputsNOTES:Array<FlxActionInput> = [];
 	#end
 	
 	#if android
-	public function addVirtualPad(?DPad:FlxDPadMode, ?Action:FlxActionMode) {
-		_virtualpad = new FlxVirtualPad(DPad, Action, 0.75, ClientPrefs.globalAntialiasing);
-		add(_virtualpad);
-		controls.setVirtualPadUI(_virtualpad, DPad, Action);
+	public function addTouchPad(?DPad:String, ?Action:String) {
+		_touchpad = new FlxTouchPad(DPad, Action);
+		add(_touchpad);
+		controls.setTouchPadUI(_touchpad, DPad, Action);
 		trackedinputsUI = controls.trackedinputsUI;
 		controls.trackedinputsUI = [];
 	}
@@ -106,7 +106,7 @@ class MusicBeatSubstate extends FlxSubState
 	#if android
 	public function removeVirtualPad() {
 		controls.removeFlxInput(trackedinputsUI);
-		remove(_virtualpad);
+		remove(_touchpad);
 	}
 	#end
 
@@ -115,13 +115,13 @@ class MusicBeatSubstate extends FlxSubState
 		var camcontrol = new flixel.FlxCamera();
 		camcontrol.bgColor.alpha = 0;
 		FlxG.cameras.add(camcontrol, false);
-		_virtualpad.cameras = [camcontrol];
+		_touchpad.cameras = [camcontrol];
 	}
 	#end
 	
 	override function destroy() {
 		#if android
-		if (_virtualpad != null){
+		if (_touchpad != null){
 		if (trackedinputsUI != [])
 		controls.removeFlxInput(trackedinputsUI);
 	    }
