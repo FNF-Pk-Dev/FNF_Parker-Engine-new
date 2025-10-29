@@ -102,7 +102,7 @@ class MusicBeatState extends FlxUIState
 		return backend.player.PlayerSettings.player1.controls;
 
 	#if android
-	public var _virtualpad:FlxVirtualPad;
+	public var _touchpad:FlxTouchPad;
 	public var _joyStick:FlxJoyStick;
 	public var androidc:AndroidControls;
 	public var trackedinputsUI:Array<FlxActionInput> = [];
@@ -110,10 +110,10 @@ class MusicBeatState extends FlxUIState
 	#end
 	
 	#if android
-	public function addVirtualPad(?DPad:FlxDPadMode, ?Action:FlxActionMode) {
-		_virtualpad = new FlxVirtualPad(DPad, Action, 0.75, ClientPrefs.globalAntialiasing);
-		add(_virtualpad);
-		controls.setVirtualPadUI(_virtualpad, DPad, Action);
+	public function addTouchPad(?DPad:String, ?Action:String) {
+		_touchpad = new FlxTouchPad(DPad, Action);
+		add(_touchpad);
+		controls.setTouchPadUI(_touchpad, DPad, Action);
 		trackedinputsUI = controls.trackedinputsUI;
 		controls.trackedinputsUI = [];
 	}
@@ -124,9 +124,9 @@ class MusicBeatState extends FlxUIState
 	#end
 
 	#if android
-	public function removeVirtualPad() {
+	public function removeTouchPad() {
 		controls.removeFlxInput(trackedinputsUI);
-		remove(_virtualpad);
+		remove(_touchpad);
 	}
 	#end
 
@@ -137,9 +137,9 @@ class MusicBeatState extends FlxUIState
 		switch (androidc.mode)
 		{
 			case VIRTUALPAD_RIGHT | VIRTUALPAD_LEFT | VIRTUALPAD_CUSTOM:
-				controls.setVirtualPadNOTES(androidc.vpad, FULL, NONE);
+				controls.setTouchPadNOTES(androidc.vpad, FULL, NONE);
 			case DUO:
-				controls.setVirtualPadNOTES(androidc.vpad, DUO, NONE);
+				controls.setTouchPadNOTES(androidc.vpad, DUO, NONE);
 			case HITBOX:
 			   if(ClientPrefs.hitboxmode == 'New'){
 				controls.setNewHitBox(androidc.newhbox);
@@ -170,17 +170,17 @@ class MusicBeatState extends FlxUIState
 	#end
 
 	#if android
-        public function addPadCamera() {
+    public function addPadCamera() {
 		var camcontrol = new flixel.FlxCamera();
 		camcontrol.bgColor.alpha = 0;
 		FlxG.cameras.add(camcontrol, false);
-		_virtualpad.cameras = [camcontrol];
+		_touchpad.cameras = [camcontrol];
 	}
 	#end
 	
 	override function destroy() {
 		#if android
-		if (_virtualpad != null){
+		if (_touchpad != null){
 		if (trackedinputsUI != [])
 		controls.removeFlxInput(trackedinputsUI);
 		}
