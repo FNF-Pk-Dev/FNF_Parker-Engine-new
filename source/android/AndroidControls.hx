@@ -5,7 +5,7 @@ import flixel.group.FlxSpriteGroup;
 import flixel.util.FlxSave;
 import flixel.math.FlxPoint;
 
-import android.FlxVirtualPad;
+import android.FlxTouchPad;
 import android.FlxHitbox;
 import android.hitboxskin.*;
 
