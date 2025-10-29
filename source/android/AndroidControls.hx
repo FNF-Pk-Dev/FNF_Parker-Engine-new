@@ -129,7 +129,7 @@ class AndroidControls extends FlxSpriteGroup {
 				oldhbox = new Old();
 				add(oldhbox);
 			default:
-				vpad = new MobilePad("RIGHT_FULL", "controlExtend");
+				vpad = new FlxTouchPad("RIGHT_FULL", "controlExtend");
 				add(vpad);				
 		}
 	}
