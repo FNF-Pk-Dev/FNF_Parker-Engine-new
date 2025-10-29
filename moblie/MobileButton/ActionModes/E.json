@@ -1,0 +1,11 @@
+{
+  "buttons": [
+    {
+      "button": "buttonE",
+      "graphic": "modding",
+      "x": 1148,
+      "y": 339,
+      "color": "-1"
+    }
+  ]
+}
