@@ -7,7 +7,7 @@ import openfl.utils.Assets;
 
 //More button support (Some buttons doesn't have a texture)
 @:build(android.macros.ButtonMacro.createButtons(["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","SELECTOR"]))
-@:build(android.macros.ButtonMacro.createExtraButtons(30)) //Psych Extended Allows to Create 30 Extra Button with Json for now
+@:build(android.macros.ButtonMacro.createExtraButtons(30)) 
 class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 	//DPad
 	public var buttonLeft:MobileButton = new MobileButton(0, 0);
