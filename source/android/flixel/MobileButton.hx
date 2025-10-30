@@ -384,7 +384,7 @@ class TypedMobileButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 
 	public function updateLabelPosition()
 	{
-		if (_spriteLabel != null && ClientPrefs.data.virtualpadTexture != 'TouchPad')
+		if (_spriteLabel != null)
 		{
 		    _spriteLabel.x = ((width - _spriteLabel.width) / 2) + (pixelPerfectPosition ? Math.floor(x) : x);
  			_spriteLabel.y = ((height - _spriteLabel.height) / 2) + (pixelPerfectPosition ? Math.floor(y) : y);
