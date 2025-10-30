@@ -66,10 +66,6 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 				actions.add(add(Reflect.field(this, buttonData.button)));
 			}
 		}
-
-		switch (Action){
-			case "NONE":
-		}
 	}
 
 	public function createMobileButton(x:Float, y:Float, Frames:String, ColorS:Int, ?bg:String):Dynamic
@@ -81,8 +77,8 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 	{
 		var button = new MobileButton(X, Y);
 		button.label = new FlxSprite();
-		button.loadGraphic(Paths.image('MobileButton/TouchPad/original/bg', "moblie"));
-		button.label.loadGraphic(Paths.image('MobileButton/TouchPad/original/${Graphic.toUpperCase()}', "moblie"));
+		button.loadGraphic(Paths.image('touchpad/original/bg'));
+		button.label.loadGraphic(Paths.image('touchpad/original/${Graphic.toUpperCase()}'));
 
 		button.scale.set(0.243, 0.243);
 		button.updateHitbox();
