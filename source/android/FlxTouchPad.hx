@@ -66,6 +66,8 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 				actions.add(add(Reflect.field(this, buttonData.button)));
 			}
 		}
+
+		alpha = ClientPrefs.virtualPadAlpha;
 	}
 
 	public function createMobileButton(x:Float, y:Float, Frames:String, ColorS:Int, ?bg:String):Dynamic
@@ -139,5 +141,11 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		for (field in Reflect.fields(this))
 			if (Std.isOfType(Reflect.field(this, field), MobileButton))
 				Reflect.setField(this, field, FlxDestroyUtil.destroy(Reflect.field(this, field)));
+	}
+
+	override function set_alpha(Value):Float
+	{
+		forEachAlive((button:MobileButton) -> button.parentAlpha = Value);
+		return super.set_alpha(Value);
 	}
 }
