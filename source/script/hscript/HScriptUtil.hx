@@ -277,185 +277,185 @@ class HScriptUtil extends HScript
 
 class HScriptState extends MusicBeatState
 {
-	var file:String = '';
-	var stateScript:FunkinHScript;
+// 	var file:String = '';
+// 	var stateScript:FunkinHScript;
 
-	public function new(fileName:String, globalss:Bool = false)
-{
-	super(false);
+// 	public function new(fileName:String, globalss:Bool = false)
+// {
+// 	super(false);
 
-	var foundFile = false;
-    stateScript = new FunkinHScript();
-	stateScript.onAddScript.push(adds);
-	trace(fileName);
-	if (globalss)
-	initScript(fileName);
-	else
-	{
-	initHScript(fileName);
-	}
+// 	var foundFile = false;
+//     stateScript = new FunkinHScript();
+// 	stateScript.onAddScript.push(adds);
+// 	trace(fileName);
+// 	if (globalss)
+// 	initScript(fileName);
+// 	else
+// 	{
+// 	initHScript(fileName);
+// 	}
 
-    stateScript.executeAllFunc("onLoad");
-}
-	function adds(script:HScript)
-	{
-	set("this", this);
-	set("add", add);
-	set("remove", remove);
-	set("insert", insert);
-	set("members", members);
-	set("onLoad", function() {});
-	set("onCreate", function() {});
-	set("onCreatePost", function() {});
-	set("onUpdatePost", function(elapsed:Float) {});
-	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
+//     stateScript.executeAllFunc("onLoad");
+// }
+// 	function adds(script:HScript)
+// 	{
+// 	set("this", this);
+// 	set("add", add);
+// 	set("remove", remove);
+// 	set("insert", insert);
+// 	set("members", members);
+// 	set("onLoad", function() {});
+// 	set("onCreate", function() {});
+// 	set("onCreatePost", function() {});
+// 	set("onUpdatePost", function(elapsed:Float) {});
+// 	// TODO: use a macro to auto-generate code to variables.set all variables/methods of MusicBeatState
 
-	set("get_controls", function()
-	{
-		return PlayerSettings.player1.controls;
-	});
-	set("controls", PlayerSettings.player1.controls);
-	}
-	function initHScript(name:String)
-	{
-		if (stateScript == null)
-			return;
+// 	set("get_controls", function()
+// 	{
+// 		return PlayerSettings.player1.controls;
+// 	});
+// 	set("controls", PlayerSettings.player1.controls);
+// 	}
+// 	function initHScript(name:String)
+// 	{
+// 		if (stateScript == null)
+// 			return;
 
-		var scriptData:Map<String, String> = [];
+// 		var scriptData:Map<String, String> = [];
 
-		var hx:Null<String> = null;
+// 		var hx:Null<String> = null;
 
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('states/' + '$name.$extn');
-			trace(path);
-			if (FileSystem.exists(path))
-			{
+// 		for (extn in HScriptUtil.extns)
+// 		{
+// 			var path:String = Paths.modFolders('states/' + '$name.$extn');
+// 			trace(path);
+// 			if (FileSystem.exists(path))
+// 			{
 				
-				hx = File.getContent(path);
-				break;
-			}
+// 				hx = File.getContent(path);
+// 				break;
+// 			}
 
-		}
+// 		}
 
-		if (stateScript.getScriptByTag(name) == null)
-			stateScript.addScript(name).executeString(hx);
-		else
-		{
-			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
-		}
+// 		if (stateScript.getScriptByTag(name) == null)
+// 			stateScript.addScript(name).executeString(hx);
+// 		else
+// 		{
+// 			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
+// 		}
 
-		//stateScript.executeAllFunc("onCreate");
-	}
-	function initScript(name:String)
-	{
-		if (stateScript == null)
-			return;
+// 		//stateScript.executeAllFunc("onCreate");
+// 	}
+// 	function initScript(name:String)
+// 	{
+// 		if (stateScript == null)
+// 			return;
 
-		var scriptData:Map<String, String> = [];
+// 		var scriptData:Map<String, String> = [];
 
-		var hx:Null<String> = null;
+// 		var hx:Null<String> = null;
 
-		for (extn in HScriptUtil.extns)
-		{
-			var path:String = Paths.modFolders('states/' + name);
-			trace(path);
-			if (FileSystem.exists(path))
-			{
+// 		for (extn in HScriptUtil.extns)
+// 		{
+// 			var path:String = Paths.modFolders('states/' + name);
+// 			trace(path);
+// 			if (FileSystem.exists(path))
+// 			{
 				
-				hx = File.getContent(path);
-				break;
-			}
+// 				hx = File.getContent(path);
+// 				break;
+// 			}
 
-		}
+// 		}
 
-		if (stateScript.getScriptByTag(name) == null)
-			stateScript.addScript(name).executeString(hx);
-		else
-		{
-			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
-		}
+// 		if (stateScript.getScriptByTag(name) == null)
+// 			stateScript.addScript(name).executeString(hx);
+// 		else
+// 		{
+// 			stateScript.getScriptByTag(name).error("Duplacite Script Error!", 'global: Duplicate Script');
+// 		}
 
-		//stateScript.executeAllFunc("onCreate");
-	}
+// 		//stateScript.executeAllFunc("onCreate");
+// 	}
 
-	override function create()
-	{
-		// UPDATE: realised I should be using the "on" prefix just so if a script needs to call an internal function it doesnt cause issues
-		// (Also need to figure out how to give the super to the classes incase that's needed in the on[function] funcs though honestly thats what the post functions are for)
-		// I'd love to modify HScript to add override specifically for troll engine hscript
-		// THSCript...
+// 	override function create()
+// 	{
+// 		// UPDATE: realised I should be using the "on" prefix just so if a script needs to call an internal function it doesnt cause issues
+// 		// (Also need to figure out how to give the super to the classes incase that's needed in the on[function] funcs though honestly thats what the post functions are for)
+// 		// I'd love to modify HScript to add override specifically for troll engine hscript
+// 		// THSCript...
 
-		// onCreate is used when the script is created so lol
-		if (stateScript.executeAllFunc("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
-			return;
+// 		// onCreate is used when the script is created so lol
+// 		if (stateScript.executeAllFunc("onCreate", []) == FunkinLua.Function_Stop) // idk why you'd return stop on create on a hscriptstate but.. sure
+// 			return;
 
-		super.create();
-		stateScript.executeAllFunc("onCreatePost");
-	}
+// 		super.create();
+// 		stateScript.executeAllFunc("onCreatePost");
+// 	}
 
-	override function update(e:Float)
-	{
-		if (stateScript.executeAllFunc("onUpdate", [e]) == FunkinLua.Function_Stop)
-			return;
+// 	override function update(e:Float)
+// 	{
+// 		if (stateScript.executeAllFunc("onUpdate", [e]) == FunkinLua.Function_Stop)
+// 			return;
 
-		super.update(e);
+// 		super.update(e);
 
-		stateScript.executeAllFunc("onUpdatePost", [e]);
-	}
+// 		stateScript.executeAllFunc("onUpdatePost", [e]);
+// 	}
 
-	static var switchToDeprecation = false;
+// 	static var switchToDeprecation = false;
 
-	override function switchTo(s:FlxState)
-	{
-		if (!switchToDeprecation)
-		{
-			trace("switchTo is deprecated. Consider using startOutro");
-			switchToDeprecation = true;
-		}
-		if (stateScript.executeAllFunc("onSwitchTo", [s]) == FunkinLua.Function_Stop)
-			return false;
+// 	override function switchTo(s:FlxState)
+// 	{
+// 		if (!switchToDeprecation)
+// 		{
+// 			trace("switchTo is deprecated. Consider using startOutro");
+// 			switchToDeprecation = true;
+// 		}
+// 		if (stateScript.executeAllFunc("onSwitchTo", [s]) == FunkinLua.Function_Stop)
+// 			return false;
 
-		super.switchTo(s);
+// 		super.switchTo(s);
 
-		stateScript.executeAllFunc("onSwitchToPost", [s]);
-		return true;
-	}
+// 		stateScript.executeAllFunc("onSwitchToPost", [s]);
+// 		return true;
+// 	}
 
-	override function startOutro(onOutroFinished:() -> Void)
-	{
-		final currentState = FlxG.state;
+// 	override function startOutro(onOutroFinished:() -> Void)
+// 	{
+// 		final currentState = FlxG.state;
 
-		if (stateScript.executeAllFunc("onStartOutro", [onOutroFinished]) == FunkinLua.Function_Stop)
-			return;
+// 		if (stateScript.executeAllFunc("onStartOutro", [onOutroFinished]) == FunkinLua.Function_Stop)
+// 			return;
 
-		if (FlxG.state == currentState) // if "onOutroFinished" wasnt called by the func above ^ then call onOutroFinished for it
-			onOutroFinished(); // same as super.startOutro(onOutroFinished)
+// 		if (FlxG.state == currentState) // if "onOutroFinished" wasnt called by the func above ^ then call onOutroFinished for it
+// 			onOutroFinished(); // same as super.startOutro(onOutroFinished)
 
-		stateScript.executeAllFunc("onStartOutroPost", []);
-	}
+// 		stateScript.executeAllFunc("onStartOutroPost", []);
+// 	}
 
-	override function beatHit()
-	{
-		stateScript.executeAllFunc("onBeatHit");
-		super.beatHit();
-	}
+// 	override function beatHit()
+// 	{
+// 		stateScript.executeAllFunc("onBeatHit");
+// 		super.beatHit();
+// 	}
 
-	override function stepHit()
-	{
-		stateScript.executeAllFunc("onStepHit");
-		super.stepHit();
-	}
+// 	override function stepHit()
+// 	{
+// 		stateScript.executeAllFunc("onStepHit");
+// 		super.stepHit();
+// 	}
 
-	override function destroy()
-	{
-		if (stateScript.executeAllFunc("onDestroy", []) == FunkinLua.Function_Stop)
-			return;
+// 	override function destroy()
+// 	{
+// 		if (stateScript.executeAllFunc("onDestroy", []) == FunkinLua.Function_Stop)
+// 			return;
 
-		super.destroy();
+// 		super.destroy();
 
-		stateScript.executeAllFunc("onDestroyPost", []);
-	}
+// 		stateScript.executeAllFunc("onDestroyPost", []);
+// 	}
 }
 
 
