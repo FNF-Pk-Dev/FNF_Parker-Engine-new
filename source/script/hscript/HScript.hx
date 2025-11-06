@@ -15,10 +15,10 @@ import openfl.Assets;
 import com.hurlant.crypto.encoding.binary.Base64;
 import backend.Paths;
 #if LUA_ALLOWED
-import llua.Lua;
-import llua.LuaL;
-import llua.State;
-import llua.Convert;
+import luau.Lua;
+import luau.LuaL;
+import luau.State;
+import luau.Convert;
 import psych.script.FunkinLua;
 #end
 import crowplexus.iris.IrisConfig;
