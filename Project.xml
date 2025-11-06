@@ -145,7 +145,7 @@
 	<haxelib name="haxe-crypto" />
 	<haxelib name="flxgif" />
 	<haxelib name="hxvlc" if="VIDEOS_ALLOWED" />
-	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
+	<haxelib name="hxluau" if="LUA_ALLOWED"/>
 	<haxelib name="lscript" if="LUA_ALLOWED"/>
 	<haxelib name="pyscript" if="PYTHON_ALLOWED"/>
 	<haxelib name="faxe" if='switch'/>
@@ -209,6 +209,7 @@
 	<icon path="art/icon64.png" size='64'/>
 	<icon path="art/iconOG.png" />
 </project>
+
 
 
 
