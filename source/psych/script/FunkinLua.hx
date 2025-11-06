@@ -2,10 +2,10 @@ package psych.script;
 
 import openfl.display.BitmapData;
 #if LUA_ALLOWED
-import llua.Lua;
-import llua.LuaL;
-import llua.State;
-import llua.Convert;
+import luau.Lua;
+import luau.LuaL;
+import luau.State;
+import luau.Convert;
 #end
 
 import animateatlas.AtlasFrameMaker;
