@@ -2671,10 +2671,6 @@ class PlayState extends MusicBeatState
 				}
 			}
 
-			FlxTimer.globalManager.forEach(function(tmr:FlxTimer) if (!tmr.finished)
-				tmr.active = false);
-			FlxTween.globalManager.forEach(function(twn:FlxTween) if (!twn.finished)
-				twn.active = false);
 
 			for (tween in modchartTweens) {
 				tween.active = false;
@@ -3312,10 +3308,7 @@ class PlayState extends MusicBeatState
 
 				persistentUpdate = false;
 				persistentDraw = false;
-				FlxTimer.globalManager.forEach(function(tmr:FlxTimer) if (!tmr.finished)
-					tmr.active = true);
-				FlxTween.globalManager.forEach(function(twn:FlxTween) if (!twn.finished)
-					twn.active = true);
+
 				for (tween in modchartTweens) {
 					tween.active = true;
 				}
