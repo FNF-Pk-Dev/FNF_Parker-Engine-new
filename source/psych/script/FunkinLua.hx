@@ -2,10 +2,12 @@ package psych.script;
 
 import openfl.display.BitmapData;
 #if LUA_ALLOWED
-import luau.Lua;
-import luau.LuaL;
-import luau.State;
-import luau.Convert;
+import llua.Lua;
+import llua.LuaL;
+import llua.State;
+import llua.Convert;
+import llua.LuaRequire;
+import llua.*;
 #end
 
 import animateatlas.AtlasFrameMaker;
@@ -106,6 +108,7 @@ class FunkinLua extends GlobalScript {
 		#if LUA_ALLOWED
 		lua = LuaL.newstate();
 		LuaL.openlibs(lua);
+		Lua_helper.register_hxtrace(lua);
 		Lua.init_callbacks(lua);
 		
 
@@ -114,25 +117,40 @@ class FunkinLua extends GlobalScript {
 
 		//LuaL.dostring(lua, CLENSE);
 		
-		try{
-		    
-			var result:Dynamic = LuaL.dofile(lua, script);
-			var resultStr:String = Lua.tostring(lua, result);
-			if(resultStr != null && result != 0) {
-				trace('Error on lua script! ' + resultStr);
-				#if (windows || android)
-				CoolUtil.showPopUp(resultStr, 'Error on lua script!');
-				#else
-				luaTrace('Error loading lua script: "$script"\n' + resultStr, true, false, FlxColor.RED);
-				#end
-				lua = null;
-				return;
-				}
-		} catch(e:Dynamic) {
-			trace(e);
-			return;
-		}
+        try{
+            var code:String = Paths.getContent(script);
+			var bytecode = CodeGen.compileWithProfile(code, 'script');
+			CodeGen.loadBytecode(lua, bytecode, "optimized_script");
+			var status:Int = LuaL.luau_loadsource(lua, script, code);
+			if(status != Lua.LUA_OK) {
+                var resultStr:String = Lua.tostring(lua, -1);
+                Lua.pop(lua, 1);
+                trace('Error on lua script! ' + resultStr);
+                #if (windows || android)
+                CoolUtil.showPopUp(resultStr, 'Error on lua script!');
+                #else
+                luaTrace('Error loading lua script: "$script"\n' + resultStr, true, false, FlxColor.RED);
+                #end
+                Lua.close(lua);
+                lua = null;
+                return;
+            }
+			
+			// NOTE: Script is loaded but NOT executed yet!
+			// We need to register all functions first before executing the script.
+        } catch(e:Dynamic) {
+            trace(e);
+            if (lua != null) {
+                Lua.close(lua);
+                lua = null;
+            }
+            return;
+        }
 		scriptName = script;
+		
+		// Initialize require() function BEFORE executing script
+		LuaRequire.init(lua, ["./", "mods/", "scripts/", "data/"]);
+		
 		initHaxeModule();
 
 		trace('lua file loaded succesfully:' + script);
@@ -266,6 +284,21 @@ class FunkinLua extends GlobalScript {
 					FlxG.sound.music.pause();
 					PlayState.instance.vocals.pause();
 				}
+			}
+
+			var runStatus:Int = Lua.pcall(lua, 0, 0, 0);
+			if(runStatus != Lua.LUA_OK) {
+				var err:String = Lua.tostring(lua, -1);
+				Lua.pop(lua, 1);
+				trace('Error running lua script! ' + err);
+				#if (windows || android)
+				CoolUtil.showPopUp(err, 'Error running lua script!');
+				#else
+				luaTrace('Error running lua script: "$script"\n' + err, true, false, FlxColor.RED);
+				#end
+				Lua.close(lua);
+				lua = null;
+				return;
 			}
 			PlayState.instance.openSubState(new CustomSubstate(name));
 		});
@@ -3027,6 +3060,19 @@ class FunkinLua extends GlobalScript {
 			return list;
 		});
 		
+		// Require functions
+		set("addRequirePath", function(path:String) {
+			#if LUA_ALLOWED
+			LuaRequire.addPath(lua, path);
+			#end
+		});
+		
+		set("clearRequireCache", function(?modname:String) {
+			#if LUA_ALLOWED
+			LuaRequire.clearCache(lua, modname);
+			#end
+		});
+		
 		for (name => func in customFunctions)
 		{
 			if(func != null)
@@ -3039,6 +3085,23 @@ class FunkinLua extends GlobalScript {
 				Convert.toLua(lua, value);
 				Lua.setglobal(lua, i);
 			}
+		}
+
+		// NOW execute the loaded script after all functions are registered
+		trace('Executing lua script: ' + scriptName);
+		var runStatus:Int = Lua.pcall(lua, 0, 0, 0);
+		if(runStatus != Lua.LUA_OK) {
+			var err:String = Lua.tostring(lua, -1);
+			Lua.pop(lua, 1);
+			trace('Error running lua script! ' + err);
+			#if (windows || android)
+			CoolUtil.showPopUp(err, 'Error running lua script!');
+			#else
+			luaTrace('Error running lua script: "$scriptName"\n' + err, true, false, FlxColor.RED);
+			#end
+			Lua.close(lua);
+			lua = null;
+			return;
 		}
 
 		call('onCreate', []);
@@ -3566,32 +3629,8 @@ class FunkinLua extends GlobalScript {
 		try {
 			if(lua == null) return GlobalScript.Function_Continue;
 
-			Lua.getglobal(lua, func);
-			var type:Int = Lua.type(lua, -1);
-
-			if (type != Lua.LUA_TFUNCTION) {
-				if (type > Lua.LUA_TNIL)
-					luaTrace("ERROR (" + func + "): attempt to call a " + typeToString(type) + " value", false, false, FlxColor.RED);
-
-				Lua.pop(lua, 1);
-				return GlobalScript.Function_Continue;
-			}
-
-			for (arg in args) Convert.toLua(lua, arg);
-			var status:Int = Lua.pcall(lua, args.length, 1, 0);
-
-			// Checks if it's not successful, then show a error.
-			if (status != Lua.LUA_OK) {
-				var error:String = getErrorMessage(status);
-				luaTrace("ERROR (" + func + "): " + error, false, false, FlxColor.RED);
-				return GlobalScript.Function_Continue;
-			}
-
-			// If successful, pass and then return the result.
-			var result:Dynamic = cast Convert.fromLua(lua, -1);
+			var result:Dynamic = Convert.callLuaFunction(lua, func, args, false);
 			if (result == null) result = GlobalScript.Function_Continue;
-
-			Lua.pop(lua, 1);
 			if(closed) stop();
 			return result;
 		}
@@ -3697,6 +3736,10 @@ class FunkinLua extends GlobalScript {
 		if (Type.typeof(data) == TFunction)
 		{
 			Lua_helper.add_callback(lua, variable, data);
+			// CRITICAL: Also store in global function table for Luau compatibility
+			// This prevents "attempt to call a nil value" errors in scripts
+			Convert.toLua(lua, data);
+			Lua.setglobal(lua, variable);
 			return;
 		}
 
