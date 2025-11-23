@@ -9,6 +9,9 @@ import flixel.math.FlxPoint;
 import flixel.util.FlxTimer;
 import flixel.system.FlxSound;
 import flash.media.Sound;
+import flixel.text.FlxText;
+import flixel.util.FlxColor;
+import openfl.utils.Assets;
 
 using StringTools;
 
@@ -21,6 +24,9 @@ enum Alignment
 
 class Alphabet extends FlxSpriteGroup
 {
+	public var useFlxText:Bool = false;
+	public var flxText:FlxText;
+
 	public var text(default, set):String;
 
 	public var bold:Bool = false;
@@ -46,6 +52,27 @@ class Alphabet extends FlxSpriteGroup
 		this.startPosition.x = x;
 		this.startPosition.y = y;
 		this.bold = bold;
+
+		if (useFlxText)
+		{
+			flxText = new FlxText(0, 0, 0, text, 48);
+			var font:String = Paths.font("vcr.ttf");
+			if (Assets.exists(font, FONT)) {
+				font = Assets.getFont(font).fontName;
+			} else if (FileSystem.exists(font)) {
+				var loadedFont = openfl.text.Font.fromFile(font);
+				if(loadedFont != null) {
+					font = loadedFont.fontName;
+				}
+			}
+			
+			flxText.setFormat(font, bold ? 60 : 48, FlxColor.WHITE, LEFT, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+			flxText.borderSize = 2;
+			flxText.antialiasing = ClientPrefs.globalAntialiasing;
+			flxText.y += 10; // Vertical offset to match sprite baseline
+			add(flxText);
+		}
+
 		this.text = text;
 	}
 
@@ -71,6 +98,18 @@ class Alphabet extends FlxSpriteGroup
 
 	private function updateAlignment()
 	{
+		if (useFlxText && flxText != null) {
+			switch(alignment) {
+				case LEFT:
+					flxText.x = 0;
+				case CENTERED:
+					flxText.x = -flxText.width / 2;
+				case RIGHT:
+					flxText.x = -flxText.width;
+			}
+			return;
+		}
+
 		for (letter in letters)
 		{
 			var newOffset:Float = 0;
@@ -93,6 +132,15 @@ class Alphabet extends FlxSpriteGroup
 	private function set_text(newText:String)
 	{
 		newText = newText.replace('\\n', '\n');
+		if (useFlxText) {
+			if (flxText != null) {
+				flxText.text = newText;
+				updateAlignment();
+			}
+			this.text = newText;
+			return newText;
+		}
+
 		clearLetters();
 		createLetters(newText);
 		updateAlignment();
@@ -122,6 +170,12 @@ class Alphabet extends FlxSpriteGroup
 	{
 		if (value == scaleX) return value;
 
+		if (useFlxText && flxText != null) {
+			flxText.scale.x = value;
+			scaleX = value;
+			return value;
+		}
+
 		scale.x = value;
 		for (letter in letters)
 		{
@@ -140,6 +194,12 @@ class Alphabet extends FlxSpriteGroup
 	private function set_scaleY(value:Float)
 	{
 		if (value == scaleY) return value;
+
+		if (useFlxText && flxText != null) {
+			flxText.scale.y = value;
+			scaleY = value;
+			return value;
+		}
 
 		scale.y = value;
 		for (letter in letters)
