@@ -47,6 +47,10 @@ class LoadingState extends MusicBeatState
 	
 	// TO DO: Make this easier
 
+	// Store preloaded audio paths so PlayState can use them
+	public static var preloadedInst:String = null;
+	public static var preloadedVoices:String = null;
+
 	var funkay:FlxSprite;
 	public var loadingRun:FlxSprite;
 	var loadingRunJSON:LoadingRunData;
@@ -108,25 +112,33 @@ class LoadingState extends MusicBeatState
 		loadBar.visible = loadingRunJSON.loadbarvisible;
 		add(loadBar);
 		
+		#if android
+		addTouchPad("NONE", "A");
+		#end
+		
 		initSongsManifest().onComplete
 		(
 			function (lib)
 			{
 				callbacks = new MultiCallback(onLoad);
 				var introComplete = callbacks.add("introComplete");
-				/*if (PlayState.SONG != null) {
-					checkLoadSong(getSongPath());
-					if (PlayState.SONG.needsVoices)
-						checkLoadSong(getVocalPath());
-				}*/
+				
+				// Don't preload songs - causes issues
+				// PlayState will load them when needed
+				
+				// Load libraries only
 				checkLibrary("shared");
 				if(directory != null && directory.length > 0 && directory != 'shared') {
 					checkLibrary(directory);
 				}
 
-				//var fadeTime = 1;
-				FlxG.camera.fade(FlxG.camera.bgColor, loadingRunJSON.fadeTime, true);
-				new FlxTimer().start(loadingRunJSON.fadeTime + MIN_TIME, function(_) introComplete());
+				// Fast fade
+				FlxG.camera.fade(FlxG.camera.bgColor, 0.2, true);
+				
+				// Complete quickly
+				new FlxTimer().start(0.3, function(_) {
+					introComplete();
+				});
 			}
 		);
 	}
@@ -137,12 +149,16 @@ class LoadingState extends MusicBeatState
 		{
 			var library = Assets.getLibrary("songs");
 			final symbolPath = path.split(":").pop();
-			// @:privateAccess
-			// library.types.set(symbolPath, SOUND);
-			// @:privateAccess
-			// library.pathGroups.set(symbolPath, [library.__cacheBreak(symbolPath)]);
 			var callback = callbacks.add("song:" + path);
-			Assets.loadSound(path).onComplete(function (_) { callback(); });
+			
+			// Load with error handling
+			Assets.loadSound(path).onComplete(function (_) { 
+				trace('Loaded: ' + path);
+				callback(); 
+			}).onError(function(e) {
+				trace('Failed to load: ' + path + ' - ' + e);
+				callback(); // Call anyway to avoid timeout
+			});
 		}
 	}
 	
@@ -162,17 +178,20 @@ class LoadingState extends MusicBeatState
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		funkay.setGraphicSize(Std.int(0.88 * FlxG.width + 0.9 * (funkay.width - 0.88 * FlxG.width)));
-		funkay.updateHitbox();
-		if(controls.ACCEPT)
-		{
-			funkay.setGraphicSize(Std.int(funkay.width + 60));
+		if(funkay != null) {
+			funkay.setGraphicSize(Std.int(0.88 * FlxG.width + 0.9 * (funkay.width - 0.88 * FlxG.width)));
 			funkay.updateHitbox();
+			if(controls != null && controls.ACCEPT)
+			{
+				funkay.setGraphicSize(Std.int(funkay.width + 60));
+				funkay.updateHitbox();
+			}
 		}
 
 		if(callbacks != null) {
 			targetShit = FlxMath.remapToRange(callbacks.numRemaining / callbacks.length, 1, 0, 0, 1);
-			loadBar.scale.x += 0.5 * (targetShit - loadBar.scale.x);
+			if(loadBar != null)
+				loadBar.scale.x += 0.5 * (targetShit - loadBar.scale.x);
 		}
 	}
 	
@@ -210,13 +229,29 @@ class LoadingState extends MusicBeatState
 		Paths.setCurrentLevel(directory);
 		trace('Setting asset folder to ' + directory);
 
+		// Check if everything is already loaded (like JS Engine)
 		var loaded:Bool = false;
 		if (PlayState.SONG != null) {
-			loaded = isSoundLoaded(getSongPath()) && (!PlayState.SONG.needsVoices || isSoundLoaded(getVocalPath())) && isLibraryLoaded("shared") && isLibraryLoaded(directory);
+			var instLoaded = isSoundLoaded(getSongPath());
+			var voicesLoaded = !PlayState.SONG.needsVoices || isSoundLoaded(getVocalPath());
+			var sharedLoaded = isLibraryLoaded("shared");
+			var dirLoaded = isLibraryLoaded(directory);
+			
+			loaded = instLoaded && voicesLoaded && sharedLoaded && dirLoaded;
+			
+			trace('=== Cache Check ===');
+			trace('Inst: ' + instLoaded + ' | Voices: ' + voicesLoaded);
+			trace('Shared: ' + sharedLoaded + ' | Dir: ' + dirLoaded);
+			trace('All loaded: ' + loaded);
 		}
 		
-		if (!loaded)
+		// If everything is cached, skip LoadingState entirely!
+		if (!loaded) {
+			trace('Not fully cached - showing loading screen');
 			return new LoadingState(target, stopMusic, directory);
+		}
+		
+		trace('Fully cached - skipping loading screen!');
 		if (stopMusic && FlxG.sound.music != null)
 			FlxG.sound.music.stop();
 		
@@ -235,6 +270,11 @@ class LoadingState extends MusicBeatState
 	
 	override function destroy()
 	{
+		#if android
+		if (_touchpad != null)
+			removeTouchPad();
+		#end
+		
 		super.destroy();
 		
 		callbacks = null;

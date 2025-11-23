@@ -392,6 +392,10 @@ class PauseSubState extends MusicBeatSubstate
 			item.targetY = i;
 			grpMenuShit.add(item);
 
+			// Entrance Animation: Fly in from right
+			item.x = FlxG.width + 500;
+			FlxTween.tween(item, {x: 90}, 0.5 + (i * 0.1), {ease: FlxEase.elasticOut, startDelay: 0.2});
+
 			if(menuItems[i] == 'Skip Time')
 			{
 				skipTimeText = new FlxText(0, 0, 0, '', 64);

@@ -124,7 +124,7 @@ class MainMenuState extends MusicBeatState
 		for (i in 0...optionShit.length)
 		{
 			var offset:Float = 108 - (Math.max(optionShit.length, 4) - 4) * 80;
-			var menuItem:FlxSprite = new FlxSprite(0, 100);
+			var menuItem:FlxSprite = new FlxSprite(0, (i * 140)  + offset);
 			menuItem.scale.x = scale;
 			menuItem.scale.y = scale;
 			menuItem.frames = Paths.getSparrowAtlas('mainmenu/menu_' + optionShit[i]);
@@ -134,7 +134,6 @@ class MainMenuState extends MusicBeatState
 			menuItem.ID = i;
 			menuItem.screenCenter(X);
 			menuItems.add(menuItem);
-			FlxTween.tween(menuItem, {y: (i * 140)  + offset}, 0.3, {ease: FlxEase.quadOut});
 			var scr:Float = (optionShit.length - 4) * 0.135;
 			if(optionShit.length < 6) scr = 0;
 			menuItem.scrollFactor.set(0, scr);
@@ -161,6 +160,19 @@ class MainMenuState extends MusicBeatState
 		// NG.core.calls.event.logEvent('swag').send();
 
 		changeItem();
+
+		// Entrance Animation: Fly in from sides
+		// Applied AFTER changeItem to override the X position tween
+		for (i in 0...optionShit.length)
+		{
+			var menuItem = menuItems.members[i];
+			if (i % 2 == 0)
+				menuItem.x = -1000;
+			else
+				menuItem.x = FlxG.width + 1000;
+				
+			FlxTween.tween(menuItem, {x: (FlxG.width - menuItem.width) / 2}, 1 + (i * 0.2), {ease: FlxEase.elasticOut});
+		}
 
 		#if ACHIEVEMENTS_ALLOWED
 		Achievements.loadAchievements();
@@ -203,6 +215,9 @@ class MainMenuState extends MusicBeatState
 
 		var lerpVal:Float = CoolUtil.boundTo(elapsed * 7.5, 0, 1);
 		camFollowPos.setPosition(FlxMath.lerp(camFollowPos.x, camFollow.x, lerpVal), FlxMath.lerp(camFollowPos.y, camFollow.y, lerpVal));
+
+		// Smooth zoom back to 1
+		FlxG.camera.zoom = FlxMath.lerp(1, FlxG.camera.zoom, CoolUtil.boundTo(1 - (elapsed * 3.125), 0, 1));
 
 		if (!selectedSomethin)
 		{
@@ -292,8 +307,25 @@ class MainMenuState extends MusicBeatState
 
 		menuItems.forEach(function(spr:FlxSprite)
 		{
-			spr.screenCenter(X);
+			// spr.screenCenter(X); // Removed to allow custom positioning
 		});
+	}
+
+	override function beatHit()
+	{
+		super.beatHit();
+
+		if (curBeat % 4 == 0 && ClientPrefs.camZooms)
+			FlxG.camera.zoom = 1.015;
+		
+		if(curBeat % 2 == 0) {
+			// Subtle background pulse
+			if (magenta != null && ClientPrefs.flashing) {
+				magenta.visible = true;
+				magenta.alpha = 0.1;
+				FlxTween.tween(magenta, {alpha: 0}, 0.5, {ease: FlxEase.quadOut});
+			}
+		}
 	}
 
 	function changeItem(huh:Int = 0)
@@ -309,6 +341,12 @@ class MainMenuState extends MusicBeatState
 		{
 			spr.animation.play('idle');
 			spr.updateHitbox();
+			
+			// Reset scale and position for unselected items
+			if (spr.ID != curSelected) {
+				FlxTween.cancelTweensOf(spr);
+				FlxTween.tween(spr, {x: (FlxG.width - spr.width) / 2, "scale.x": 1, "scale.y": 1, alpha: 0.6}, 0.2, {ease: FlxEase.quadOut});
+			}
 
 			if (spr.ID == curSelected)
 			{
@@ -319,6 +357,10 @@ class MainMenuState extends MusicBeatState
 				}
 				camFollow.setPosition(spr.getGraphicMidpoint().x, spr.getGraphicMidpoint().y - add);
 				spr.centerOffsets();
+
+				// Stronger selection effect
+				FlxTween.cancelTweensOf(spr);
+				FlxTween.tween(spr, {"scale.x": 1.1, "scale.y": 1.1, alpha: 1}, 0.2, {ease: FlxEase.elasticOut});
 			}
 		});
 	}

@@ -113,6 +113,10 @@ class OptionsState extends MusicBeatState
 			}
 			optionText.snapToPosition();
 			grpOptions.add(optionText);
+
+			// Entrance Animation: Slide in from left
+			optionText.x = -1000;
+			FlxTween.tween(optionText, {x: 90}, 0.5 + (i * 0.1), {ease: FlxEase.elasticOut, startDelay: 0.2});
 		}
 
 		// selectorLeft = new Alphabet(0, 0, '>', true);
@@ -219,6 +223,13 @@ class OptionsState extends MusicBeatState
 				// selectorLeft.y = item.y;
 				// selectorRight.x = item.x + item.width + 15;
 				// selectorRight.y = item.y;
+				
+				// Dynamic selection effect
+				FlxTween.cancelTweensOf(item);
+				FlxTween.tween(item, {x: 120, alpha: 1}, 0.2, {ease: FlxEase.quadOut});
+			} else {
+				FlxTween.cancelTweensOf(item);
+				FlxTween.tween(item, {x: 90, alpha: 0.6}, 0.2, {ease: FlxEase.quadOut});
 			}
 		}
 		FlxG.sound.play(Paths.sound('scrollMenu'));

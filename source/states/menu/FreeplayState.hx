@@ -26,6 +26,7 @@ import flixel.FlxCamera;
 #if MODS_ALLOWED
 import sys.FileSystem;
 #end
+import backend.MusicBeatSubstate;
 
 using StringTools;
 
@@ -59,8 +60,8 @@ class FreeplayState extends MusicBeatState
 
 	override function create()
 	{
-		Paths.clearStoredMemory();
-		Paths.clearUnusedMemory();
+		// Paths.clearStoredMemory();
+		// Paths.clearUnusedMemory();
 		
 		persistentUpdate = true;
 		PlayState.isStoryMode = false;
@@ -230,6 +231,11 @@ class FreeplayState extends MusicBeatState
 	override function closeSubState() {
 		changeSelection(0, false);
 		persistentUpdate = true;
+		upordown = true;
+		#if android
+		removeTouchPad();  // Remove any existing touchpad first to prevent duplicates
+		addTouchPad("FULL", "A_B_C_X_Y_Z");
+		#end
 		super.closeSubState();
 	}
 
@@ -389,15 +395,23 @@ class FreeplayState extends MusicBeatState
 			persistentUpdate = false;
 			var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 			var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
-			/*#if MODS_ALLOWED
+			#if MODS_ALLOWED
 			if(!sys.FileSystem.exists(Paths.modsJson(songLowercase + '/' + poop)) && !sys.FileSystem.exists(Paths.json(songLowercase + '/' + poop))) {
 			#else
 			if(!OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop))) {
 			#end
-				poop = songLowercase;
-				curDifficulty = 1;
+				// poop = songLowercase;
+				// curDifficulty = 1;
 				trace('Couldnt find file');
-			}*/
+				FlxG.sound.play(Paths.sound('cancelMenu'));
+				// upordown = true; // Handled in closeSubState
+				#if android
+				removeTouchPad();
+				#end
+				persistentUpdate = false;
+				openSubState(new MissingFileSubState("Chart file not found:\n" + poop + ".json"));
+				return;
+			}
 			trace(poop);
 			/*
 			grpSongs.forEach(function(spr:FlxSprite)
@@ -619,5 +633,54 @@ class SongMetadata
 		this.color = color;
 		this.folder = Paths.currentModDirectory;
 		if(this.folder == null) this.folder = '';
+	}
+}
+
+class MissingFileSubState extends MusicBeatSubstate
+{
+	var errorMessage:String;
+	var canClose:Bool = false;
+	public function new(errorMessage:String)
+	{
+		super();
+		this.errorMessage = errorMessage;
+	}
+
+	override function create()
+	{
+		super.create();
+
+		var bg:FlxSprite = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
+		bg.alpha = 0.6;
+		add(bg);
+
+		var text:FlxText = new FlxText(0, 0, FlxG.width - 100, errorMessage, 32);
+		text.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		text.screenCenter();
+		add(text);
+        
+        var infoText:FlxText = new FlxText(0, FlxG.height - 50, FlxG.width, "Press ESC or ENTER to close", 24);
+        infoText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+        add(infoText);
+
+		#if android
+		addTouchPad("NONE", "A_B");
+		#end
+		
+		new FlxTimer().start(0.5, function(tmr:FlxTimer) {
+			canClose = true;
+		});
+	}
+
+	override function update(elapsed:Float)
+	{
+		super.update(elapsed);
+		if (canClose && (controls.BACK || controls.ACCEPT))
+		{
+			#if android
+			removeVirtualPad();
+			#end
+			close();
+		}
 	}
 }

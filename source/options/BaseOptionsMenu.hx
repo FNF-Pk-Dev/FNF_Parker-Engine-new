@@ -45,6 +45,11 @@ class BaseOptionsMenu extends MusicBeatSubstate
 	public var title:String;
 	public var rpcTitle:String;
 
+	// Typewriter Effect
+	var targetDesc:String = "";
+	var descTimer:Float = 0;
+	var typeTimer:Float = 0;
+
 	public function new()
 	{
 		super();
@@ -277,6 +282,18 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		if(nextAccept > 0) {
 			nextAccept -= 1;
 		}
+		
+		// Typewriter Effect
+		if (descText.text != targetDesc) {
+			typeTimer += elapsed;
+			if (typeTimer >= 0.02) { // Type speed
+				typeTimer = 0;
+				if (descText.text.length < targetDesc.length) {
+					descText.text += targetDesc.charAt(descText.text.length);
+				}
+			}
+		}
+		
 		super.update(elapsed);
 	}
 
@@ -304,31 +321,36 @@ class BaseOptionsMenu extends MusicBeatSubstate
 		if (curSelected >= optionsArray.length)
 			curSelected = 0;
 
-		descText.text = optionsArray[curSelected].description;
+		var visibleIndex:Int = 0;
+		for (item in grpOptions.members)
+		{
+			if (item == null) continue;
+			item.targetY = visibleIndex - curSelected;
+			visibleIndex++;
+
+			var isSelected:Bool = (item.targetY == 0);
+			item.alpha = isSelected ? 1 : 0.6;
+			FlxTween.cancelTweensOf(item);
+			var targetX:Float = isSelected ? item.startPosition.x + 30 : item.startPosition.x;
+			FlxTween.tween(item, {x: targetX, alpha: item.alpha}, 0.12, {ease: FlxEase.quadOut});
+		}
+
+		// Start Typewriter
+		targetDesc = optionsArray[curSelected].description;
+		if (targetDesc == null) targetDesc = "";
+		
+		// Update box size based on full text
+		descText.text = targetDesc;
 		descText.screenCenter(Y);
 		descText.y += 270;
-
-		var bullShit:Int = 0;
-
-		for (item in grpOptions.members) {
-			item.targetY = bullShit - curSelected;
-			bullShit++;
-
-			item.alpha = 0.6;
-			if (item.targetY == 0) {
-				item.alpha = 1;
-			}
-		}
-		for (text in grpTexts) {
-			text.alpha = 0.6;
-			if(text.ID == curSelected) {
-				text.alpha = 1;
-			}
-		}
 
 		descBox.setPosition(descText.x - 10, descText.y - 10);
 		descBox.setGraphicSize(Std.int(descText.width + 20), Std.int(descText.height + 25));
 		descBox.updateHitbox();
+		
+		// Reset for typing
+		descText.text = "";
+		typeTimer = 0;
 
 		if(boyfriend != null)
 		{

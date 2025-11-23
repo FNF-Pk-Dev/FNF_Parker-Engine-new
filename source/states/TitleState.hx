@@ -670,6 +670,11 @@ class TitleState extends MusicBeatState
 					ngSpr.visible = false;
 				// credTextShit.visible = false;
 
+				
+				// Rhythmic Flash
+				if (ClientPrefs.flashing)
+					FlxG.camera.flash(FlxColor.WHITE, 0.15);
+
 				// credTextShit.text = 'Shoutouts Tom Fulp';
 				// credTextShit.screenCenter();
 				case 10:
@@ -695,6 +700,13 @@ class TitleState extends MusicBeatState
 				case 17:
 					skipIntro();
 			}
+		}
+		
+		// Stronger Logo Bounce
+		if (logoBl != null) {
+			logoBl.scale.set(1.1, 1.1);
+			FlxTween.cancelTweensOf(logoBl);
+			FlxTween.tween(logoBl, {"scale.x": 1, "scale.y": 1}, 0.3, {ease: FlxEase.quadOut});
 		}
 	}
 

@@ -32,7 +32,7 @@ class NotesSubState extends MusicBeatSubstate
 {
 	private static var curSelected:Int = 0;
 	private static var typeSelected:Int = 0;
-	private var grpNumbers:FlxTypedGroup<Alphabet>;
+	private var grpNumbers:FlxTypedGroup<FlxText>;
 	private var grpNotes:FlxTypedGroup<FlxSprite>;
 	private var shaderArray:Array<ColorSwap> = [];
 	var curValue:Float = 0;
@@ -58,13 +58,15 @@ class NotesSubState extends MusicBeatSubstate
 
 		grpNotes = new FlxTypedGroup<FlxSprite>();
 		add(grpNotes);
-		grpNumbers = new FlxTypedGroup<Alphabet>();
+		grpNumbers = new FlxTypedGroup<FlxText>();
 		add(grpNumbers);
 
 		for (i in 0...ClientPrefs.arrowHSV.length) {
 			var yPos:Float = (165 * i) + 35;
 			for (j in 0...3) {
-				var optionText:Alphabet = new Alphabet(posX + (225 * j) + 250, yPos + 60, Std.string(ClientPrefs.arrowHSV[i][j]), true);
+				var optionText:FlxText = new FlxText(posX + (225 * j) + 250, yPos + 60, 0, Std.string(ClientPrefs.arrowHSV[i][j]), 40);
+				optionText.setFormat(Paths.font("vcr.ttf"), 40, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+				optionText.scrollFactor.set();
 				grpNumbers.add(optionText);
 			}
 
@@ -258,12 +260,8 @@ class NotesSubState extends MusicBeatSubstate
 
 		var item = grpNumbers.members[(selected * 3) + type];
 		item.text = '0';
-
-		var add = (40 * (item.letters.length - 1)) / 2;
-		for (letter in item.letters)
-		{
-			letter.offset.x += add;
-		}
+		item.x = posX + (225 * type) + 250;
+		item.x -= item.width / 2;
 	}
 	function updateValue(change:Float = 0) {
 		curValue += change;
@@ -289,12 +287,7 @@ class NotesSubState extends MusicBeatSubstate
 
 		var item = grpNumbers.members[(curSelected * 3) + typeSelected];
 		item.text = Std.string(roundedValue);
-
-		var add = (40 * (item.letters.length - 1)) / 2;
-		for (letter in item.letters)
-		{
-			letter.offset.x += add;
-			if(roundedValue < 0) letter.offset.x += 10;
-		}
+		item.x = posX + (225 * typeSelected) + 250;
+		item.x -= item.width / 2;
 	}
 }

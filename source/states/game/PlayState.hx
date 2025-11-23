@@ -70,6 +70,7 @@ import script.hscript.HScript;
 import script.FunkinHScript;
 import script.hscript.HScriptUtil;
 import modchart.*;
+import obj.*;
 import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
@@ -217,6 +218,8 @@ class PlayState extends MusicBeatState
 	public static var changedDifficulty:Bool = false;
 	public static var chartingMode:Bool = false;
 	public static var songIsModcharted:Bool = false;
+	public static var isBlockTest:Bool = false;
+	public static var blockScriptPath:String = "";
 
 	//Gameplay settings
 	public var healthGain:Float = 1;
@@ -227,6 +230,8 @@ class PlayState extends MusicBeatState
 
 	public var botplaySine:Float = 0;
 	public var botplayTxt:FlxText;
+
+	public var keysUI:KeystrokesUI;
 
 	public var iconP1:HealthIcon;
 	public var iconP2:HealthIcon;
@@ -349,6 +354,10 @@ class PlayState extends MusicBeatState
 		instance = this;
 		
 		scripts = new FunkinHScript();
+		
+		if (isBlockTest && blockScriptPath != "" && FileSystem.exists(blockScriptPath)) {
+			luaArray.push(new FunkinLua(blockScriptPath));
+		}
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
@@ -1262,6 +1271,9 @@ class PlayState extends MusicBeatState
 			botplayTxt.y = timeBarBG.y - 78;
 		}
 
+	    keysUI = new KeystrokesUI(0, 0);
+		add(keysUI);
+
 		strumLineNotes.cameras = [camHUD];	
 		grpNoteSplashes.cameras = [camHUD];
 		notes.cameras = [camHUD];
@@ -1275,6 +1287,7 @@ class PlayState extends MusicBeatState
 		timeBarBG.cameras = [camHUD];
 		timeTxt.cameras = [camHUD];
 		doof.cameras = [camHUD];
+		keysUI.cameras = [camOther];
 		
 		#if android
 		addAndroidControls();
@@ -2671,7 +2684,6 @@ class PlayState extends MusicBeatState
 				}
 			}
 
-
 			for (tween in modchartTweens) {
 				tween.active = false;
 			}
@@ -2786,6 +2798,14 @@ class PlayState extends MusicBeatState
 
 	override public function update(elapsed:Float)
 	{
+		if (isBlockTest && FlxG.keys.justPressed.ESCAPE) {
+			if (FlxG.sound.music != null) FlxG.sound.music.stop();
+			if (vocals != null) vocals.stop();
+			FlxG.sound.list.forEach(function(snd) snd.stop());
+			MusicBeatState.switchState(new editors.BlockCodeEditorState());
+			return;
+		}
+
 		/*if (FlxG.keys.justPressed.NINE)
 		{
 			iconP1.swapOldIcon();
