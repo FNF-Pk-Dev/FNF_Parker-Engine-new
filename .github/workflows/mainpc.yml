@@ -1,0 +1,69 @@
+# This is a basic workflow to help you get started with Actions
+
+name: WindowsBuild
+
+# Controls when the action will run.
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+ 
+  buildWindows:
+    runs-on: windows-latest
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - name: Checkout
+        uses: actions/checkout@v4.1.7
+
+      - uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.7
+      # Runs a set of commands using the runners shell
+      - name: Install Haxelib
+        run: |
+          haxelib setup C:/haxelib
+          haxelib git hxcpp https://github.com/HomuHomu833/hxcpp
+          haxelib git lime https://github.com/HomuHomu833/lime int-delta
+          haxelib install openfl 9.2.2
+          haxelib git flixel https://github.com/FNF-Pk-Dev/flixel 9daa047aa075a133a7a11a2d049c26c8317f65af
+          haxelib install flixel-tools
+          haxelib install flixel-ui 2.6.1
+          haxelib install flixel-addons 3.2.2
+          haxelib install tjson
+          haxelib install hxjsonast
+          haxelib install hxvlc 1.9.1
+          haxelib git lscript https://github.com/Ajwyunsx/lscript
+          haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto
+          haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
+          haxelib git linc_luajit https://github.com/AnDevGo/linc_luajit_h.git
+          haxelib git pyscript https://github.com/Ajwyunsx/pythonScript
+          haxelib install hscript
+          haxelib install hscript-iris
+          haxelib git hscript-ex https://github.com/ianharrigan/hscript-ex
+          haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
+          haxelib install hxcpp-debug-server
+          haxelib set lime git
+          haxelib list
+        shell: cmd
+      - name: Create Version Tag
+        run: echo "${{github.run_id}}" > VERSION
+      - name: Compile
+        run: haxelib run lime build windows
+      - name: Publish Artifact
+        uses: actions/upload-artifact@main
+        with:
+          name: windowsBuild
+          path: export/release/windows/bin
+  
+
+

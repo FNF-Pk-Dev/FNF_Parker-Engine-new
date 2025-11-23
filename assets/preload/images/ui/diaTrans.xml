@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextureAtlas imagePath="diaTrans.png">
+	<!-- Created with Adobe Animate version 21.0.6.41649 -->
+	<!-- http://www.adobe.com/products/animate.html -->
+	<SubTexture name="transIn0000" x="5" y="5" width="1280" height="736"/>
+	<SubTexture name="transIn0001" x="1290" y="5" width="1280" height="736"/>
+	<SubTexture name="transIn0002" x="2575" y="5" width="1280" height="736"/>
+	<SubTexture name="transIn0003" x="3860" y="5" width="1280" height="736"/>
+	<SubTexture name="transIn0004" x="5145" y="5" width="1280" height="736"/>
+	<SubTexture name="transIn0005" x="6430" y="5" width="1280" height="736"/>
+	<SubTexture name="transIn0006" x="5" y="746" width="1280" height="736"/>
+	<SubTexture name="transIn0007" x="1290" y="746" width="1280" height="736"/>
+	<SubTexture name="transIn0008" x="2575" y="746" width="1280" height="736"/>
+	<SubTexture name="transIn0009" x="3860" y="746" width="1280" height="736"/>
+	<SubTexture name="transIn0010" x="5145" y="746" width="1280" height="736"/>
+	<SubTexture name="transIn0011" x="6430" y="746" width="1280" height="736"/>
+	<SubTexture name="transIn0012" x="5" y="1487" width="1280" height="736"/>
+	<SubTexture name="transIn0013" x="1290" y="1487" width="1280" height="736"/>
+	<SubTexture name="transIn0014" x="2575" y="1487" width="1280" height="736"/>
+	<SubTexture name="transIn0015" x="3860" y="1487" width="1280" height="736"/>
+	<SubTexture name="transIn0016" x="5145" y="1487" width="1280" height="736"/>
+	<SubTexture name="transOut0000" x="5145" y="1487" width="1280" height="736"/>
+	<SubTexture name="transOut0001" x="3860" y="1487" width="1280" height="736"/>
+	<SubTexture name="transOut0002" x="2575" y="1487" width="1280" height="736"/>
+	<SubTexture name="transOut0003" x="1290" y="1487" width="1280" height="736"/>
+	<SubTexture name="transOut0004" x="5" y="1487" width="1280" height="736"/>
+	<SubTexture name="transOut0005" x="6430" y="746" width="1280" height="736"/>
+	<SubTexture name="transOut0006" x="5145" y="746" width="1280" height="736"/>
+	<SubTexture name="transOut0007" x="3860" y="746" width="1280" height="736"/>
+	<SubTexture name="transOut0008" x="2575" y="746" width="1280" height="736"/>
+	<SubTexture name="transOut0009" x="1290" y="746" width="1280" height="736"/>
+	<SubTexture name="transOut0010" x="5" y="746" width="1280" height="736"/>
+	<SubTexture name="transOut0011" x="6430" y="5" width="1280" height="736"/>
+	<SubTexture name="transOut0012" x="5145" y="5" width="1280" height="736"/>
+	<SubTexture name="transOut0013" x="3860" y="5" width="1280" height="736"/>
+	<SubTexture name="transOut0014" x="2575" y="5" width="1280" height="736"/>
+	<SubTexture name="transOut0015" x="1290" y="5" width="1280" height="736"/>
+	<SubTexture name="transOut0016" x="5" y="5" width="1280" height="736"/>
+</TextureAtlas>
