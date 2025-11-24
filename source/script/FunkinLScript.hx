@@ -3,7 +3,7 @@ package script;
 #if LUA_ALLOWED
 import flixel.util.FlxSignal.FlxTypedSignal;
 import haxe.io.Path;
-import luau.Lua;
+import llua.Lua;
 import lscript.CustomConvert;
 import lscript.LScript;
 #end
