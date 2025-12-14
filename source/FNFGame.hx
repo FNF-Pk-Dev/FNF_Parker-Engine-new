@@ -1,29 +1,30 @@
 package;
-import flixel.util.typeLimit.NextState;
-import flixel.FlxGame;
-import script.hscript.HScriptUtil.HScriptState;
-import psych.script.FunkinLua.LuaSState;
 
+import flixel.FlxGame;
+
+/**
+ * Extended FlxGame class that supports scripted state overrides.
+ * Allows mod authors to replace built-in states with HScript implementations.
+ */
 class FNFGame extends FlxGame {
-    public override function switchState():Void
-    {
+    public override function switchState():Void {
+        // Check if the next state can be overridden by a script
         if (_nextState is MusicBeatState) {
-            var state:MusicBeatState = cast _nextState;
-        if (state.canBeScripted){
-            var className = Type.getClassName(Type.getClass(_nextState));
-            var simpleName = className.split(".").pop();
-                    for (extn in HScriptUtil.extns) {
-                        var fileName = 'globals/$simpleName.$extn';
-                        trace(fileName);
-                        if (Paths.exists(Paths.modFolders('states/$fileName'))) {
-                            _nextState = OScriptState.fromFile(Paths.modFolders('states/$fileName'));
-                            trace(fileName);
-                            return super.switchState();
-                        }
+            final state:MusicBeatState = cast _nextState;
+            if (state.canBeScripted) {
+                final simpleName = Type.getClassName(Type.getClass(_nextState)).split(".").pop();
+                
+                // Try to find a script override for this state
+                for (extn in HScriptUtil.extns) {
+                    final scriptPath = Paths.modFolders('states/globals/$simpleName.$extn');
+                    if (Paths.exists(scriptPath)) {
+                        _nextState = OScriptState.fromFile(scriptPath);
+                        break;
                     }
+                }
             }
         }
-
-        return super.switchState();
+        
+        super.switchState();
     }
 }

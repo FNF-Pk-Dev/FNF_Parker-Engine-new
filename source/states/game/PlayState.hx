@@ -1,6 +1,5 @@
 package states.game;
 
-import flixel.graphics.FlxGraphic;
 #if desktop
 import backend.Discord.DiscordClient;
 #end
@@ -10,18 +9,14 @@ import shaders.WiggleEffect.WiggleEffectType;
 import flixel.FlxBasic;
 import flixel.FlxCamera;
 import flixel.FlxG;
-import flixel.FlxGame;
 import flixel.FlxObject;
 import flixel.FlxSprite;
-import flixel.FlxState;
 import flixel.FlxSubState;
-import flixel.addons.display.FlxGridOverlay;
 import flixel.addons.effects.FlxTrail;
 import flixel.addons.effects.FlxTrailArea;
 import flixel.addons.effects.chainable.FlxEffectSprite;
 import flixel.addons.effects.chainable.FlxWaveEffect;
 import flixel.addons.transition.FlxTransitionableState;
-import flixel.graphics.atlas.FlxAtlas;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.math.FlxMath;
@@ -32,7 +27,6 @@ import flixel.text.FlxText;
 import flixel.tweens.FlxEase;
 import flixel.tweens.FlxTween;
 import flixel.ui.FlxBar;
-import flixel.util.FlxCollision;
 import flixel.util.FlxColor;
 import flixel.util.FlxSort;
 import flixel.util.FlxStringUtil;
@@ -41,9 +35,6 @@ import haxe.Json;
 import lime.utils.Assets;
 import openfl.Lib;
 import openfl.display.BlendMode;
-import openfl.display.BitmapData;
-import openfl.display.StageQuality;
-import openfl.filters.BitmapFilter;
 import openfl.utils.Assets as OpenFlAssets;
 import editors.ChartingState;
 import editors.CharacterEditorState;
@@ -51,8 +42,6 @@ import flixel.group.FlxSpriteGroup;
 import flixel.input.keyboard.FlxKey;
 import obj.Note.EventNote;
 import openfl.events.KeyboardEvent;
-import flixel.effects.particles.FlxEmitter;
-import flixel.effects.particles.FlxParticle;
 import flixel.util.FlxSave;
 import flixel.animation.FlxAnimationController;
 import animateatlas.AtlasFrameMaker;
@@ -65,13 +54,11 @@ import backend.songs.Conductor.Rating;
 import backend.game.stages.*;
 import backend.game.*;
 import states.game.stages.*;
-import flixel.system.FlxAssets.FlxShader;
 import script.hscript.HScript;
 import script.FunkinHScript;
 import script.hscript.HScriptUtil;
 import modchart.*;
 import obj.*;
-import com.hurlant.crypto.encoding.UTF8;
 
 #if !flash 
 import flixel.addons.display.FlxRuntimeShader;
@@ -95,9 +82,6 @@ class PlayState extends MusicBeatState
     
 	public static var STRUM_X = 48.5;
 	public static var STRUM_X_MIDDLESCROLL = -278;
-	
-	//public var midSongVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
-	//public var cheatingVideo:#if VIDEOS_ALLOWED VideoSprite #else Dynamic #end;
 
 	public static var ratingStuff:Array<Dynamic> = [
 		['You Suck!', 0.2], //From 0% to 19%
@@ -845,76 +829,8 @@ class PlayState extends MusicBeatState
 		add(luaDebugGroup);
 		#end
 
-		// "GLOBAL" SCRIPTS
-		#if LUA_ALLOWED
-		var filesPushed:Array<String> = [];
-		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('scripts/')];
-
-		#if MODS_ALLOWED
-		foldersToCheck.insert(0, Paths.mods('scripts/'));
-		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
-
-		for(mod in Paths.getGlobalMods())
-			foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
-		#end
-
-		for (folder in foldersToCheck)
-		{
-			if(FileSystem.exists(folder))
-			{
-				for (file in FileSystem.readDirectory(folder))
-				{
-					if(file.endsWith('.lua') && !filesPushed.contains(file))
-					{
-						luaArray.push(new FunkinLua(folder + file));
-						filesPushed.push(file);
-					}
-				}
-			}
-		}
-		#end
-
-	    //lscript and pscript
-
-		 var filesPushed:Array<String> = [];
-		 var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('scripts/')];
-
-		 #if MODS_ALLOWED
-		 foldersToCheck.insert(0, Paths.mods('scripts/'));
-		 if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-		 	foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
-
-		 for(mod in Paths.getGlobalMods())
-		 	foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
-		 #end
-
-		 for (folder in foldersToCheck)
-		 {
-		 	if(FileSystem.exists(folder))
-		 	{
-		 		for (file in FileSystem.readDirectory(folder))
-		 		{
-		 			if(file.endsWith('.lscript') && !filesPushed.contains(file))
-		 			{
-		 				lscriptArray.push(initLScript(folder + file));
-		 				filesPushed.push(file);
-		 			}
-		 		}
-		 	}
-
-			if(FileSystem.exists(folder))
-		 	{
-		 		for (file in FileSystem.readDirectory(folder))
-		 		{
-		 			if(file.endsWith('.py') && !filesPushed.contains(file))
-		 			{
-		 				pscriptArray.push(initPScript(folder + file));
-		 				filesPushed.push(file);
-		 			}
-		 		}
-		 	}
-		 }
+		// "GLOBAL" SCRIPTS - delegate to script manager for cleaner code
+		loadGlobalScripts();
 
 
 		// STAGE SCRIPTS
@@ -1100,96 +1016,8 @@ class PlayState extends MusicBeatState
 		setDefaultLScripts("modManager", modManager);
 		setDefaultHScripts("modManager", modManager);
 
-		#if LUA_ALLOWED
-		for (notetype in noteTypeMap.keys())
-		{
-			var luaToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.lua');
-			if(FileSystem.exists(luaToLoad))
-			{
-				luaArray.push(new FunkinLua(luaToLoad));
-			}
-			else
-			{
-				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.lua');
-				if(FileSystem.exists(luaToLoad))
-				{
-					luaArray.push(new FunkinLua(luaToLoad));
-				}
-			}
-		}
-		#end
-		
-		for (notetype in noteTypeMap.keys())
-		{
-			var luaToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.lscript');
-			if(FileSystem.exists(luaToLoad))
-			{
-				lscriptArray.push(initLScript(luaToLoad));
-			}
-			else
-			{
-				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.lscript');
-				if(FileSystem.exists(luaToLoad))
-				{
-					lscriptArray.push(initLScript(luaToLoad));
-				}
-			}
-			var pyToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.py');
-			if(FileSystem.exists(pyToLoad))
-			{
-				pscriptArray.push(initPScript(pyToLoad));
-			}
-			else
-			{
-				pyToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.py');
-				if(FileSystem.exists(pyToLoad))
-				{
-					pscriptArray.push(initPScript(pyToLoad));
-				}
-			}
-		}
-		
-		for (notetype in noteTypeMap.keys())
-			{
-				var hx:Null<String> = null;
-	
-				for (extn in HScriptUtil.extns)
-				{
-					var path = Paths.modFolders("custom_notetypes/" + notetype + '.$extn');
-		
-					if (FileSystem.exists(path))
-					{
-						hx = File.getContent(path);
-						break;
-					}
-				}
-		
-				if (hx != null)
-				{
-					initIris(hx, notetype);
-				}
-			}
-
-			for (notetype in noteTypeMap.keys())
-				{
-					var hx:Null<String> = null;
-		
-					for (extn in HScriptUtil.extns)
-					{
-						var path = Paths.getPreloadPath("custom_notetypes/" + notetype + '.$extn');
-			
-						if (FileSystem.exists(path))
-						{
-							hx = File.getContent(path);
-							break;
-						}
-					}
-			
-					if (hx != null)
-					{
-						initIris(hx, notetype);
-					}
-				}
+		// Load notetype scripts - consolidated into single iteration
+		loadNoteTypeScripts(noteTypeMap);
 		
 
 		// After all characters being loaded, it makes then invisible 0.01s later so that the player won't freeze when you change characters
@@ -1297,32 +1125,24 @@ class PlayState extends MusicBeatState
 
 		startingSong = true;
 		
-		#if LUA_ALLOWED
+		// Consolidated notetype script loading into single loop
 		for (notetype in noteTypeMap.keys())
 		{
+			#if LUA_ALLOWED
 			startLuasOnFolder('custom_notetypes/' + notetype + '.lua');
-		}
-		for (event in eventPushedMap.keys())
-		{
-			startLuasOnFolder('custom_events/' + event + '.lua');
-		}
-		#end
-		for (notetype in noteTypeMap.keys())
-		{
+			#end
 			startLuahxOnFolder('custom_notetypes/' + notetype + '.lscript');
 			startPyOnFolder('custom_notetypes/' + notetype + '.py');
-		}
-		for (event in eventPushedMap.keys())
-		{
-			startLuahxOnFolder('custom_events/' + event + '.lscript');
-			startPyOnFolder('custom_events/' + event + '.py');
-		}
-		for (notetype in noteTypeMap.keys())
-		{
 			startHScriptsOnFolder('custom_notetypes/', notetype);
 		}
+		// Consolidated event script loading into single loop
 		for (event in eventPushedMap.keys())
 		{
+			#if LUA_ALLOWED
+			startLuasOnFolder('custom_events/' + event + '.lua');
+			#end
+			startLuahxOnFolder('custom_events/' + event + '.lscript');
+			startPyOnFolder('custom_events/' + event + '.py');
 			startHScriptsOnFolder('custom_events/', event);
 		}
 		noteTypeMap.clear();
@@ -1336,76 +1156,8 @@ class PlayState extends MusicBeatState
 			eventNotes.sort(sortByTime);
 		}
 
-		// SONG SPECIFIC SCRIPTS
-		#if LUA_ALLOWED
-		var filesPushed:Array<String> = [];
-		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('data/' + Paths.formatToSongPath(SONG.song) + '/')];
-
-		#if MODS_ALLOWED
-		foldersToCheck.insert(0, Paths.mods('data/' + Paths.formatToSongPath(SONG.song) + '/'));
-		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/data/' + Paths.formatToSongPath(SONG.song) + '/'));
-
-		for(mod in Paths.getGlobalMods())
-			foldersToCheck.insert(0, Paths.mods(mod + '/data/' + Paths.formatToSongPath(SONG.song) + '/' ));// using push instead of insert because these should run after everything else
-		#end
-
-		for (folder in foldersToCheck)
-		{
-			if(FileSystem.exists(folder))
-			{
-				for (file in FileSystem.readDirectory(folder))
-				{
-					if(file.endsWith('.lua') && !filesPushed.contains(file))
-					{
-						luaArray.push(new FunkinLua(folder + file));
-						filesPushed.push(file);
-					}
-				}
-			}
-		}
-		#end
-
-		// SONG SPECIFIC SCRIPTS
-		var filesPushed:Array<String> = [];
-		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('data/' + Paths.formatToSongPath(SONG.song) + '/')];
-
-		#if MODS_ALLOWED
-		foldersToCheck.insert(0, Paths.mods('data/' + Paths.formatToSongPath(SONG.song) + '/'));
-		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
-			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/data/' + Paths.formatToSongPath(SONG.song) + '/'));
-
-		for(mod in Paths.getGlobalMods())
-			foldersToCheck.insert(0, Paths.mods(mod + '/data/' + Paths.formatToSongPath(SONG.song) + '/' ));// using push instead of insert because these should run after everything else
-		#end
-
-		for (folder in foldersToCheck)
-		{
-			if(FileSystem.exists(folder))
-			{
-				for (file in FileSystem.readDirectory(folder))
-				{
-					if(file.endsWith('.lscript') && !filesPushed.contains(file))
-					{
-						lscriptArray.push(initLScript(folder + file));
-						filesPushed.push(file);
-					}
-				}
-			}
-
-			if(FileSystem.exists(folder))
-			{
-				for (file in FileSystem.readDirectory(folder))
-				{
-					if(file.endsWith('.py') && !filesPushed.contains(file))
-					{
-						pscriptArray.push(initPScript(folder + file));
-						filesPushed.push(file);
-					}
-				}
-			}
-		}
-		
+		// SONG SPECIFIC SCRIPTS - consolidated into loadSongScripts()
+		loadSongScripts(SONG.song);
 
 		var daSong:String = Paths.formatToSongPath(curSong);
 		if (isStoryMode && !seenCutscene)
@@ -1635,7 +1387,6 @@ class PlayState extends MusicBeatState
 		}
 		playbackRate = value;
 		FlxAnimationController.globalSpeed = value;
-		trace('Anim speed: ' + FlxAnimationController.globalSpeed);
 		Conductor.safeZoneOffset = (ClientPrefs.safeFrames / 60) * 1000 * value;
 		setOnLuas('playbackRate', playbackRate);
 		return value;
@@ -2339,7 +2090,6 @@ class PlayState extends MusicBeatState
 		callOnScripts('onSongStart', []);
 	}
 
-	var debugNum:Int = 0;
 	private var noteTypeMap:Map<String, Bool> = new Map<String, Bool>();
 	private var eventPushedMap:Map<String, Bool> = new Map<String, Bool>();
 	private function generateSong(dataPath:String):Void
@@ -3013,7 +2763,6 @@ class PlayState extends MusicBeatState
 		if (!ClientPrefs.noReset && controls.RESET && canReset && !inCutscene && startedCountdown && !endingSong)
 		{
 			health = 0;
-			trace("RESET = True");
 		}
 		doDeathCheck();
 		
@@ -3953,9 +3702,6 @@ class PlayState extends MusicBeatState
 				{
 					var difficulty:String = CoolUtil.getDifficultyFilePath();
 
-					trace('LOADING NEXT SONG');
-					trace(Paths.formatToSongPath(PlayState.storyPlaylist[0]) + difficulty);
-
 					var winterHorrorlandNext = (Paths.formatToSongPath(SONG.song) == "eggnog");
 					if (winterHorrorlandNext)
 					{
@@ -3990,7 +3736,6 @@ class PlayState extends MusicBeatState
 			}
 			else
 			{
-				trace('WENT BACK TO FREEPLAY??');
 				WeekData.loadTheFirstEnabledMod();
 				cancelMusicFadeTween();
 				if(FlxTransitionableState.skipNextTransIn) {
@@ -4010,7 +3755,6 @@ class PlayState extends MusicBeatState
 		achievementObj = new AchievementObject(achieve, camOther);
 		achievementObj.onFinish = achievementEnd;
 		add(achievementObj);
-		trace('Giving achievement ' + achieve);
 	}
 	function achievementEnd():Void
 	{
@@ -5071,6 +4815,164 @@ class PlayState extends MusicBeatState
 		callOnScripts("onSectionHit", [curSection]);
 	}
 
+	/**
+	 * Load global scripts from scripts/ folder (Lua, LScript, PScript)
+	 * Consolidated to reduce code duplication
+	 */
+	private function loadGlobalScripts():Void
+	{
+		#if LUA_ALLOWED
+		var filesPushed:Array<String> = [];
+		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('scripts/')];
+
+		#if MODS_ALLOWED
+		foldersToCheck.insert(0, Paths.mods('scripts/'));
+		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/scripts/'));
+
+		for(mod in Paths.getGlobalMods())
+			foldersToCheck.insert(0, Paths.mods(mod + '/scripts/'));
+		#end
+
+		for (folder in foldersToCheck)
+		{
+			if(FileSystem.exists(folder))
+			{
+				for (file in FileSystem.readDirectory(folder))
+				{
+					// Load Lua scripts
+					if(file.endsWith('.lua') && !filesPushed.contains(file))
+					{
+						luaArray.push(new FunkinLua(folder + file));
+						filesPushed.push(file);
+					}
+					// Load LScript scripts
+					else if(file.endsWith('.lscript') && !filesPushed.contains(file))
+					{
+						lscriptArray.push(initLScript(folder + file));
+						filesPushed.push(file);
+					}
+					// Load Python scripts
+					else if(file.endsWith('.py') && !filesPushed.contains(file))
+					{
+						pscriptArray.push(initPScript(folder + file));
+						filesPushed.push(file);
+					}
+				}
+			}
+		}
+		#end
+	}
+
+	/**
+	 * Load notetype scripts from custom_notetypes/ folder
+	 * Consolidated 4 separate loops into single iteration
+	 */
+	private function loadNoteTypeScripts(noteTypeMap:Map<String, Bool>):Void
+	{
+		for (notetype in noteTypeMap.keys())
+		{
+			// Load Lua scripts
+			#if LUA_ALLOWED
+			var luaToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.lua');
+			if(FileSystem.exists(luaToLoad))
+				luaArray.push(new FunkinLua(luaToLoad));
+			else {
+				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.lua');
+				if(FileSystem.exists(luaToLoad))
+					luaArray.push(new FunkinLua(luaToLoad));
+			}
+			#end
+			
+			// Load LScript
+			var lscriptToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.lscript');
+			if(FileSystem.exists(lscriptToLoad))
+				lscriptArray.push(initLScript(lscriptToLoad));
+			else {
+				lscriptToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.lscript');
+				if(FileSystem.exists(lscriptToLoad))
+					lscriptArray.push(initLScript(lscriptToLoad));
+			}
+			
+			// Load PScript (Python)
+			var pyToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.py');
+			if(FileSystem.exists(pyToLoad))
+				pscriptArray.push(initPScript(pyToLoad));
+			else {
+				pyToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.py');
+				if(FileSystem.exists(pyToLoad))
+					pscriptArray.push(initPScript(pyToLoad));
+			}
+			
+			// Load HScript - check mods folder first, then preload
+			var hx:Null<String> = null;
+			for (extn in HScriptUtil.extns) {
+				var path = Paths.modFolders("custom_notetypes/" + notetype + '.$extn');
+				if (FileSystem.exists(path)) {
+					hx = File.getContent(path);
+					break;
+				}
+			}
+			if (hx == null) {
+				for (extn in HScriptUtil.extns) {
+					var path = Paths.getPreloadPath("custom_notetypes/" + notetype + '.$extn');
+					if (FileSystem.exists(path)) {
+						hx = File.getContent(path);
+						break;
+					}
+				}
+			}
+			if (hx != null)
+				initIris(hx, notetype);
+		}
+	}
+
+	/**
+	 * Load song-specific scripts from data/songname/ folder
+	 */
+	private function loadSongScripts(songName:String):Void
+	{
+		var formattedSong:String = Paths.formatToSongPath(songName);
+		var filesPushed:Array<String> = [];
+		var foldersToCheck:Array<String> = [SUtil.getPath() + Paths.getPreloadPath('data/' + formattedSong + '/')];
+
+		#if MODS_ALLOWED
+		foldersToCheck.insert(0, Paths.mods('data/' + formattedSong + '/'));
+		if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+			foldersToCheck.insert(0, Paths.mods(Paths.currentModDirectory + '/data/' + formattedSong + '/'));
+
+		for(mod in Paths.getGlobalMods())
+			foldersToCheck.insert(0, Paths.mods(mod + '/data/' + formattedSong + '/'));
+		#end
+
+		for (folder in foldersToCheck)
+		{
+			if(FileSystem.exists(folder))
+			{
+				for (file in FileSystem.readDirectory(folder))
+				{
+					#if LUA_ALLOWED
+					if(file.endsWith('.lua') && !filesPushed.contains(file))
+					{
+						luaArray.push(new FunkinLua(folder + file));
+						filesPushed.push(file);
+					}
+					#end
+					if(file.endsWith('.lscript') && !filesPushed.contains(file))
+					{
+						lscriptArray.push(initLScript(folder + file));
+						filesPushed.push(file);
+					}
+					if(file.endsWith('.py') && !filesPushed.contains(file))
+					{
+						pscriptArray.push(initPScript(folder + file));
+						filesPushed.push(file);
+					}
+				}
+			}
+		}
+	}
+
 	#if LUA_ALLOWED
 	public function startLuasOnFolder(luaFile:String)
 	{
@@ -5202,25 +5104,43 @@ class PlayState extends MusicBeatState
 	}
 
 	public function callOnScriptAll(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
+		var returnVal:Dynamic = GlobalScript.Function_Continue;
+		
 		var returnH = callOnHScripts(event, args, ignoreStops, exclusions, excludeValues);
+		if (returnH == GlobalScript.Function_Stop && !ignoreStops) return returnH;
+		if (returnH != null && returnH != GlobalScript.Function_Continue) returnVal = returnH;
+		
 		var returnL = callOnLScripts(event, args, ignoreStops, exclusions, excludeValues);
+		if (returnL == GlobalScript.Function_Stop && !ignoreStops) return returnL;
+		if (returnL != null && returnL != GlobalScript.Function_Continue) returnVal = returnL;
+		
 		var returnP = callOnPScripts(event, args, ignoreStops, exclusions, excludeValues);
+		if (returnP == GlobalScript.Function_Stop && !ignoreStops) return returnP;
+		if (returnP != null && returnP != GlobalScript.Function_Continue) returnVal = returnP;
+		
 		var returnLua = callOnLuas(event, args, ignoreStops, exclusions, excludeValues);
+		if (returnLua == GlobalScript.Function_Stop && !ignoreStops) return returnLua;
+		if (returnLua != null && returnLua != GlobalScript.Function_Continue) returnVal = returnLua;
 
-        return returnH;
-		return returnL;
-		return returnP;
-		return returnLua;
+		return returnVal;
 	}
 	
 	public function callOnScripts(event:String, args:Array<Dynamic>, ignoreStops = true, exclusions:Array<String> = null, excludeValues:Array<Dynamic> = null):Dynamic {
+		var returnVal:Dynamic = GlobalScript.Function_Continue;
+		
 		var returnH = callOnHScripts(event, args, ignoreStops, exclusions, excludeValues);
+		if (returnH == GlobalScript.Function_Stop && !ignoreStops) return returnH;
+		if (returnH != null && returnH != GlobalScript.Function_Continue) returnVal = returnH;
+		
 		var returnL = callOnLScripts(event, args, ignoreStops, exclusions, excludeValues);
+		if (returnL == GlobalScript.Function_Stop && !ignoreStops) return returnL;
+		if (returnL != null && returnL != GlobalScript.Function_Continue) returnVal = returnL;
+		
 		var returnP = callOnPScripts(event, args, ignoreStops, exclusions, excludeValues);
+		if (returnP == GlobalScript.Function_Stop && !ignoreStops) return returnP;
+		if (returnP != null && returnP != GlobalScript.Function_Continue) returnVal = returnP;
 
-        return returnH;
-		return returnL;
-		return returnP;
+		return returnVal;
 	}
 
 
@@ -5353,8 +5273,8 @@ class PlayState extends MusicBeatState
 	}
 
 	public function setDefaultPScripts(variable:String, arg:Dynamic){
-		HScript.defaultVars.set(variable, arg);
-		return setOnHScripts(variable, arg);
+		FunkinPython.defaultVars.set(variable, arg);
+		return setOnPScripts(variable, arg);
 	}
 
 	function StrumPlayAnim(isDad:Bool, id:Int, time:Float) {
@@ -5615,7 +5535,6 @@ class PlayState extends MusicBeatState
 
 				if (FileSystem.exists(path))
 				{
-					trace('Failed to display error: $path');
 					initIris(File.getContent(path), 'stage');
 				}
 			}

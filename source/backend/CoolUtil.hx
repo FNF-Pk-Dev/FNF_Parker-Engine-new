@@ -3,13 +3,8 @@ package backend;
 import flixel.util.FlxSave;
 import flixel.FlxG;
 import flixel.FlxCamera;
-import openfl.utils.Assets;
-import haxe.display.Display.Package;
 import haxe.io.Path;
-import lime.utils.Assets as LimeAssets;
-import lime.utils.AssetLibrary;
-import lime.utils.AssetManifest;
-import flixel.system.FlxSound;
+
 #if sys
 import sys.io.File;
 import sys.FileSystem;
@@ -19,43 +14,50 @@ import openfl.utils.Assets;
 
 using StringTools;
 
-class CoolUtil
-{
-	public static var defaultDifficulties:Array<String> = [
-		'Easy',
-		'Normal',
-		'Hard'
-	];
-	public static var defaultDifficulty:String = 'Normal'; //The chart that has no suffix and starting difficulty on Freeplay/Story Mode
-
-	public static var difficulties:Array<String> = [];
-
-	inline public static function scale(x:Float, l1:Float, h1:Float, l2:Float, h2:Float):Float
-		return ((x - l1) * (h2 - l2) / (h1 - l1) + l2);
-
-	inline public static function clamp(n:Float, l:Float, h:Float)
-	{
-		if (n > h)
-			n = h;
-		if (n < l)
-			n = l;
-
-		return n;
-	}
-
-	public static function rotate(x:Float, y:Float, angle:Float, ?point:FlxPoint):FlxPoint
-	{
-		var p = point == null ? FlxPoint.weak() : point;
-		p.set((x * Math.cos(angle)) - (y * Math.sin(angle)), (x * Math.sin(angle)) + (y * Math.cos(angle)));
-		return p;
-	}
-
-	inline public static function quantize(f:Float, snap:Float){
-		// changed so this actually works lol
-		var m:Float = Math.fround(f * snap);
-		trace(snap);
-		return (m / snap);
-	}
+/**
+ * Collection of utility functions used throughout the engine.
+ * Provides math helpers, file operations, and formatting utilities.
+ */
+class CoolUtil {
+    // Difficulty settings
+    public static var defaultDifficulties:Array<String> = ['Easy', 'Normal', 'Hard'];
+    public static var defaultDifficulty:String = 'Normal';
+    public static var difficulties:Array<String> = [];
+    
+    // Characters not allowed in formatted strings
+    public static final formatNotAllowedChars:Array<String> = ["~", "%", "&", ";", ":", '/', '"', "'", "<", ">", "?", "#", " ", "!"];
+    
+    /**
+     * Scale a value from one range to another
+     */
+    inline public static function scale(x:Float, l1:Float, h1:Float, l2:Float, h2:Float):Float {
+        return ((x - l1) * (h2 - l2) / (h1 - l1) + l2);
+    }
+    
+    /**
+     * Clamp a value between min and max
+     */
+    inline public static function clamp(n:Float, l:Float, h:Float):Float {
+        return Math.max(l, Math.min(h, n));
+    }
+    
+    /**
+     * Rotate a point around the origin
+     */
+    public static function rotate(x:Float, y:Float, angle:Float, ?point:FlxPoint):FlxPoint {
+        final p = point == null ? FlxPoint.weak() : point;
+        final cos = Math.cos(angle);
+        final sin = Math.sin(angle);
+        p.set((x * cos) - (y * sin), (x * sin) + (y * cos));
+        return p;
+    }
+    
+    /**
+     * Quantize a float value to a snap grid
+     */
+    inline public static function quantize(f:Float, snap:Float):Float {
+        return Math.fround(f * snap) / snap;
+    }
 	
 	public static function getDifficultyFilePath(num:Null<Int> = null)
 	{
@@ -136,135 +138,130 @@ class CoolUtil
 		return maxKey;
 	}
 
-	public static function numberArray(max:Int, ?min = 0):Array<Int>
-	{
-		var dumbArray:Array<Int> = [];
-		for (i in min...max)
-		{
-			dumbArray.push(i);
-		}
-		return dumbArray;
-	}
-
-	//uhhhh does this even work at all? i'm starting to doubt
-	public static function precacheSound(sound:String, ?library:String = null):Void {
-		Paths.sound(sound, library);
-	}
-
-	public static function precacheMusic(sound:String, ?library:String = null):Void {
-		Paths.music(sound, library);
-	}
-
-	public static function precacheImage(name:String, ?library:String = null):Void {
-		Paths.image(name, library);
-	}
-
-	// public static function insertFlxCamera(idx:Int, cam:FlxCamera, defDraw:Bool):FlxCamera {
-	// 	var cameras = [
-	// 		for (i in FlxG.cameras.list)
-	// 			{
-	// 				cam: i,
-	// 				defaultDraw: FlxG.cameras.list.defaults.contains(i)
-	// 			}
-	// 	];
-
-	// 	for(i in cameras) FlxG.cameras.remove(i.cam, false);
-
-	// 	cameras.insert(idx, {cam: cam, defaultDraw: defDraw});
-
-	// 	for (i in cameras) FlxG.cameras.add(i.cam, i.defaultDraw);
-
-	// 	return cam;
-	// }
-
-	public static function browserLoad(site:String) {
-		#if linux
-		Sys.command('/usr/bin/xdg-open', [site]);
-		#else
-		FlxG.openURL(site);
-		#end
-	}
-
-	public static final formatNotAllowedChars:Array<String> = ["~", "%", "&", ";", ":", '/', '"', "'", "<", ">", "?", "#", " ", "!"];
-
-	public static function formatBindString(str:String):String
-	{
-		var finalStr = str;
-
-		for (notAllowed in formatNotAllowedChars)
-		{
-			finalStr = StringTools.replace(finalStr, notAllowed, "");
-		}
-
-		return finalStr.toLowerCase();
-	}
-
-	public static function findFilesInPath(path:String, extns:Array<String>, ?filePath:Bool = false, ?deepSearch:Bool = true):Array<String>
-	{
-		var files:Array<String> = [];
-
-		if (FileSystem.exists(path))
-		{
-			for (file in FileSystem.readDirectory(path))
-			{
-				var path = haxe.io.Path.join([path, file]);
-				if (!FileSystem.isDirectory(path))
-				{
-					for (extn in extns)
-					{
-						if (file.endsWith(extn))
-						{
-							if (filePath)
-								files.push(path);
-							else
-								files.push(file);
-						}
-					}
-				}
-				else if (deepSearch) // ! YAY !!!! -lunar
-				{
-					var pathsFiles:Array<String> = findFilesInPath(path, extns);
-
-					for (_ in pathsFiles)
-						files.push(_);
-				}
-			}
-		}
-		return files;
-	}
-	
-	public static inline function getFileStringFromPath(file:String):String
-	{
-		return Path.withoutDirectory(Path.withoutExtension(file));
-	}
-
-	/** Quick Function to Fix Save Files for Flixel 5
-		if you are making a mod, you are gonna wanna change "ShadowMario" to something else
-		so Base Psych saves won't conflict with yours
-		@BeastlyGabi
-	**/
-	public static function getSavePath(folder:String = 'ShadowMario'):String {
-		@:privateAccess
-		return #if (flixel < "5.0.0") folder #else FlxG.stage.application.meta.get('company')
-			+ '/'
-			+ FlxSave.validate(FlxG.stage.application.meta.get('file')) #end;
-	}
-	inline public static function colorFromString(color:String):FlxColor
-	{
-		var hideChars = ~/[\t\n\r]/;
-		var color:String = hideChars.split(color).join('').trim();
-		if(color.startsWith('0x')) color = color.substring(color.length - 6);
-
-		var colorNum:Null<FlxColor> = FlxColor.fromString(color);
-		if(colorNum == null) colorNum = FlxColor.fromString('#$color');
-		return colorNum != null ? colorNum : FlxColor.WHITE;
-	}
-	public static function showPopUp(message:String, title:String):Void
-	{
-		#if android
-		android.Tools.showAlertDialog(title, message, {name: "OK", func: null}, null);
-		#else
-		FlxG.stage.window.alert(message, title);
-		#end
-	}
+	   /**
+	    * Generate an array of integers from min to max (exclusive)
+	    */
+	   public static function numberArray(max:Int, ?min:Int = 0):Array<Int> {
+	       return [for (i in min...max) i];
+	   }
+	   
+	   /**
+	    * Precache a sound asset
+	    */
+	   inline public static function precacheSound(sound:String, ?library:String):Void {
+	       Paths.sound(sound, library);
+	   }
+	   
+	   /**
+	    * Precache a music asset
+	    */
+	   inline public static function precacheMusic(sound:String, ?library:String):Void {
+	       Paths.music(sound, library);
+	   }
+	   
+	   /**
+	    * Precache an image asset
+	    */
+	   inline public static function precacheImage(name:String, ?library:String):Void {
+	       Paths.image(name, library);
+	   }
+	   
+	   /**
+	    * Open a URL in the default browser
+	    */
+	   public static function browserLoad(site:String):Void {
+	       #if linux
+	       Sys.command('/usr/bin/xdg-open', [site]);
+	       #else
+	       FlxG.openURL(site);
+	       #end
+	   }
+	   
+	   /**
+	    * Format a string for use as a key binding identifier
+	    */
+	   public static function formatBindString(str:String):String {
+	       var finalStr = str;
+	       for (notAllowed in formatNotAllowedChars) {
+	           finalStr = StringTools.replace(finalStr, notAllowed, "");
+	       }
+	       return finalStr.toLowerCase();
+	   }
+	   
+	   /**
+	    * Find files with specific extensions in a directory
+	    * @param path Directory to search
+	    * @param extns Array of file extensions to look for
+	    * @param filePath If true, returns full paths; otherwise just filenames
+	    * @param deepSearch If true, recursively searches subdirectories
+	    */
+	   public static function findFilesInPath(path:String, extns:Array<String>, filePath:Bool = false, deepSearch:Bool = true):Array<String> {
+	       var files:Array<String> = [];
+	       
+	       #if sys
+	       if (!FileSystem.exists(path)) return files;
+	       
+	       for (file in FileSystem.readDirectory(path)) {
+	           final fullPath = haxe.io.Path.join([path, file]);
+	           
+	           if (!FileSystem.isDirectory(fullPath)) {
+	               for (extn in extns) {
+	                   if (file.endsWith(extn)) {
+	                       files.push(filePath ? fullPath : file);
+	                       break;
+	                   }
+	               }
+	           } else if (deepSearch) {
+	               for (f in findFilesInPath(fullPath, extns, filePath, deepSearch)) {
+	                   files.push(f);
+	               }
+	           }
+	       }
+	       #end
+	       
+	       return files;
+	   }
+	   
+	   /**
+	    * Extract filename without extension from a path
+	    */
+	   public static inline function getFileStringFromPath(file:String):String {
+	       return Path.withoutDirectory(Path.withoutExtension(file));
+	   }
+	   
+	   /**
+	    * Get the save path for Flixel 5 compatibility
+	    */
+	   public static function getSavePath(folder:String = 'ShadowMario'):String {
+	       @:privateAccess
+	       return #if (flixel < "5.0.0")
+	           folder
+	       #else
+	           FlxG.stage.application.meta.get('company') + '/' + FlxSave.validate(FlxG.stage.application.meta.get('file'))
+	       #end;
+	   }
+	   
+	   /**
+	    * Parse a color from a string value
+	    */
+	   inline public static function colorFromString(color:String):FlxColor {
+	       final hideChars = ~/[\t\n\r]/;
+	       var colorStr = hideChars.split(color).join('').trim();
+	       if (colorStr.startsWith('0x')) colorStr = colorStr.substring(colorStr.length - 6);
+	       
+	       var colorNum:Null<FlxColor> = FlxColor.fromString(colorStr);
+	       if (colorNum == null) colorNum = FlxColor.fromString('#$colorStr');
+	       return colorNum != null ? colorNum : FlxColor.WHITE;
+	   }
+	   
+	   /**
+	    * Show a popup dialog
+	    */
+	   public static function showPopUp(message:String, title:String):Void {
+	       #if android
+	       android.Tools.showAlertDialog(title, message, {name: "OK", func: null}, null);
+	       #else
+	       FlxG.stage.window.alert(message, title);
+	       #end
+	   }
 }

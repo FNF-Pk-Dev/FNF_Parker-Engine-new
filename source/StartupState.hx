@@ -1,39 +1,25 @@
 package;
 
-import backend.MusicBeatState;
-import backend.CustomTilesTransition;
-
-import flixel.FlxG;
 import flixel.FlxState;
-import flixel.FlxSprite;
-import flixel.tweens.*;
 import flixel.addons.transition.FlxTransitionableState;
-import flixel.input.keyboard.FlxKey;
 
-#if sys
-import Sys.time as getTime;
-#else
-import haxe.Timer.stamp as getTime;
-#end
-
-using StringTools;
-
-// 垃圾写法
-class StartupState extends MusicBeatState
-{
-	public static var nextState:Class<FlxState> = states.TitleState;
-
-	public function new()
-	{
-		super();
-	}
-
-	override function create()
-	{
-		FlxTransitionableState.skipNextTransIn = true;
-		FlxTransitionableState.skipNextTransOut = true;
-		MusicBeatState.switchState(Type.createInstance(nextState, []));
-		super.create();
-	}
-
+/**
+ * Initial startup state that handles transitions to the main game state.
+ * This is a minimal bootstrapping state that skips transitions and immediately
+ * switches to the configured next state (default: TitleState).
+ */
+class StartupState extends MusicBeatState {
+    /** The state to transition to after startup */
+    public static var nextState:Class<FlxState> = states.TitleState;
+    
+    override function create() {
+        // Skip transitions for initial load
+        FlxTransitionableState.skipNextTransIn = true;
+        FlxTransitionableState.skipNextTransOut = true;
+        
+        // Immediately transition to the next state
+        MusicBeatState.switchState(Type.createInstance(nextState, []));
+        
+        super.create();
+    }
 }
