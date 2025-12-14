@@ -37,6 +37,9 @@ import substates.game.*;
 import script.*;
 import script.hscript.*;
 
+// SUtil is needed on all platforms (returns "" on non-Android)
+import android.backend.SUtil;
+
 // Android-specific imports (only on Android platform)
 #if android
 import android.backend.*;
