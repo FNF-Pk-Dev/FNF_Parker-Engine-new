@@ -58,7 +58,7 @@ jobs:
         run: |
           haxelib setup ~/haxelib
           haxelib git hxcpp https://github.com/HomuHomu833/hxcpp
-          haxelib git lime https://github.com/HomuHomu833/lime int-delta
+          haxelib git lime https://github.com/HomuHomu833/lime
           haxelib install openfl 9.2.2
           haxelib git flixel https://github.com/FNF-Pk-Dev/flixel 9daa047aa075a133a7a11a2d049c26c8317f65af
           haxelib install flixel-tools
@@ -73,7 +73,7 @@ jobs:
           haxelib git lscript https://github.com/Ajwyunsx/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
-          haxelib git linc_luajit https://github.com/th2l-devs/linc_luajit
+          haxelib git linc_luajit https://github.com/Ajwyunsx/linc_luau
           haxelib install hxcpp-debug-server
           haxelib list
       - name: Create Version Tag
@@ -133,11 +133,3 @@ jobs:
             export/release/android/obj/
           restore-keys: |
             cache-build-android
-
-
-
-
-
-
-
-
