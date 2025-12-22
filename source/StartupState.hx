@@ -18,8 +18,13 @@ class StartupState extends MusicBeatState {
         FlxTransitionableState.skipNextTransOut = true;
         
         // Immediately transition to the next state
-        MusicBeatState.switchState(Type.createInstance(nextState, []));
         
         super.create();
+
+        #if android
+        FlxG.android.preventDefaultKeys = [BACK];
+        #end
+
+        MusicBeatState.switchState(Type.createInstance(nextState, []));
     }
 }
