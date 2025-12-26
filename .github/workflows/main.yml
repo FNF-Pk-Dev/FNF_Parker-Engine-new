@@ -20,7 +20,7 @@ jobs:
 
   buildAndroid:
     name: buildAndroid
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
@@ -34,7 +34,7 @@ jobs:
         uses: nttld/setup-ndk@main
         id: setup-ndk
         with:
-          ndk-version: r28c
+          ndk-version: r27c
 
       - name: Setup Java JDK
         uses: actions/setup-java@main
