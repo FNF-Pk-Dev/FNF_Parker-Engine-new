@@ -26,7 +26,7 @@ jobs:
         uses: actions/checkout@main
 
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
+        uses: krdlab/setup-haxe@38fd78cc3a7960b281cf4a33a63a9c1543ac4598
         with:
           haxe-version: 4.3.7
 
@@ -45,9 +45,9 @@ jobs:
       - name: Install Haxelib
         run: |
           haxelib setup ~/haxelib
-          haxelib git hxcpp https://github.com/HomuHomu833-haxe-stuff/hxcpp
-          haxelib git lime https://github.com/HomuHomu833-haxe-stuff/lime
-          haxelib install openfl 9.3.3
+          haxelib git hxcpp https://github.com/Ajwyunsx/hxcpp
+          haxelib git lime https://github.com/VapireMox/lime
+          haxelib install openfl 9.2.2
           haxelib git flixel https://github.com/FNF-Pk-Dev/flixel 9daa047aa075a133a7a11a2d049c26c8317f65af
           haxelib install flixel-tools
           haxelib install flixel-ui 2.6.1
