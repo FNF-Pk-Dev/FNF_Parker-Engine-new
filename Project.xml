@@ -212,6 +212,11 @@
 	<!-- Do whatever you want I'm tired uninstall and install everytime -->
 	<certificate path="key.keystore" password="psychengine" alias="psychport" alias-password="psychengine" if="android" unless="debug" />
 	<!--Place custom nodes like icons here (higher priority to override the HaxeFlixel icon)-->
+<config>
+	<android minimum-sdk-version="24" />
+	<android target-sdk-version= "35" />
+    
+</config>
 	
 	<icon path="art/icon16.png" size='16'/>
 	<icon path="art/icon32.png" size='32'/>

@@ -20,10 +20,15 @@ jobs:
 
   buildAndroid:
     name: buildAndroid
-    runs-on: macos-15
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@main
+
+      - name: Setup Haxe
+        uses: krdlab/setup-haxe@38fd78cc3a7960b281cf4a33a63a9c1543ac4598
+        with:
+          haxe-version: 4.3.7
 
       - name: Setup Android NDK
         uses: nttld/setup-ndk@main
@@ -34,31 +39,14 @@ jobs:
       - name: Setup Java JDK
         uses: actions/setup-java@main
         with:
-          distribution: 'temurin'
-          java-version: 21
-
-      - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.7
-
-      - name: Restore existing build cache for faster compilation
-        uses: actions/cache@v4
-        with:
-          # not caching the bin folder to prevent asset duplication and stuff like that
-          key: cache-build-android
-          path: |
-            .haxelib/
-            export/release/android/haxe/
-            export/release/android/obj/
-          restore-keys: |
-            cache-build-android
+          distribution: 'zulu'
+          java-version: '17'
 
       - name: Install Haxelib
         run: |
           haxelib setup ~/haxelib
-          haxelib git hxcpp https://github.com/HomuHomu833/hxcpp
-          haxelib git lime https://github.com/HomuHomu833/lime int-delta
+          haxelib git hxcpp https://github.com/Ajwyunsx/hxcpp
+          haxelib git lime https://github.com/VapireMox/lime
           haxelib install openfl 9.2.2
           haxelib git flixel https://github.com/FNF-Pk-Dev/flixel 9daa047aa075a133a7a11a2d049c26c8317f65af
           haxelib install flixel-tools
@@ -73,7 +61,7 @@ jobs:
           haxelib git lscript https://github.com/Ajwyunsx/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto.git
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
-          haxelib git linc_luajit https://github.com/th2l-devs/linc_luajit
+          haxelib git linc_luajit https://github.com/Ajwyunsx/linc_luau
           haxelib install hxcpp-debug-server
           haxelib list
       - name: Create Version Tag
@@ -87,7 +75,7 @@ jobs:
           haxelib run lime config JAVA_HOME $JAVA_HOME
           haxelib run lime config ANDROID_SETUP true
           haxelib set lime git
-          haxelib set openfl 9.3.3
+          haxelib set openfl 9.2.2
           haxelib set flixel-addons 3.2.2
           haxelib set hxcpp git
         env:
@@ -101,43 +89,4 @@ jobs:
         with:
           name: buildAndroid
           path: export/release/android/bin/app/build/outputs/apk/release/*.apk
-
-
-      - name: Clearing already existing cache
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const caches = await github.rest.actions.getActionsCacheList({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-            })
-            for (const cache of caches.data.actions_caches) {
-              if (cache.key == "cache-build-android") {
-                console.log('Clearing ' + cache.key + '...')
-                await github.rest.actions.deleteActionsCacheById({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  cache_id: cache.id,
-                })
-                console.log("Cache cleared.")
-              }
-            }
-      - name: Uploading new cache
-        uses: actions/cache@v4
-        with:
-          # caching again since for some reason it doesnt work with the first post cache shit
-          key: cache-build-android
-          path: |
-            .haxelib/
-            export/release/android/haxe/
-            export/release/android/obj/
-          restore-keys: |
-            cache-build-android
-
-
-
-
-
-
-
 

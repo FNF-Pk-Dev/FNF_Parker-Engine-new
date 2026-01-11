@@ -33,8 +33,8 @@ jobs:
         run: |
           haxelib setup C:/haxelib
           haxelib git hxcpp https://github.com/HomuHomu833/hxcpp
-          haxelib git lime https://github.com/HomuHomu833/lime int-delta
-          haxelib install openfl 9.2.2
+          haxelib git lime https://github.com/HomuHomu833/lime 
+          haxelib install openfl 9.3.3
           haxelib git flixel https://github.com/FNF-Pk-Dev/flixel 9daa047aa075a133a7a11a2d049c26c8317f65af
           haxelib install flixel-tools
           haxelib install flixel-ui 2.6.1
@@ -45,7 +45,7 @@ jobs:
           haxelib git lscript https://github.com/Ajwyunsx/lscript
           haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto
           haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
-          haxelib git linc_luajit https://github.com/AnDevGo/linc_luajit_h.git
+          haxelib git linc_luajit https://github.com/Ajwyunsx/linc_luau
           haxelib git pyscript https://github.com/Ajwyunsx/pythonScript
           haxelib install hscript
           haxelib install hscript-iris
@@ -65,5 +65,3 @@ jobs:
           name: windowsBuild
           path: export/release/windows/bin
   
-
-
