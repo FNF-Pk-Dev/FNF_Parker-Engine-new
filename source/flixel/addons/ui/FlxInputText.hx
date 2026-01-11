@@ -766,7 +766,7 @@ class FlxInputText extends FlxText
 					caret.makeGraphic(cw, ch, caretC, false, caretKey);
 					caret.offset.x = caret.offset.y = 0;
 
-				case SHADOW:
+				case SHADOW #if (flixel >= "6.0.0"), SHADOW_XY(_) #end:
 					// Shadow offset to the lower-right
 					cw += Std.int(borderSize);
 					ch += Std.int(borderSize); // expand canvas on one side for shadow
@@ -786,6 +786,11 @@ class FlxInputText extends FlxText
 					caret.pixels.fillRect(r, caretC); // draw caret
 					// we need to offset caret's drawing position since the caret is now larger than normal
 					caret.offset.x = caret.offset.y = borderSize;
+					
+				default:
+					// Handle any other border styles
+					caret.makeGraphic(cw, ch, caretC, false, caretKey);
+					caret.offset.x = caret.offset.y = 0;
 			}
 			// Update width/height so caret's dimensions match its pixels
 			caret.width = cw;

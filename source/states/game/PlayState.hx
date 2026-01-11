@@ -84,19 +84,18 @@ class PlayState extends MusicBeatState
 	public static var STRUM_X_MIDDLESCROLL = -278;
 
 	public static var ratingStuff:Array<Dynamic> = [
-		['You Suck!', 0.2], //From 0% to 19%
-		['Shit', 0.4], //From 20% to 39%
-		['Bad', 0.5], //From 40% to 49%
-		['Bruh', 0.6], //From 50% to 59%
-		['Meh', 0.69], //From 60% to 68%
-		['Nice', 0.7], //69%
-		['Good', 0.8], //From 70% to 79%
-		['Great', 0.9], //From 80% to 89%
-		['Sick!', 1], //From 90% to 99%
-		['Perfect!!', 1] //The value on this one isn't used actually, since Perfect is always "1"
+		['You Suck!', 0.2],
+		['Shit', 0.4],
+		['Bad', 0.5],
+		['Bruh', 0.6],
+		['Meh', 0.69],
+		['Nice', 0.7],
+		['Good', 0.8],
+		['Great', 0.9],
+		['Sick!', 1],
+		['Perfect!!', 1]
 	];
 
-	//event variables
 	public var isCameraOnForcedPos:Bool = false;
 
 	#if (haxe >= "4.0.0")
@@ -114,7 +113,6 @@ class PlayState extends MusicBeatState
 	public var boyfriendMap:Map<String, Boyfriend> = new Map<String, Boyfriend>();
 	public var dadMap:Map<String, Character> = new Map<String, Character>();
 	public var gfMap:Map<String, Character> = new Map<String, Character>();
-	//public var variables:Map<String, Dynamic> = new Map<String, Dynamic>();
 	public var modchartTweens:Map<String, FlxTween> = new Map();
 	public var modchartSprites:Map<String, ModchartSprite> = new Map();
 	public var modchartTimers:Map<String, FlxTimer> = new Map();
@@ -151,6 +149,7 @@ class PlayState extends MusicBeatState
 	public var spawnTime:Float = 2000;
 
 	public var vocals:FlxSound;
+	public var opponentVocals:FlxSound;
 
 	public var dad:Character = null;
 	public var gf:Character = null;
@@ -162,7 +161,6 @@ class PlayState extends MusicBeatState
 
 	private var strumLine:FlxSprite;
 
-	//Handles the new epic mega sexy cam code that i've done
 	public var camFollow:FlxPoint;
 	public var camFollowPos:FlxObject;
 	private static var prevCamFollow:FlxPoint;
@@ -205,7 +203,6 @@ class PlayState extends MusicBeatState
 	public static var isBlockTest:Bool = false;
 	public static var blockScriptPath:String = "";
 
-	//Gameplay settings
 	public var healthGain:Float = 1;
 	public var healthLoss:Float = 1;
 	public var instakillOnMiss:Bool = false;
@@ -274,7 +271,6 @@ class PlayState extends MusicBeatState
 
 	public var defaultCamZoom:Float = 1.05;
 
-	// how big to stretch the pixel art assets
 	public static var daPixelZoom:Float = 6;
 
 	public var inCutscene:Bool = false;
@@ -282,20 +278,17 @@ class PlayState extends MusicBeatState
 	private var singAnimations:Array<String> = ['singLEFT', 'singDOWN', 'singUP', 'singRIGHT'];
 	var songLength:Float = 0;
 	public var ratingOffsets:Array<Int> = [0, 0, 0, 0];
-	//Used to rating match his position.
 
 	public var boyfriendCameraOffset:Array<Float> = null;
 	public var opponentCameraOffset:Array<Float> = null;
 	public var girlfriendCameraOffset:Array<Float> = null;
 
 	#if desktop
-	// Discord RPC variables
 	var storyDifficultyText:String = "";
 	var detailsText:String = "";
 	var detailsPausedText:String = "";
 	#end
 
-	//Achievement shit
 	var keysPressed:Array<Bool> = [];
 	var boyfriendIdleTime:Float = 0.0;
 	var boyfriendIdled:Bool = false;
@@ -1383,6 +1376,7 @@ class PlayState extends MusicBeatState
 		if(generatedMusic)
 		{
 			if(vocals != null) vocals.pitch = value;
+			if(opponentVocals != null) opponentVocals.pitch = value;
 			FlxG.sound.music.pitch = value;
 		}
 		playbackRate = value;
@@ -2014,6 +2008,7 @@ class PlayState extends MusicBeatState
 
 		FlxG.sound.music.pause();
 		vocals.pause();
+		if(opponentVocals != null) opponentVocals.pause();
 
 		FlxG.sound.music.time = time;
 		FlxG.sound.music.pitch = playbackRate;
@@ -2025,6 +2020,15 @@ class PlayState extends MusicBeatState
 			vocals.pitch = playbackRate;
 		}
 		vocals.play();
+		if(opponentVocals != null)
+		{
+			if (Conductor.songPosition <= opponentVocals.length)
+			{
+				opponentVocals.time = time;
+				opponentVocals.pitch = playbackRate;
+			}
+			opponentVocals.play();
+		}
 		Conductor.songPosition = time;
 		songTime = time;
 	}
@@ -2053,6 +2057,7 @@ class PlayState extends MusicBeatState
 		FlxG.sound.music.pitch = playbackRate;
 		FlxG.sound.music.onComplete = finishSong.bind();
 		vocals.play();
+		if(opponentVocals != null) opponentVocals.play();
 
 		if(startOnTime > 0)
 		{
@@ -2064,6 +2069,7 @@ class PlayState extends MusicBeatState
 			//trace('Oopsie doopsie! Paused sound');
 			FlxG.sound.music.pause();
 			vocals.pause();
+			if(opponentVocals != null) opponentVocals.pause();
 		}
 
 		// Song duration in a float, useful for the time left feature
@@ -2111,7 +2117,36 @@ class PlayState extends MusicBeatState
 		curSong = songData.song;
 
 		if (SONG.needsVoices)
-			vocals = new FlxSound().loadEmbedded(Paths.voices(PlayState.SONG.song));
+		{
+			var playerSuffix:String = (boyfriend != null && boyfriend.vocalsFile != null && boyfriend.vocalsFile.length > 0) ? boyfriend.vocalsFile : 'Player';
+			var opponentSuffix:String = (dad != null && dad.vocalsFile != null && dad.vocalsFile.length > 0) ? dad.vocalsFile : 'Opponent';
+			
+			var normalVocals = Paths.voices(SONG.song);
+			var playerVocalsSound = Paths.voices(SONG.song, '', playerSuffix);
+			var opponentVocalsSound = Paths.voices(SONG.song, '', opponentSuffix);
+
+			if(playerVocalsSound != null || opponentVocalsSound != null)
+			{
+				if(playerVocalsSound != null)
+					vocals = new FlxSound().loadEmbedded(playerVocalsSound);
+				else
+					vocals = new FlxSound();
+				
+				if(opponentVocalsSound != null)
+				{
+					opponentVocals = new FlxSound().loadEmbedded(opponentVocalsSound);
+					FlxG.sound.list.add(opponentVocals);
+					opponentVocals.pitch = playbackRate;
+				}
+			}
+			else
+			{
+				if(normalVocals != null)
+					vocals = new FlxSound().loadEmbedded(normalVocals);
+				else
+					vocals = new FlxSound();
+			}
+		}
 		else
 			vocals = new FlxSound();
 
@@ -2418,6 +2453,7 @@ class PlayState extends MusicBeatState
 			{
 				FlxG.sound.music.pause();
 				vocals.pause();
+				if(opponentVocals != null) opponentVocals.pause();
 			}
 
 			if (startTimer != null && !startTimer.finished)
@@ -2529,6 +2565,7 @@ class PlayState extends MusicBeatState
 		if(finishTimer != null) return;
 
 		vocals.pause();
+		if(opponentVocals != null) opponentVocals.pause();
 
 		FlxG.sound.music.play();
 		FlxG.sound.music.pitch = playbackRate;
@@ -2539,6 +2576,15 @@ class PlayState extends MusicBeatState
 			vocals.pitch = playbackRate;
 		}
 		vocals.play();
+		if(opponentVocals != null)
+		{
+			if (Conductor.songPosition <= opponentVocals.length)
+			{
+				opponentVocals.time = Conductor.songPosition;
+				opponentVocals.pitch = playbackRate;
+			}
+			opponentVocals.play();
+		}
 	}
 
 	public var paused:Bool = false;
@@ -2551,6 +2597,7 @@ class PlayState extends MusicBeatState
 		if (isBlockTest && FlxG.keys.justPressed.ESCAPE) {
 			if (FlxG.sound.music != null) FlxG.sound.music.stop();
 			if (vocals != null) vocals.stop();
+			if (opponentVocals != null) opponentVocals.stop();
 			FlxG.sound.list.forEach(function(snd) snd.stop());
 			MusicBeatState.switchState(new editors.BlockCodeEditorState());
 			return;
@@ -3025,6 +3072,7 @@ class PlayState extends MusicBeatState
 		if(FlxG.sound.music != null) {
 			FlxG.sound.music.pause();
 			vocals.pause();
+			if(opponentVocals != null) opponentVocals.pause();
 		}
 		openSubState(new PauseSubState(boyfriend.getScreenPosition().x, boyfriend.getScreenPosition().y));
 		//}
@@ -3043,6 +3091,7 @@ class PlayState extends MusicBeatState
 		if(FlxG.sound.music != null) {
 			FlxG.sound.music.pause();
 			vocals.pause();
+			if(opponentVocals != null) opponentVocals.pause();
 		}
 		openSubState(new GameplayChangersSubstate());
 	}
@@ -3073,6 +3122,7 @@ class PlayState extends MusicBeatState
 				paused = true;
 
 				vocals.stop();
+				if(opponentVocals != null) opponentVocals.stop();
 				FlxG.sound.music.stop();
 
 				persistentUpdate = false;
@@ -3586,6 +3636,11 @@ class PlayState extends MusicBeatState
 		FlxG.sound.music.volume = 0;
 		vocals.volume = 0;
 		vocals.pause();
+		if(opponentVocals != null)
+		{
+			opponentVocals.volume = 0;
+			opponentVocals.pause();
+		}
 		if(ClientPrefs.noteOffset <= 0 || ignoreNoteOffset) {
 			finishCallback();
 		} else {
@@ -4176,7 +4231,7 @@ class PlayState extends MusicBeatState
 				}
 				#end
 			}
-			else if (boyfriend.animation.curAnim != null && boyfriend.holdTimer > Conductor.stepCrochet * (0.0011 / FlxG.sound.music.pitch) * boyfriend.singDuration && boyfriend.animation.curAnim.name.startsWith('sing') && !boyfriend.animation.curAnim.name.endsWith('miss'))
+			else if (boyfriend.animation.curAnim != null && boyfriend.holdTimer > Conductor.stepCrochet * (0.0025 / FlxG.sound.music.pitch) * boyfriend.singDuration && boyfriend.animation.curAnim.name.startsWith('sing') && !boyfriend.animation.curAnim.name.endsWith('miss'))
 			{
 				boyfriend.dance();
 				//boyfriend.animation.curAnim.finish();
@@ -4336,9 +4391,9 @@ class PlayState extends MusicBeatState
 		if (SONG.needsVoices)
 			vocals.volume = 1;
 
-		var time:Float = 0.15;
+		var time:Float = 0.2;
 		if(note.isSustainNote && !note.animation.curAnim.name.endsWith('end')) {
-			time += 0.15;
+			time += 0.2;
 		}
 		StrumPlayAnim(true, Std.int(Math.abs(note.noteData)), time);
 		note.hitByOpponent = true;
@@ -4433,9 +4488,9 @@ class PlayState extends MusicBeatState
 			}
 
 			if(cpuControlled) {
-				var time:Float = 0.15;
+				var time:Float = 0.2;
 				if(note.isSustainNote && !note.animation.curAnim.name.endsWith('end')) {
-					time += 0.15;
+					time += 0.2;
 				}
 				//StrumPlayAnim(false, Std.int(Math.abs(note.noteData)), time);
 			} else {
@@ -4668,7 +4723,8 @@ class PlayState extends MusicBeatState
 	{
 		super.stepHit();
 		if (Math.abs(FlxG.sound.music.time - (Conductor.songPosition - Conductor.offset)) > (20 * playbackRate)
-			|| (SONG.needsVoices && Math.abs(vocals.time - (Conductor.songPosition - Conductor.offset)) > (20 * playbackRate)))
+			|| (SONG.needsVoices && Math.abs(vocals.time - (Conductor.songPosition - Conductor.offset)) > (20 * playbackRate))
+			|| (opponentVocals != null && Math.abs(opponentVocals.time - (Conductor.songPosition - Conductor.offset)) > (20 * playbackRate)))
 		{
 			resyncVocals();
 		}

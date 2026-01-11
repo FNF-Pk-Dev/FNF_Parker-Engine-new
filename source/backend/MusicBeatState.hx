@@ -17,12 +17,7 @@ import android.FlxTouchPad;
 import android.FlxJoyStick;
 #end
 
-/**
- * Base state class that provides beat/step synchronization with the music.
- * All game states should extend this class to have access to music timing events.
- */
 class MusicBeatState extends FlxUIState {
-    // Beat/Step tracking
     private var curSection:Int = 0;
     private var stepsToDo:Int = 0;
     private var curStep:Int = 0;
@@ -30,19 +25,15 @@ class MusicBeatState extends FlxUIState {
     private var curDecStep:Float = 0;
     private var curDecBeat:Float = 0;
     
-    // Camera for beat-synced effects
     public static var camBeat:FlxCamera;
     
-    // Script variables storage
     public var variables:Map<String, Dynamic> = new Map();
     
-    // Scripting support
     public var canBeScripted(get, default):Bool = false;
     public var scripted:Bool = false;
     public var scriptName:String = 'Placeholder';
     public var script:OScriptState;
     
-    // Controls accessor
     private var controls(get, never):Controls;
     
     inline function get_canBeScripted():Bool return canBeScripted;
@@ -53,20 +44,10 @@ class MusicBeatState extends FlxUIState {
         this.canBeScripted = canBeScripted;
     }
     
-    /**
-     * Set a variable on the attached script
-     */
     inline function setOnScript(name:String, value:Dynamic):Void {
         if (script != null) script.set(name, value);
     }
     
-    /**
-     * Call a function on the attached script
-     * @param name Function name to call
-     * @param vars Arguments to pass
-     * @param ignoreStops If true, continue even if script returns halt
-     * @return The return value from the script function
-     */
     public function callOnScript(name:String, vars:Array<Any>, ignoreStops:Bool = false):Dynamic {
         if (script == null) return GlobalScript.Function_Continue;
         
@@ -83,10 +64,6 @@ class MusicBeatState extends FlxUIState {
         return script == null || !script.customMenu;
     }
     
-    /**
-     * Initialize script for this state
-     * @param s Script name to load
-     */
     public function setUpScript(s:String = 'Placeholder'):Void {
         scripted = true;
         scriptName = s;
@@ -101,7 +78,6 @@ class MusicBeatState extends FlxUIState {
         callOnScript('onCreate', []);
     }
 
-	   // Android touch controls
 	   #if android
 	   public var _touchpad:FlxTouchPad;
 	   public var _joyStick:FlxJoyStick;
@@ -169,7 +145,7 @@ class MusicBeatState extends FlxUIState {
 	   override function destroy():Void {
 	       #if android
 	       if (_touchpad != null && trackedinputsUI.length > 0) {
-	           controls.removeFlxInput(trackedinputsUI);
+	           removeTouchPad();
 	       }
 	       if (androidc != null && trackedinputsNOTES != null) {
 	           controls.removeFlxInput(trackedinputsNOTES);
@@ -206,7 +182,6 @@ class MusicBeatState extends FlxUIState {
 	           }
 	       }
 	       
-	       // Persist fullscreen setting
 	       if (FlxG.save.data != null) {
 	           FlxG.save.data.fullscreen = FlxG.fullscreen;
 	       }
@@ -257,9 +232,6 @@ class MusicBeatState extends FlxUIState {
 	       curStep = lastChange.stepTime + Math.floor(stepOffset);
 	   }
 	   
-	   /**
-	    * Switch to a new state with custom transition
-	    */
 	   public static function switchState(nextState:FlxState):Void {
 	       if (!FlxTransitionableState.skipNextTransIn) {
 	           final leState:MusicBeatState = cast(FlxG.state, MusicBeatState);
@@ -293,11 +265,9 @@ class MusicBeatState extends FlxUIState {
 	   }
 	   
 	   public function beatHit():Void {
-	       // Override in subclasses for beat-synced behavior
 	   }
 	   
 	   public function sectionHit():Void {
-	       // Override in subclasses for section-synced behavior
 	   }
 	   
 	   private inline function getBeatsOnSection():Float {

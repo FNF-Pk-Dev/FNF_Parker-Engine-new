@@ -4,6 +4,7 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.graphics.frames.FlxFrame;
 import flixel.util.FlxDestroyUtil.IFlxDestroyable;
+import flixel.util.FlxSignal;
 
 class FlxAnimationController implements IFlxDestroyable
 {
@@ -75,6 +76,21 @@ class FlxAnimationController implements IFlxDestroyable
 	#end
 
 	/**
+	 * If assigned, will be called each time the current animation loops.
+	 * A function that has 1 parameter: a string name - animation name.
+	 */
+	#if haxe4
+	public var loopCallback:(name:String) -> Void;
+	#else
+	public var loopCallback:String->Void;
+	#end
+
+	/**
+	 * Signal that is dispatched when the current animation finishes.
+	 */
+	public var onFinish:FlxTypedSignal<String->Void>;
+
+	/**
 	 * Internal, reference to owner sprite.
 	 */
 	var _sprite:FlxSprite;
@@ -96,6 +112,7 @@ class FlxAnimationController implements IFlxDestroyable
 	{
 		_sprite = Sprite;
 		_animations = new Map<String, FlxAnimation>();
+		onFinish = new FlxTypedSignal<String->Void>();
 	}
 
 	public static var globalSpeed:Float = 1;
@@ -166,6 +183,12 @@ class FlxAnimationController implements IFlxDestroyable
 		destroyAnimations();
 		_animations = null;
 		callback = null;
+		finishCallback = null;
+		loopCallback = null;
+		if (onFinish != null) {
+			onFinish.destroy();
+			onFinish = null;
+		}
 		_sprite = null;
 	}
 
@@ -683,6 +706,16 @@ class FlxAnimationController implements IFlxDestroyable
 		if (finishCallback != null)
 		{
 			finishCallback(name);
+		}
+		onFinish.dispatch(name);
+	}
+
+	@:allow(flixel.animation)
+	inline function fireLoopCallback(?name:String):Void
+	{
+		if (loopCallback != null)
+		{
+			loopCallback(name);
 		}
 	}
 

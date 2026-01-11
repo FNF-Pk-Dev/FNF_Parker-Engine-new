@@ -8,6 +8,7 @@ import flixel.tweens.FlxTween;
 import flixel.group.FlxSpriteGroup;
 import flixel.util.FlxColor;
 import flixel.text.FlxText;
+import backend.FlxCompat;
 
 using StringTools;
 
@@ -131,7 +132,7 @@ class AchievementObject extends FlxSpriteGroup {
 		add(achievementText);
 		add(achievementIcon);
 
-		var cam:Array<FlxCamera> = FlxCamera.defaultCameras;
+		var cam:Array<FlxCamera> = FlxCompat.defaultCameras;
 		if(camera != null) {
 			cam = [camera];
 		}

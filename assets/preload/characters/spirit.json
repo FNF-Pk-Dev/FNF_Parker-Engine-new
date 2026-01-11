@@ -64,6 +64,7 @@
 	],
 	"healthicon": "spirit-pixel",
 	"flip_x": false,
+	"dataType": "PACKER",
 	"healthbar_colors": [
 		255,
 		60,

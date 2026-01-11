@@ -36,6 +36,7 @@ typedef CharacterFile = {
 	var flip_x:Bool;
 	var no_antialiasing:Bool;
 	var healthbar_colors:Array<Int>;
+	var vocals_file:String;
 }
 
 typedef AnimArray = {
@@ -83,6 +84,7 @@ class Character extends FlxSprite
 	public var originalFlipX:Bool = false;
 	public var healthColorArray:Array<Int> = [255, 0, 0];
 	public var dataType:DataType;
+	public var vocalsFile:String = '';
 
 	public static var DEFAULT_CHARACTER:String = 'bf'; //In case a character is missing, it will use BF on its place
 	public function new(x:Float, y:Float, ?character:String = 'bf', ?isPlayer:Bool = false)
@@ -160,6 +162,9 @@ class Character extends FlxSprite
 
 				if(json.healthbar_colors != null && json.healthbar_colors.length > 2)
 					healthColorArray = json.healthbar_colors;
+
+				if(json.vocals_file != null && json.vocals_file.length > 0)
+					vocalsFile = json.vocals_file;
 
 				antialiasing = !noAntialiasing;
 				if(!ClientPrefs.globalAntialiasing) antialiasing = false;
@@ -264,18 +269,15 @@ class Character extends FlxSprite
 					if(animation.curAnim.finished) playAnim(animation.curAnim.name, false, false, animation.curAnim.frames.length - 3);
 			}
 
-			if (!isPlayer)
+			if (animation.curAnim.name.startsWith('sing'))
 			{
-				if (animation.curAnim.name.startsWith('sing'))
-				{
-					holdTimer += elapsed;
-				}
+				holdTimer += elapsed;
+			}
 
-				if (holdTimer >= Conductor.stepCrochet * (0.0011 / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1)) * singDuration)
-				{
-					dance();
-					holdTimer = 0;
-				}
+			if (holdTimer >= Conductor.stepCrochet * ((isPlayer ? 0.0025 : 0.0011) / (FlxG.sound.music != null ? FlxG.sound.music.pitch : 1)) * singDuration)
+			{
+				dance();
+				holdTimer = 0;
 			}
 
 			if(animation.curAnim.finished && animation.getByName(animation.curAnim.name + '-loop') != null)
@@ -314,6 +316,7 @@ class Character extends FlxSprite
 	{
 		specialAnim = false;
 		animation.play(AnimName, Force, Reversed, Frame);
+		holdTimer = 0;
 
 		var daOffset = animOffsets.get(AnimName);
 		if (animOffsets.exists(AnimName))

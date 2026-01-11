@@ -16,6 +16,10 @@ class StartupState extends MusicBeatState {
         // Skip transitions for initial load
         FlxTransitionableState.skipNextTransIn = true;
         FlxTransitionableState.skipNextTransOut = true;
+
+        #if android
+		FlxG.android.preventDefaultKeys = [BACK];
+		#end
         
         // Immediately transition to the next state
         MusicBeatState.switchState(Type.createInstance(nextState, []));
