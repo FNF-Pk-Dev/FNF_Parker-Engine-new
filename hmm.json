@@ -110,7 +110,7 @@
       "type": "git",
       "dir": null,
       "ref": "main",
-      "url": "https://github.com/Ajwyunsx/linc_luajit.git"
+      "url": "https://github.com/Ajwyunsx/linc_luau.git"
     },
     {
       "name": "lscript",
