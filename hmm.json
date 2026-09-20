@@ -118,13 +118,6 @@
       "dir": null,
       "ref": "main",
       "url": "https://github.com/FNF-Pk-Dev/pyscript.git"
-    },
-    {
-      "name": "hxpy",
-      "type": "git",
-      "dir": null,
-      "ref": "main",
-      "url": "https://github.com/FNF-Pk-Dev/hxpy.git"
     }
   ]
 }
