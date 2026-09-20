@@ -1153,6 +1153,8 @@ class PlayState extends MusicBeatState
 		#if android
 		addAndroidControls();
 		androidc.visible = false;
+		addTouchPad("NONE", "P");
+		_touchpad.visible = false;
 		#end
 
 		startingSong = true;
@@ -1857,6 +1859,7 @@ class PlayState extends MusicBeatState
 				skipArrowStartTween = true;
 			#if android
 			androidc.visible = true;
+			_touchpad.visible = true;
 			#end
 			generateStaticArrows(0);
 			generateStaticArrows(1);
@@ -4024,6 +4027,7 @@ class PlayState extends MusicBeatState
 
 		#if android
 		androidc.visible = false;
+		_touchpad.visible = false;
 		#end
 		timeBarBG.visible = false;
 		timeBar.visible = false;
@@ -4770,10 +4774,10 @@ class PlayState extends MusicBeatState
 
 			/*boyfriend.stunned = true;
 	
-																						// get stunned for 1/60 of a second, makes you able to
-																						new FlxTimer().start(1 / 60, function(tmr:FlxTimer)
-																						{
-																							boyfriend.stunned = false;
+																									// get stunned for 1/60 of a second, makes you able to
+																									new FlxTimer().start(1 / 60, function(tmr:FlxTimer)
+																									{
+																										boyfriend.stunned = false;
 			});*/
 
 			if (boyfriend.hasMissAnimations)

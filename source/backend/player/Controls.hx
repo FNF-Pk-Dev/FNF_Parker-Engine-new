@@ -541,6 +541,8 @@ class Controls extends FlxActionSet
 				inline forEachBound(Control.UI_RIGHT, (action, state) -> addbuttonuUI(action, MobilePad.buttonRight, state));
 				inline forEachBound(Control.ACCEPT, (action, state) -> addbuttonuUI(action, MobilePad.buttonA, state));
 				inline forEachBound(Control.BACK, (action, state) -> addbuttonuUI(action, MobilePad.buttonB, state));
+			case "P":
+				inline forEachBound(Control.PAUSE, (action, state) -> addbuttonuUI(action, MobilePad.buttonP, state));
 			case "NONE" | "E" | "controlExtend": // do nothing
 			default:
 				inline forEachBound(Control.ACCEPT, (action, state) -> addbuttonuUI(action, MobilePad.buttonA, state));
