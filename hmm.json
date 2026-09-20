@@ -34,17 +34,10 @@
     {
       "name": "hscript",
       "type": "haxelib",
-      "version": null
+      "version": "2.6.0"
     },
     {
       "name": "hscript-iris",
-      "type": "git",
-      "dir": null,
-      "ref": "main",
-      "url": "https://github.com/FNF-Pk-Dev/hscript-iris.git"
-    },
-    {
-      "name": "hxcpp",
       "type": "git",
       "dir": null,
       "ref": "main",
