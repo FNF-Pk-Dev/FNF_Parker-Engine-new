@@ -12,42 +12,6 @@ class FunkinHScript extends FlxBasic
 {
 	public var scripts:Array<HScript> = [];
 
-	// public function addScript(tag:Null<String>):HScript
-	// {
-	// 	// var script:HScript = HScriptUtil.getBasicScript();
-	// 	// HScriptUtil.setUpFlixelScript(script);
-	// 	// HScriptUtil.setUpFNFScript(script);
-	// 	@:privateAccess
-	// 	script._group = this;
-	// 	if (tag != null)
-	// 	{
-	// 		script.set("name", tag);
-	// 		script.name = tag;
-	// 	}
-	// 	else
-	// 	{
-	// 		var i:Int = 0;
-	// 		for (script in scripts)
-	// 		{
-	// 			if (script == null)
-	// 				continue;
-	// 			if (script.name.toLowerCase().contains("_hscript"))
-	// 				i++;
-	// 		}
-	// 		script.set("name", '_hscript$i');
-	// 		script.name = '_hscript$i';
-	// 	}
-	// 	trace('999');
-	// 	for (func in onAddScript)
-	// 	{
-	// 		if (func == null)
-	// 			continue;
-	// 		func(script);
-	// 	}
-	// 	scripts.push(script);
-	// 	return script;
-	// }
-
 	public function executeAllFunc(name:String, ?args:Array<Any>):Array<Dynamic>
 	{
 		var returns:Array<Dynamic> = [];
