@@ -28,31 +28,12 @@ jobs:
       - uses: krdlab/setup-haxe@master
         with:
           haxe-version: 4.3.7
-      # Runs a set of commands using the runners shell
+      # All dependencies (versions + forks) are declared in hmm.json
       - name: Install Haxelib
         run: |
           haxelib setup C:/haxelib
-          haxelib git hxcpp https://github.com/HomuHomu833/hxcpp
-          haxelib git lime https://github.com/HomuHomu833/lime 
-          haxelib install openfl 9.3.3
-          haxelib git flixel https://github.com/FNF-Pk-Dev/flixel 9daa047aa075a133a7a11a2d049c26c8317f65af
-          haxelib install flixel-tools
-          haxelib install flixel-ui 2.6.1
-          haxelib install flixel-addons 3.2.2
-          haxelib install tjson
-          haxelib install hxjsonast
-          haxelib install hxvlc 1.9.1
-          haxelib git lscript https://github.com/Ajwyunsx/lscript
-          haxelib git haxe-crypto https://github.com/soywiz/haxe-crypto
-          haxelib git flxgif https://github.com/MAJigsaw77/flxgif.git
-          haxelib git linc_luajit https://github.com/Ajwyunsx/linc_luau
-          haxelib git pyscript https://github.com/Ajwyunsx/pythonScript
-          haxelib install hscript
-          haxelib install hscript-iris
-          haxelib git hscript-ex https://github.com/ianharrigan/hscript-ex
-          haxelib git discord_rpc https://github.com/Aidan63/linc_discord-rpc
-          haxelib install hxcpp-debug-server
-          haxelib set lime git
+          haxelib install hmm
+          haxelib run hmm install
           haxelib list
         shell: cmd
       - name: Create Version Tag
@@ -64,4 +45,3 @@ jobs:
         with:
           name: windowsBuild
           path: export/release/windows/bin
-  

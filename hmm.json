@@ -3,22 +3,27 @@
     {
       "name": "lime",
       "type": "haxelib",
-      "version": 8.0.2
+      "version": "8.1.3"
     },
     {
       "name": "openfl",
       "type": "haxelib",
-      "version": 9.2.2
+      "version": "9.3.4"
     },
     {
       "name": "flixel",
       "type": "haxelib",
-      "version": null
+      "version": "5.8.0"
     },
     {
       "name": "flixel-addons",
       "type": "haxelib",
-      "version": 3.0.2
+      "version": "3.2.3"
+    },
+    {
+      "name": "flixel-ui",
+      "type": "haxelib",
+      "version": "2.6.1"
     },
     {
       "name": "flixel-tools",
@@ -26,7 +31,32 @@
       "version": null
     },
     {
-      "name": "flixel-ui",
+      "name": "hscript",
+      "type": "haxelib",
+      "version": "2.6.0"
+    },
+    {
+      "name": "hscript-iris",
+      "type": "haxelib",
+      "version": "1.1.3"
+    },
+    {
+      "name": "hxvlc",
+      "type": "haxelib",
+      "version": "1.9.1"
+    },
+    {
+      "name": "tjson",
+      "type": "haxelib",
+      "version": "1.4.0"
+    },
+    {
+      "name": "hxjsonast",
+      "type": "haxelib",
+      "version": "1.1.0"
+    },
+    {
+      "name": "hxcpp-debug-server",
       "type": "haxelib",
       "version": null
     },
@@ -35,27 +65,56 @@
       "type": "git",
       "dir": null,
       "ref": "main",
-      "url": "https://github.com/mcagabe19-stuff/hxcpp.git"
+      "url": "https://github.com/FNF-Pk-Dev/hxcpp.git"
     },
     {
-      "name": "tjson",
-      "type": "haxelib",
-      "version": null
+      "name": "flxanimate",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/flxanimate.git"
     },
     {
-      "name": "hxluajit",
-      "type": "haxelib",
-      "version": null
+      "name": "flxgif",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/flxgif.git"
     },
     {
-      "name": "hxjsonast",
-      "type": "haxelib",
-      "version": null
+      "name": "haxe-crypto",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/haxe-crypto.git"
     },
     {
-      "name": "hxvlc",
-      "type": "haxelib",
-      "version": null
+      "name": "discord_rpc",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/discord_rpc.git"
+    },
+    {
+      "name": "linc_luajit",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/linc_luajit.git"
+    },
+    {
+      "name": "lscript",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/lscript.git"
+    },
+    {
+      "name": "pyscript",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/pyscript.git"
     },
     {
       "name": "hxpy",
@@ -70,51 +129,6 @@
       "dir": null,
       "ref": "main",
       "url": "https://github.com/FNF-Pk-Dev/hxCodec"
-    },
-    {
-      "name": "hscript",
-      "type": "haxelib",
-      "version": null
-    },
-    {
-      "name": "hxcpp-debug-server",
-      "type": "haxelib",
-      "version": null
-    },
-    {
-      "name": "flxgif",
-      "type": "git",
-      "dir": null,
-      "ref": "main",
-      "url": "https://github.com/MAJigsaw77/flxgif.git"
-    }
-    {
-      "name": "haxe-crypto",
-      "type": "git",
-      "dir": null,
-      "ref": "main",
-      "url": "https://github.com/soywiz/haxe-crypto.git"
-    },
-    {
-      "name": "discord_rpc",
-      "type": "git",
-      "dir": null,
-      "ref": "master",
-      "url": "https://github.com/Aidan63/linc_discord-rpc"
-    },
-    {
-      "name": "hscript-ex",
-      "type": "git",
-      "dir": null,
-      "ref": "master",
-      "url": "https://github.com/ianharrigan/hscript-ex"
-    },
-    {
-      "name": "linc_luajit",
-      "type": "git",
-      "dir": null,
-      "ref": "main",
-      "url": "https://github.com/mcagabe19/linc_luajit-legacy.git"
     },
     {
       "name": "extension-androidtools",
