@@ -2064,6 +2064,22 @@ class FunkinLua extends GlobalScript
 			PlayState.instance.startCountdown();
 			return true;
 		});
+		#if android
+		set("addTouchPad", function(Dpad:String, Full:String)
+		{
+			if (menuMode)
+			{
+				var luaState:LuaSState = Std.downcast(currentMenuState, LuaSState);
+				if (luaState != null)
+					luaState.addTouchPad(Dpad, Full);
+			}
+			else if (PlayState.instance != null)
+			{
+				PlayState.instance.addTouchPad(Dpad, Full);
+			}
+			return true;
+		});
+		#end
 
 		set("setPercent", function(modName:String, val:Float, player:Int = -1)
 		{
