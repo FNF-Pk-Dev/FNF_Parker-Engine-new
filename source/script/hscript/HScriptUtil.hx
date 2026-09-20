@@ -47,7 +47,6 @@ import llua.Lua;
 import llua.LuaL;
 import llua.State;
 import llua.Convert;
-
 import psych.script.FunkinLua;
 #end
 import script.hscript.HScript;
@@ -90,7 +89,7 @@ class HScriptUtil extends HScript
 		set("Lib", Lib);
 		set("Capabilities", Capabilities);
 		set("ShaderFitler", ShaderFilter);
-		set('BlendMode',{
+		set('BlendMode', {
 			SUBTRACT: BlendMode.SUBTRACT,
 			ADD: BlendMode.ADD,
 			MULTIPLY: BlendMode.MULTIPLY,
@@ -106,7 +105,7 @@ class HScriptUtil extends HScript
 		});
 
 		// Basic Stuff
-		//set("this", this);
+		// set("this", this);
 		set("state", FlxG.state);
 		set("camera", FlxG.camera);
 		set("FlxG", FlxG);
@@ -117,17 +116,17 @@ class HScriptUtil extends HScript
 		{
 			FlxG.state.add(obj);
 		});
-		
+
 		set("addBehindGF", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindGF(obj);
 		});
-		
+
 		set("addBehindBF", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindBF(obj);
 		});
-		
+
 		set("addBehindDad", function(obj:flixel.FlxObject)
 		{
 			PlayState.instance.addBehindDad(obj);
@@ -149,7 +148,7 @@ class HScriptUtil extends HScript
 		// Sprites
 		set("FlxSprite", FlxSprite);
 		set("FlxGraphic", FlxGraphic);
-		
+
 		// Bar
 		set("FlxBar", FlxBar);
 		set("LEFT_TO_RIGHT", LEFT_TO_RIGHT);
@@ -160,7 +159,7 @@ class HScriptUtil extends HScript
 		set("HORIZONTAL_OUTSIDE_IN", HORIZONTAL_OUTSIDE_IN);
 		set("VERTICAL_INSIDE_OUT", VERTICAL_INSIDE_OUT);
 		set("VERTICAL_OUTSIDE_IN", VERTICAL_OUTSIDE_IN);
-		
+
 		// Video
 		set("FlxVideo", FlxVideo);
 		set("FlxVideoSprite", FlxVideoSprite);
@@ -194,7 +193,7 @@ class HScriptUtil extends HScript
 		// Modchart
 		set("ModManager", modchart.ModManager);
 		set("Modifier", modchart.Modifier);
-		//set("HScriptModifier", modchart.HScriptModifier);
+		// set("HScriptModifier", modchart.HScriptModifier);
 		set("SubModifier", modchart.SubModifier);
 		set("NoteModifier", modchart.NoteModifier);
 		set("EventTimeline", modchart.EventTimeline);
@@ -203,10 +202,10 @@ class HScriptUtil extends HScript
 		set("ModEvent", modchart.events.ModEvent);
 		set("EaseEvent", modchart.events.EaseEvent);
 		set("SetEvent", modchart.events.SetEvent);
-		
+
 		// Color Functions
 		set("FlxColor", CustomFlxColor);
-		
+
 		set("fromRGB", function(Red:Int, Green:Int, Blue:Int, Alpha:Int = 255)
 		{
 			return FlxColor.fromRGB(Red, Green, Blue, Alpha);
@@ -219,16 +218,16 @@ class HScriptUtil extends HScript
 
 		// Sounds
 		set("FlxSound", FlxSound);
-		
+
 		// RunLuaCodes
 		#if LUA_ALLOWED
 		set("runLuaCode", function(str:String)
 		{
-		    for (script in PlayState.instance.luaArray)
-			script.executeLua(str);
+			for (script in PlayState.instance.luaArray)
+				script.executeLua(str);
 		});
 		#end
-		
+
 		set("FlxAxes", {
 			X: flixel.util.FlxAxes.X,
 			Y: flixel.util.FlxAxes.Y,
@@ -259,39 +258,41 @@ class HScriptUtil extends HScript
 		set("NoteSplash", NoteSplash);
 		set("Character", Character);
 		set("Boyfriend", Boyfriend);
+	}
 
+	/**
+	 * Find all HScript files in a directory
+	 * @param path Directory path to search
+	 * @param deepSearch Whether to search recursively
+	 * @return Array of script file paths
+	 */
+	public static inline function findScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String>
+	{
+		return CoolUtil.findFilesInPath(path, extns, deepSearch);
+	}
 
-	   }
-
-	   /**
-	    * Find all HScript files in a directory
-	    * @param path Directory path to search
-	    * @param deepSearch Whether to search recursively
-	    * @return Array of script file paths
-	    */
-	   public static inline function findScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String> {
-	       return CoolUtil.findFilesInPath(path, extns, deepSearch);
-	   }
-	   
-	   /**
-	    * Find all encoded HScript files in a directory
-	    * @param path Directory path to search
-	    * @param deepSearch Whether to search recursively
-	    * @return Array of encoded script file paths
-	    */
-	   public static inline function findEncodedScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String> {
-	       return CoolUtil.findFilesInPath(path, ["hxenc", "hscriptenc", "hscenc", "hxsenc"], deepSearch);
-	   }
+	/**
+	 * Find all encoded HScript files in a directory
+	 * @param path Directory path to search
+	 * @param deepSearch Whether to search recursively
+	 * @return Array of encoded script file paths
+	 */
+	public static inline function findEncodedScriptsInDir(path:String, ?deepSearch:Bool = true):Array<String>
+	{
+		return CoolUtil.findFilesInPath(path, ["hxenc", "hscriptenc", "hscenc", "hxsenc"], deepSearch);
+	}
 }
 
 /**
-	* Placeholder class for scripted states.
-	* Actual implementation is in OScriptState.
-	*/
-class HScriptState extends MusicBeatState {
-	   // This class serves as a placeholder for the scripted state system.
-	   // The actual scripted state functionality is handled by OScriptState.
+ * Placeholder class for scripted states.
+ * Actual implementation is in OScriptState.
+ */
+class HScriptState extends MusicBeatState
+{
+	// This class serves as a placeholder for the scripted state system.
+	// The actual scripted state functionality is handled by OScriptState.
 }
+
 class CustomFlxColor
 {
 	// These aren't part of FlxColor but i thought they could be useful
@@ -300,8 +301,9 @@ class CustomFlxColor
 		return [color.red, color.green, color.blue];
 
 	public static function lerp(from:FlxColor, to:FlxColor, ratio:Float) // FlxColor.interpolate() exists -_-
-		return FlxColor.fromRGBFloat(flixel.math.FlxMath.lerp(from.redFloat, to.redFloat, ratio), flixel.math.FlxMath.lerp(from.greenFloat, to.greenFloat, ratio),
-			flixel.math.FlxMath.lerp(from.blueFloat, to.blueFloat, ratio), flixel.math.FlxMath.lerp(from.alphaFloat, to.alphaFloat, ratio));
+		return FlxColor.fromRGBFloat(flixel.math.FlxMath.lerp(from.redFloat, to.redFloat, ratio),
+			flixel.math.FlxMath.lerp(from.greenFloat, to.greenFloat, ratio), flixel.math.FlxMath.lerp(from.blueFloat, to.blueFloat, ratio),
+			flixel.math.FlxMath.lerp(from.alphaFloat, to.alphaFloat, ratio));
 
 	////
 	public static function get_red(color:FlxColor)

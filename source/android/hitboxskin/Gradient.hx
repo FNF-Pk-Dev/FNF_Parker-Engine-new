@@ -75,21 +75,21 @@ class Gradient extends FlxSpriteGroup
 		hint.antialiasing = ClientPrefs.globalAntialiasing;
 		hint.scrollFactor.set();
 		hint.alpha = guh2;
-			hint.onDown.callback = function()
-			{
-				if (hint.alpha != guh)
-					hint.alpha = guh;
-			}
-			hint.onUp.callback = function()
-			{
-				if (hint.alpha != guh2)
-					hint.alpha = guh2;
-			}
-			hint.onOut.callback = function()
-			{
-				if (hint.alpha != guh2)
-					hint.alpha = guh2;
-			}
+		hint.onDown.callback = function()
+		{
+			if (hint.alpha != guh)
+				hint.alpha = guh;
+		}
+		hint.onUp.callback = function()
+		{
+			if (hint.alpha != guh2)
+				hint.alpha = guh2;
+		}
+		hint.onOut.callback = function()
+		{
+			if (hint.alpha != guh2)
+				hint.alpha = guh2;
+		}
 		#if FLX_DEBUG
 		hint.ignoreDrawDebug = true;
 		#end
@@ -103,12 +103,12 @@ class Gradient extends FlxSpriteGroup
 			guh = ClientPrefs.hitboxalpha - 0.07;
 		var shape:Shape = new Shape();
 		shape.graphics.beginFill(Color);
-			var matrix:Matrix = new Matrix();
-			matrix.createGradientBox(Width, Height, 0, 0, 0);
+		var matrix:Matrix = new Matrix();
+		matrix.createGradientBox(Width, Height, 0, 0, 0);
 
-			shape.graphics.beginGradientFill(RADIAL, [Color, Color], [0, guh], [60, 255], matrix, PAD, RGB, 0);
-			shape.graphics.drawRect(0, 0, Width, Height);
-			shape.graphics.endFill();
+		shape.graphics.beginGradientFill(RADIAL, [Color, Color], [0, guh], [60, 255], matrix, PAD, RGB, 0);
+		shape.graphics.drawRect(0, 0, Width, Height);
+		shape.graphics.endFill();
 		var bitmap:BitmapData = new BitmapData(Width, Height, true, 0);
 		bitmap.draw(shape, true);
 		return bitmap;

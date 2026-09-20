@@ -25,7 +25,7 @@ class AndroidBackHandler
 	{
 		#if android
 		onBackCallback = callback;
-		
+
 		if (!initialized)
 		{
 			initialized = true;
@@ -65,28 +65,25 @@ class AndroidBackHandler
 	public static function handleBackPress():Bool
 	{
 		trace("AndroidBackHandler: handleBackPress called");
-		
+
 		if (onBackCallback != null)
 		{
 			var consume = onBackCallback();
 			trace("AndroidBackHandler: Callback returned " + consume);
 			return consume;
 		}
-		
+
 		// Default behavior: consume back press (show pause menu if in PlayState)
 		if (FlxG.state != null && Std.is(FlxG.state, states.game.PlayState))
 		{
 			var playState:states.game.PlayState = cast FlxG.state;
 			if (!playState.paused && !playState.endingSong)
 			{
-				playState.openSubState(new substates.PauseSubState(
-					playState.boyfriend.getScreenPosition().x,
-					playState.boyfriend.getScreenPosition().y
-				));
+				playState.openSubState(new substates.PauseSubState(playState.boyfriend.getScreenPosition().x, playState.boyfriend.getScreenPosition().y));
 				return true;
 			}
 		}
-		
+
 		// Not in PlayState, allow back to exit
 		return false;
 	}

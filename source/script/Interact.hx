@@ -27,7 +27,8 @@ class Interact extends FlxBasic
 	public function getNewObj():Dynamic
 	{
 		var newObj:Dynamic = {};
-		if (newObj != null) {
+		if (newObj != null)
+		{
 			interactObjs.push(newObj);
 		}
 
@@ -71,7 +72,8 @@ class Interact extends FlxBasic
 				{
 					@:privateAccess
 					var val:Dynamic = parent._interp.resolve(varName);
-					if (val != null) {
+					if (val != null)
+					{
 						Reflect.setProperty(interactObj, varName, val);
 					}
 				}
@@ -143,7 +145,8 @@ class Interact extends FlxBasic
 				if (!presetVars.contains(str) && !isScriptCheck && !newVars.contains(str))
 				{
 					var value:Dynamic = map.get(str);
-					if (value != null) {
+					if (value != null)
+					{
 						newVars.push(str);
 					}
 				}
@@ -153,6 +156,3 @@ class Interact extends FlxBasic
 		return newVars;
 	}
 }
-
-
-

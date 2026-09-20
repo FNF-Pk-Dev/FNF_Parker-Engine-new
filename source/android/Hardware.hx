@@ -2,11 +2,13 @@ package android;
 
 import lime.system.JNI;
 
-class Hardware {
+class Hardware
+{
 	/**
 	 * Base Orientation of the phone.
 	 */
 	public static inline var ORIENTATION_UNSPECIFIED:Int = 0;
+
 	public static inline var ORIENTATION_PORTRAIT:Int = 1;
 	public static inline var ORIENTATION_LANDSCAPE:Int = 2;
 
@@ -42,7 +44,7 @@ class Hardware {
 	 */
 	public static function setScreenOrientation(screenOrientation:Int):Void
 	{
-		var setRequestedOrientationNative = JNI.createStaticMethod("org/haxe/extension/Hardware","setRequestedOrientation","(I)V");
+		var setRequestedOrientationNative = JNI.createStaticMethod("org/haxe/extension/Hardware", "setRequestedOrientation", "(I)V");
 		setRequestedOrientationNative(screenOrientation);
 	}
 

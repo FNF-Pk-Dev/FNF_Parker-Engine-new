@@ -71,7 +71,7 @@ class MobileData
 
 		return mobilePad;
 	}
-	
+
 	static function readDirectory(folder:String, map:Dynamic)
 	{
 		folder = folder.contains(':') ? folder.split(':')[1] : folder;
@@ -95,29 +95,32 @@ class MobileData
 	{
 		var foldersToCheck:Array<String> = [];
 		#if sys
-		if(FileSystem.exists(path + fileToFind))
+		if (FileSystem.exists(path + fileToFind))
 		#end
-			foldersToCheck.push(path + fileToFind);
+		foldersToCheck.push(path + fileToFind);
 
 		#if MODS_ALLOWED
-		if(mods)
+		if (mods)
 		{
 			// Global mods first
-			for(mod in Paths.getGlobalMods())
+			for (mod in Paths.getGlobalMods())
 			{
 				var folder:String = Paths.mods(mod + '/' + fileToFind);
-				if(FileSystem.exists(folder) && !foldersToCheck.contains(folder)) foldersToCheck.push(folder);
+				if (FileSystem.exists(folder) && !foldersToCheck.contains(folder))
+					foldersToCheck.push(folder);
 			}
 
 			// Then "PsychEngine/mods/" main folder
 			var folder:String = Paths.mods(fileToFind);
-			if(FileSystem.exists(folder) && !foldersToCheck.contains(folder)) foldersToCheck.push(Paths.mods(fileToFind));
+			if (FileSystem.exists(folder) && !foldersToCheck.contains(folder))
+				foldersToCheck.push(Paths.mods(fileToFind));
 
 			// And lastly, the loaded mod's folder
-			if(Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
+			if (Paths.currentModDirectory != null && Paths.currentModDirectory.length > 0)
 			{
 				var folder:String = Paths.mods(Paths.currentModDirectory + '/' + fileToFind);
-				if(FileSystem.exists(folder) && !foldersToCheck.contains(folder)) foldersToCheck.push(folder);
+				if (FileSystem.exists(folder) && !foldersToCheck.contains(folder))
+					foldersToCheck.push(folder);
 			}
 		}
 		#end

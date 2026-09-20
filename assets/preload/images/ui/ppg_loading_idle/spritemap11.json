@@ -1,0 +1,167 @@
+{
+  "ATLAS": {
+    "SPRITES": [
+      {
+        "SPRITE": {
+          "name": "frame_0150",
+          "x": 0,
+          "y": 0,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0151",
+          "x": 1280,
+          "y": 0,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0152",
+          "x": 2560,
+          "y": 0,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0153",
+          "x": 0,
+          "y": 720,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0154",
+          "x": 1280,
+          "y": 720,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0155",
+          "x": 2560,
+          "y": 720,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0156",
+          "x": 0,
+          "y": 1440,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0157",
+          "x": 1280,
+          "y": 1440,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0158",
+          "x": 2560,
+          "y": 1440,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0159",
+          "x": 0,
+          "y": 2160,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0160",
+          "x": 1280,
+          "y": 2160,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0161",
+          "x": 2560,
+          "y": 2160,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0162",
+          "x": 0,
+          "y": 2880,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0163",
+          "x": 1280,
+          "y": 2880,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      },
+      {
+        "SPRITE": {
+          "name": "frame_0164",
+          "x": 2560,
+          "y": 2880,
+          "w": 1280,
+          "h": 720,
+          "rotated": false
+        }
+      }
+    ]
+  },
+  "meta": {
+    "app": "fbx_to_flxanimate",
+    "version": "1.0",
+    "image": "spritemap11.png",
+    "format": "RGBA8888",
+    "size": {
+      "w": 3840,
+      "h": 3600
+    },
+    "resolution": "1"
+  }
+}

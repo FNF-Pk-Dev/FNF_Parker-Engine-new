@@ -13,7 +13,8 @@ class CameraUtil
 	**/
 	public static var lastCamera(get, never):FlxCamera;
 
-	static function get_lastCamera():FlxCamera return FlxG.cameras.list[FlxG.cameras.list.length - 1];
+	static function get_lastCamera():FlxCamera
+		return FlxG.cameras.list[FlxG.cameras.list.length - 1];
 
 	/**
 		convenient function to making a camera and adding it to the stack as well
@@ -25,7 +26,8 @@ class CameraUtil
 		var cam = new FlxCamera();
 		cam.bgColor = 0x0;
 
-		if (add) FlxG.cameras.add(cam, false);
+		if (add)
+			FlxG.cameras.add(cam, false);
 
 		return cam;
 	}
@@ -37,10 +39,12 @@ class CameraUtil
 	**/
 	public static function addShader(shader:FlxShader, ?camera:FlxCamera)
 	{
-		if (camera == null) camera = FlxG.camera;
+		if (camera == null)
+			camera = FlxG.camera;
 
 		var filter:ShaderFilter = new ShaderFilter(shader);
-		if (camera.filters == null) camera.filters = [];
+		if (camera.filters == null)
+			camera.filters = [];
 		camera.filters.push(filter);
 	}
 
@@ -52,8 +56,10 @@ class CameraUtil
 	**/
 	public static function removeShader(shader:FlxShader, ?camera:FlxCamera):Bool
 	{
-		if (camera == null) camera = FlxG.camera;
-		if (camera.filters == null) return false;
+		if (camera == null)
+			camera = FlxG.camera;
+		if (camera.filters == null)
+			return false;
 
 		for (i in camera.filters)
 		{
@@ -80,7 +86,7 @@ class CameraUtil
 	public static function insertFlxCamera(idx:Int, camera:FlxCamera, defDraw:Bool = false)
 	{
 		#if (flixel > "5.8.0")
-		return FlxG.cameras.insert(camera,idx,defDraw);
+		return FlxG.cameras.insert(camera, idx, defDraw);
 		#else
 		var cameras = [
 			for (i in FlxG.cameras.list)

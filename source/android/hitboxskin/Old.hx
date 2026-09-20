@@ -20,7 +20,7 @@ class Old extends FlxSpriteGroup
 	public var buttonRight:FlxButton = new FlxButton(0, 0);
 	public var buttonSpace:FlxButton = new FlxButton(0, 0);
 
-    final offsetFir:Int = (ClientPrefs.hitboxPT ? Std.int(FlxG.height / 4) * 3 : 0);
+	final offsetFir:Int = (ClientPrefs.hitboxPT ? Std.int(FlxG.height / 4) * 3 : 0);
 	final offsetSec:Int = (ClientPrefs.hitboxPT ? 0 : Std.int(FlxG.height / 4));
 
 	/**
@@ -30,24 +30,22 @@ class Old extends FlxSpriteGroup
 	{
 		super();
 
-        if (ClientPrefs.hitboxLocation != 'Space')
+		if (ClientPrefs.hitboxLocation != 'Space')
 		{
-		add(buttonLeft = createHint(0, 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0xFF00FF));
-		add(buttonDown = createHint(FlxG.width / 4, 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0x00FFFF));
-		add(buttonUp = createHint(FlxG.width / 2, 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0x00FF00));
-		add(buttonRight = createHint((FlxG.width / 2) + (FlxG.width / 4), 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0xFF0000));
-		}	
+			add(buttonLeft = createHint(0, 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0xFF00FF));
+			add(buttonDown = createHint(FlxG.width / 4, 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0x00FFFF));
+			add(buttonUp = createHint(FlxG.width / 2, 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0x00FF00));
+			add(buttonRight = createHint((FlxG.width / 2) + (FlxG.width / 4), 0, Std.int(FlxG.width / 4), Std.int(FlxG.height * 1), 0xFF0000));
+		}
 		else
 		{
-		add(buttonLeft = createHint(0, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0xFF00FF));
-		add(buttonDown = createHint(FlxG.width / 4, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0x00FFFF));
-		add(buttonUp = createHint(FlxG.width / 2, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0x00FF00));
-		add(buttonRight = createHint((FlxG.width / 2) + (FlxG.width / 4), offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0xFF0000));
-        add(buttonSpace = createHint(0, offsetFir, Std.int(FlxG.width), Std.int(FlxG.height / 4), 0xFFFF00));
+			add(buttonLeft = createHint(0, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0xFF00FF));
+			add(buttonDown = createHint(FlxG.width / 4, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0x00FFFF));
+			add(buttonUp = createHint(FlxG.width / 2, offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0x00FF00));
+			add(buttonRight = createHint((FlxG.width / 2) + (FlxG.width / 4), offsetSec, Std.int(FlxG.width / 4), Std.int(FlxG.height * 0.8), 0xFF0000));
+			add(buttonSpace = createHint(0, offsetFir, Std.int(FlxG.width), Std.int(FlxG.height / 4), 0xFFFF00));
 		}
-		
-			
-		
+
 		scrollFactor.set();
 	}
 

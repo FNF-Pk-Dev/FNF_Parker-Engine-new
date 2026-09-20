@@ -110,7 +110,7 @@ class TypedMobileButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	 * Defaults to `Math.POSITIVE_INFINITY` (i.e. no limit).
 	 */
 	public var maxInputMovement:Float = Math.POSITIVE_INFINITY;
-	
+
 	/**
 	 * Shows the current state of the button, either `MobileButton.NORMAL`,
 	 * `MobileButton.HIGHLIGHT` or `MobileButton.PRESSED`.
@@ -187,6 +187,7 @@ class TypedMobileButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	var currentInput:IFlxInput;
 
 	var lastStatus = -1;
+
 	public var canChangeLabelAlpha:Bool = true;
 
 	/**
@@ -386,8 +387,8 @@ class TypedMobileButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 	{
 		if (_spriteLabel != null)
 		{
-		    _spriteLabel.x = ((width - _spriteLabel.width) / 2) + (pixelPerfectPosition ? Math.floor(x) : x);
- 			_spriteLabel.y = ((height - _spriteLabel.height) / 2) + (pixelPerfectPosition ? Math.floor(y) : y);
+			_spriteLabel.x = ((width - _spriteLabel.width) / 2) + (pixelPerfectPosition ? Math.floor(x) : x);
+			_spriteLabel.y = ((height - _spriteLabel.height) / 2) + (pixelPerfectPosition ? Math.floor(y) : y);
 		}
 	}
 
@@ -396,7 +397,7 @@ class TypedMobileButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 		if (_spriteLabel != null && labelAlphas.length > status)
 			_spriteLabel.alpha = alpha * labelAlphas[status];
 	}
-	
+
 	public function updateLabelScale()
 	{
 		if (_spriteLabel != null)
@@ -485,10 +486,10 @@ class TypedMobileButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 		updateLabelAlpha();
 		return alpha;
 	}
-	
+
 	override function set_visible(Value:Bool):Bool
 	{
-	 	return Value;
+		return Value;
 	}
 
 	override function set_x(Value:Float):Float
@@ -504,35 +505,35 @@ class TypedMobileButton<T:FlxSprite> extends FlxSprite implements IFlxInput
 		updateLabelPosition();
 		return y;
 	}
-	
+
 	override function set_color(Value:FlxColor):Int
 	{
 		if (_spriteLabel != null)
-	 		_spriteLabel.color = Value;
-	 	
-	 	super.set_color(Value);
+			_spriteLabel.color = Value;
+
+		super.set_color(Value);
 		return Value;
 	}
 
 	override private function set_width(Value:Float)
 	{
-	 	super.set_width(Value);
-	 	updateLabelScale();
-	 	return Value;
+		super.set_width(Value);
+		updateLabelScale();
+		return Value;
 	}
 
 	override private function set_height(Value:Float)
 	{
 		super.set_height(Value);
-	 	updateLabelScale();
-	 	return Value;
+		updateLabelScale();
+		return Value;
 	}
 
 	override public function updateHitbox()
 	{
-	 	super.updateHitbox();
-	 	if (_spriteLabel != null)
-	 		_spriteLabel.updateHitbox();
+		super.updateHitbox();
+		if (_spriteLabel != null)
+			_spriteLabel.updateHitbox();
 	}
 
 	function set_parentAlpha(Value:Float):Float

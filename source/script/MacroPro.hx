@@ -10,7 +10,6 @@ using Lambda;
 
 class MacroPro
 {
-
 	/**
 	 * enforces the use of haxe 4.3 cuz i use alot of its null coalescents lol
 	 */
@@ -90,32 +89,30 @@ class MacroPro
 
 		var position = Context.currentPos();
 
-		fields.push(
-			{
-				name: "loadFromSheet",
-				access: [haxe.macro.Expr.Access.APublic],
-				kind: FFun(
+		fields.push({
+			name: "loadFromSheet",
+			access: [haxe.macro.Expr.Access.APublic],
+			kind: FFun({
+				args: [
+					{name: 'path', type: (macro :String)},
+					{name: 'animName', type: (macro :String)},
+					{name: 'fps', type: (macro :Int), value: macro $v{24}}
+				],
+				expr: macro
+				{
+					this.frames = funkin.Paths.getSparrowAtlas(path);
+					this.animation.addByPrefix(animName, animName, fps);
+					this.animation.play(animName);
+					if (this.animation.curAnim == null || this.animation.curAnim.numFrames == 1)
 					{
-						args: [
-							{name: 'path', type: (macro :String)},
-							{name: 'animName', type: (macro :String)},
-							{name: 'fps', type: (macro :Int), value: macro $v{24}}
-						],
-						expr: macro
-						{
-							this.frames = funkin.Paths.getSparrowAtlas(path);
-							this.animation.addByPrefix(animName, animName, fps);
-							this.animation.play(animName);
-							if (this.animation.curAnim == null || this.animation.curAnim.numFrames == 1)
-							{
-								this.active = false;
-							}
-							
-							return this;
-						}
-					}),
-				pos: position,
-			});
+						this.active = false;
+					}
+
+					return this;
+				}
+			}),
+			pos: position,
+		});
 
 		fields.push({
 			doc: "shortcut to loading the frames of a sparrow atlas",
@@ -147,8 +144,10 @@ class MacroPro
 				],
 				expr: macro
 				{
-					if (scaleY == null) scaleY = scaleX;
-					if (shouldUpdateHitbox == null) shouldUpdateHitbox = true;
+					if (scaleY == null)
+						scaleY = scaleX;
+					if (shouldUpdateHitbox == null)
+						shouldUpdateHitbox = true;
 
 					this.scale.set(scaleX, scaleY);
 					if (shouldUpdateHitbox)
@@ -170,8 +169,10 @@ class MacroPro
 				],
 				expr: macro
 				{
-					if (height == null) height = 0;
-					if (shouldUpdateHitbox == null) shouldUpdateHitbox = true;
+					if (height == null)
+						height = 0;
+					if (shouldUpdateHitbox == null)
+						shouldUpdateHitbox = true;
 
 					this.setGraphicSize(width, height);
 					if (shouldUpdateHitbox)
@@ -215,7 +216,8 @@ class MacroPro
 				],
 				expr: macro
 				{
-					if (axes == null) axes = flixel.util.FlxAxes.XY;
+					if (axes == null)
+						axes = flixel.util.FlxAxes.XY;
 					if (axes.x)
 						this.x = object.x + (object.width - this.width) / 2;
 					if (axes.y)

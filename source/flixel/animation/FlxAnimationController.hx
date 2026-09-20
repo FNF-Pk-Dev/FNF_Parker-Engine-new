@@ -52,7 +52,6 @@ class FlxAnimationController implements IFlxDestroyable
 	 */
 	@:deprecated("frames is deprecated, use numFrames")
 	#end
-
 	public var frames(get, never):Int;
 
 	/**
@@ -116,13 +115,16 @@ class FlxAnimationController implements IFlxDestroyable
 	}
 
 	public static var globalSpeed:Float = 1;
+
 	public var followGlobalSpeed:Bool = true;
+
 	public function update(elapsed:Float):Void
 	{
 		if (_curAnim != null)
 		{
 			var e:Float = elapsed;
-			if(followGlobalSpeed) e *= globalSpeed;
+			if (followGlobalSpeed)
+				e *= globalSpeed;
 
 			_curAnim.update(e);
 		}
@@ -185,7 +187,8 @@ class FlxAnimationController implements IFlxDestroyable
 		callback = null;
 		finishCallback = null;
 		loopCallback = null;
-		if (onFinish != null) {
+		if (onFinish != null)
+		{
 			onFinish.destroy();
 			onFinish = null;
 		}
@@ -906,7 +909,7 @@ class FlxAnimationController implements IFlxDestroyable
 		return _sprite.numFrames;
 	}
 
-  #if (flixel >= "5.3.0")
+	#if (flixel >= "5.3.0")
 	inline function get_numFrames():Int
 		return _sprite.numFrames;
 	#end

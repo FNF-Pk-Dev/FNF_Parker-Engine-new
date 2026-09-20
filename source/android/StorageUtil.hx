@@ -1,5 +1,3 @@
-
-
 package android;
 
 import lime.system.System as LimeSystem;

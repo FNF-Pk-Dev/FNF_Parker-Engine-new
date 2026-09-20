@@ -118,7 +118,8 @@ class InterpPro extends crowplexus.hscript.Interp
 	public function new(?parent:Dynamic)
 	{
 		super();
-		if (parent == null) parent = FlxG.state;
+		if (parent == null)
+			parent = FlxG.state;
 		this.parent = parent;
 		showPosOnLog = false;
 	}
@@ -301,7 +302,8 @@ class HScript extends Script
 	public static final defaultVars:Map<String, Dynamic> = new Map<String, Dynamic>();
 
 	var _group:Null<FunkinHScript>;
-	public var foreground :FlxTypedGroup<FlxBasic>;
+
+	public var foreground:FlxTypedGroup<FlxBasic>;
 
 	public static final exts:Array<String> = ['hx', 'hxs', 'hscript'];
 
@@ -320,7 +322,6 @@ class HScript extends Script
 					continue;
 				return i;
 			}
-
 		}
 		return path;
 	}
@@ -400,63 +401,78 @@ class HScript extends Script
 
 		tryExecute();
 		InitLogger();
-		
 	}
-	
-	override function stop() {
-		if (_script == null) return;
+
+	override function stop()
+	{
+		if (_script == null)
+			return;
 		_script.destroy();
 		_script = null;
 	}
 
-	override function set(variable:String, data:Dynamic):Void {
+	override function set(variable:String, data:Dynamic):Void
+	{
 		_script.set(variable, data);
 	}
 
-	override function get(key:String):Dynamic {
+	override function get(key:String):Dynamic
+	{
 		return _script.get(key);
 	}
 
-	override function call(func:String, ?args:Array<Dynamic>):Dynamic {
+	override function call(func:String, ?args:Array<Dynamic>):Dynamic
+	{
 		var ret:Dynamic = GlobalScript.Function_Continue;
-		if (exists(func)) {
+		if (exists(func))
+		{
 			var result = _script.call(func, args);
 			ret = (result != null && result.returnValue != null) ? result.returnValue : GlobalScript.Function_Continue;
 		}
 		return ret;
 	}
 
-	public function exists(varName:String) {
+	public function exists(varName:String)
+	{
 		return _script.exists(varName);
 	}
 
-	public function executeFunc(func:String, ?parameters:Array<Dynamic>, ?theObject:Any, ?extraVars:Map<String, Dynamic>):Dynamic {
-		if (extraVars == null) extraVars = [];
+	public function executeFunc(func:String, ?parameters:Array<Dynamic>, ?theObject:Any, ?extraVars:Map<String, Dynamic>):Dynamic
+	{
+		if (extraVars == null)
+			extraVars = [];
 
-		if (exists(func)) {
+		if (exists(func))
+		{
 			var daFunc = get(func);
-			if (Reflect.isFunction(daFunc)) {
+			if (Reflect.isFunction(daFunc))
+			{
 				var returnVal:Any = null;
 				var defaultShit:Map<String, Dynamic> = [];
 
-				if (theObject != null) extraVars.set("this", theObject);
+				if (theObject != null)
+					extraVars.set("this", theObject);
 
-				for (key in extraVars.keys()) {
+				for (key in extraVars.keys())
+				{
 					defaultShit.set(key, get(key));
 					set(key, extraVars.get(key));
 				}
 
-				try {
+				try
+				{
 					returnVal = Reflect.callMethod(theObject, daFunc, parameters);
 				}
-				catch (e:haxe.Exception) {
+				catch (e:haxe.Exception)
+				{
 					error(e.message, '${scriptName}: Script Execution Error');
 					#if sys
 					Sys.println(e.message);
 					#end
 				}
 
-				for (key in defaultShit.keys()) {
+				for (key in defaultShit.keys())
+				{
 					set(key, defaultShit.get(key));
 				}
 
@@ -466,16 +482,20 @@ class HScript extends Script
 		return null;
 	}
 
-	public function executeString(script:String, ?names:String = "Script", ?additionalVars:Map<String, Any>):Dynamic {
+	public function executeString(script:String, ?names:String = "Script", ?additionalVars:Map<String, Any>):Dynamic
+	{
 		return new HScript(script, names, additionalVars);
 	}
 
-    inline function tryExecute() {
+	inline function tryExecute()
+	{
 		var ret:Dynamic = null;
-		try {
+		try
+		{
 			ret = _script.execute();
 		}
-		catch (e) {
+		catch (e)
+		{
 			parsingException = Std.string(e);
 			error('PARSING ERROR: $e', '${scriptName}: Script Error');
 			PlayState.instance.addTextToDebug('[${scriptName}]: PARSING ERROR: $e', FlxColor.RED);
@@ -483,53 +503,61 @@ class HScript extends Script
 		return ret;
 	}
 
-	public function update(elapsed:Float) {
+	public function update(elapsed:Float)
+	{
 		executeFunc("onUpdate", [elapsed]);
 	}
 
-	public function error(errorMsg:String, ?winTitle:Null<String>) {
-		try {
+	public function error(errorMsg:String, ?winTitle:Null<String>)
+	{
+		try
+		{
 			// Handle null error message
-			if (errorMsg == null) errorMsg = "Unknown error occurred";
-			
+			if (errorMsg == null)
+				errorMsg = "Unknown error occurred";
+
 			// Only show error once
-			if (alreadyShownError) return;
+			if (alreadyShownError)
+				return;
 			alreadyShownError = true;
-			
+
 			trace(errorMsg);
 			var fullMsg = 'Script Error: $errorMsg';
 			var line = getCurLine();
-			if (line != null) {
+			if (line != null)
+			{
 				fullMsg += '\n\nLine: $line';
 			}
 			#if windows
-			if (CPPInterface != null) {
+			if (CPPInterface != null)
+			{
 				CPPInterface.messageBox(fullMsg, winTitle != null ? winTitle : '${scriptName}: Script Error');
 			}
 			#else
 			var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
-			if (stack != null && stack.length > 0) {
+			if (stack != null && stack.length > 0)
+			{
 				fullMsg += '\n\nStack Trace:\n$stack';
 			}
 			CoolUtil.showPopUp(fullMsg, winTitle != null ? winTitle : '${scriptName}: Script Error');
 			#end
-		} catch (e:Dynamic) {
-
+		}
+		catch (e:Dynamic)
+		{
 			trace('Failed to display error: $e');
 		}
 	}
 
 	var alreadyShownError:Bool = false;
 
-	function getCurLine():Null<Int> {
+	function getCurLine():Null<Int>
+	{
 		return _script.interp.posInfos() != null ? _script.interp.posInfos().lineNumber : null;
 	}
 
 	function setDefaultVars()
 	{
 		_script.preset();
-
-		
 
 		set("StringTools", StringTools);
 
@@ -636,16 +664,18 @@ class HScript extends Script
 			});
 
 			#if LUA_ALLOWED
-			set('createGlobalCallback', function(name:String, func:Dynamic) {
+			set('createGlobalCallback', function(name:String, func:Dynamic)
+			{
 				for (script in PlayState.instance.luaArray)
-					if(script != null && script.lua != null && !script.closed)
+					if (script != null && script.lua != null && !script.closed)
 						Lua_helper.add_callback(script.lua, name, func);
 				FunkinLua.customFunctions.set(name, func);
 			});
 			#end
 
 			#if LUA_ALLOWED
-			if (Lua_helper.callbacks != null) {
+			if (Lua_helper.callbacks != null)
+			{
 				for (i => value in Lua_helper.callbacks) // 直接遍历键值对
 					set(i, value);
 			}
@@ -653,7 +683,8 @@ class HScript extends Script
 		}
 
 		// todo rework this
-		set("newShader", function(fragFile:String = null, vertFile:String = null) { // returns a FlxRuntimeShader but with file names lol
+		set("newShader", function(fragFile:String = null, vertFile:String = null)
+		{ // returns a FlxRuntimeShader but with file names lol
 			var runtime:flixel.addons.display.FlxRuntimeShader = null;
 
 			try

@@ -20,7 +20,7 @@ class FlxCompat
 	 * 6.0版本中 FlxCamera.defaultCameras 变更为 FlxG.cameras.defaultCameras
 	 */
 	public static var isV6(get, never):Bool;
-	
+
 	static function get_isV6():Bool
 	{
 		#if !flixel_5
@@ -36,7 +36,7 @@ class FlxCompat
 	 * 6.x: FlxG.cameras.list 默认包含默认相机
 	 */
 	public static var defaultCameras(get, never):Array<FlxCamera>;
-	
+
 	static function get_defaultCameras():Array<FlxCamera>
 	{
 		#if (flixel >= "6.0.0")
@@ -84,9 +84,8 @@ class FlxCompat
 	 * 5.x: 支持 SHADOW_XY borderStyle
 	 * 6.x: 可能需要手动实现
 	 */
-	public static function makeBorderGraphic(sprite:flixel.FlxSprite, width:Int, height:Int, 
-		borderColor:FlxColor, borderSize:Int, caretColor:FlxColor, caretWidth:Int, caretHeight:Int,
-		borderStyle:String = "NONE"):Void
+	public static function makeBorderGraphic(sprite:flixel.FlxSprite, width:Int, height:Int, borderColor:FlxColor, borderSize:Int, caretColor:FlxColor,
+			caretWidth:Int, caretHeight:Int, borderStyle:String = "NONE"):Void
 	{
 		#if (flixel >= "6.0.0")
 		// 6.x 不支持 SHADOW_XY，手动实现
@@ -94,7 +93,7 @@ class FlxCompat
 		{
 			case "NONE":
 				sprite.makeGraphic(width, height, caretColor);
-				
+
 			case "SHADOW":
 				var cw = width + borderSize;
 				var ch = height + borderSize;
@@ -105,14 +104,14 @@ class FlxCompat
 				// 绘制主体
 				var mainRect = new flash.geom.Rectangle(0, 0, width, height);
 				sprite.pixels.fillRect(mainRect, caretColor);
-				
+
 			case "OUTLINE_FAST", "OUTLINE":
 				var cw = width + borderSize * 2;
 				var ch = height + borderSize * 2;
 				sprite.makeGraphic(cw, ch, borderColor);
 				var innerRect = new flash.geom.Rectangle(borderSize, borderSize, width, height);
 				sprite.pixels.fillRect(innerRect, caretColor);
-				
+
 			default:
 				sprite.makeGraphic(width, height, caretColor);
 		}

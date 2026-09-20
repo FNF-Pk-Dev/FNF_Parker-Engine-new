@@ -10,5 +10,6 @@
 	"backgroundSprite":"",
 	"backgroundvisible":false,
 	"loadbarvisible":false,
-	"fadeTime":0.5
+	"fadeTime":0.5,
+	"usePowerPuffGirls":false
 }

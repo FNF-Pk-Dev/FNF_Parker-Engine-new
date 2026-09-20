@@ -10,7 +10,6 @@ import flixel.input.actions.FlxActionSet;
 import flixel.input.gamepad.FlxGamepadButton;
 import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.input.keyboard.FlxKey;
-
 #if android
 import flixel.group.FlxGroup;
 import android.FlxHitbox;
@@ -319,13 +318,13 @@ class Controls extends FlxActionSet
 	public var SPACE(get, never):Bool;
 
 	inline function get_SPACE()
-		return _space.check();		
-	
+		return _space.check();
+
 	public var SPACE_R(get, never):Bool;
 
 	inline function get_SPACE_R()
-		return _spaceR.check();		
-		
+		return _spaceR.check();
+
 	public var SPACE_P(get, never):Bool;
 
 	inline function get_SPACE_P()
@@ -412,7 +411,7 @@ class Controls extends FlxActionSet
 
 		for (action in digitalActions)
 			byName[action.name] = action;
-			
+
 		if (scheme == null)
 			scheme = None;
 		setKeyboardScheme(scheme, false);
@@ -421,23 +420,23 @@ class Controls extends FlxActionSet
 
 	#if android
 	public var trackedinputsUI:Array<FlxActionInput> = [];
-	public var trackedinputsNOTES:Array<FlxActionInput> = [];	
+	public var trackedinputsNOTES:Array<FlxActionInput> = [];
 
-	public function addbuttonuNOTES(action:FlxActionDigital, button:MobileButton, state:FlxInputState) 
+	public function addbuttonuNOTES(action:FlxActionDigital, button:MobileButton, state:FlxInputState)
 	{
 		var input = new FlxActionInputDigitalIFlxInput(button, state);
 		trackedinputsNOTES.push(input);
 		action.add(input);
 	}
-	
-	public function addbuttonuOldNOTES(action:FlxActionDigital, button:FlxButton, state:FlxInputState) 
+
+	public function addbuttonuOldNOTES(action:FlxActionDigital, button:FlxButton, state:FlxInputState)
 	{
 		var input = new FlxActionInputDigitalIFlxInput(button, state);
 		trackedinputsNOTES.push(input);
 		action.add(input);
 	}
-	
-	//rework later
+
+	// rework later
 	public function addButtonNOTES(action:FlxActionDigital, button:FlxNewButton, state:FlxInputState)
 	{
 		var input = new FlxActionInputDigitalIFlxInput(button, state);
@@ -445,7 +444,8 @@ class Controls extends FlxActionSet
 		action.add(input);
 	}
 
-	public function addbuttonuUI(action:FlxActionDigital, button:MobileButton, state:FlxInputState) {
+	public function addbuttonuUI(action:FlxActionDigital, button:MobileButton, state:FlxInputState)
+	{
 		var input = new FlxActionInputDigitalIFlxInput(button, state);
 		trackedinputsUI.push(input);
 		action.add(input);
@@ -458,15 +458,14 @@ class Controls extends FlxActionSet
 		action.add(input);
 	}
 
-	public function setHitBox(hitbox:FlxHitbox) 
+	public function setHitBox(hitbox:FlxHitbox)
 	{
 		inline forEachBound(Control.NOTE_UP, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonUp, state));
 		inline forEachBound(Control.NOTE_DOWN, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonDown, state));
 		inline forEachBound(Control.NOTE_LEFT, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonLeft, state));
-		inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonRight, state));	
+		inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addbuttonuOldNOTES(action, hitbox.buttonRight, state));
 	}
-	
-	
+
 	public function setNewHitBox(Hitbox:FlxNewHitbox)
 	{
 		inline forEachBound(Control.NOTE_UP, (action, state) -> addButtonNOTES(action, Hitbox.buttonUp, state));
@@ -496,7 +495,7 @@ class Controls extends FlxActionSet
 		inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addButtonNOTES(action, Hitbox.hints[3], state));
 		inline forEachBound(Control.SPACE, (action, state) -> addButtonUI(action, Hitbox.hints[4], state));
 	}
-	
+
 	public function setTouchPadUI(MobilePad:FlxTouchPad, DPad:String, Action:String):Void
 	{
 		if (MobilePad == null)
@@ -525,7 +524,7 @@ class Controls extends FlxActionSet
 				inline forEachBound(Control.UI_RIGHT, (action, state) -> addbuttonuUI(action, MobilePad.buttonRight2, state));
 			case "NONE": // do nothing
 			default:
-			    inline forEachBound(Control.UI_UP, (action, state) -> addbuttonuUI(action, MobilePad.buttonUp, state));
+				inline forEachBound(Control.UI_UP, (action, state) -> addbuttonuUI(action, MobilePad.buttonUp, state));
 				inline forEachBound(Control.UI_DOWN, (action, state) -> addbuttonuUI(action, MobilePad.buttonDown, state));
 				inline forEachBound(Control.UI_LEFT, (action, state) -> addbuttonuUI(action, MobilePad.buttonLeft, state));
 				inline forEachBound(Control.UI_RIGHT, (action, state) -> addbuttonuUI(action, MobilePad.buttonRight, state));
@@ -544,7 +543,7 @@ class Controls extends FlxActionSet
 				inline forEachBound(Control.BACK, (action, state) -> addbuttonuUI(action, MobilePad.buttonB, state));
 			case "NONE" | "E" | "controlExtend": // do nothing
 			default:
-			    inline forEachBound(Control.ACCEPT, (action, state) -> addbuttonuUI(action, MobilePad.buttonA, state));
+				inline forEachBound(Control.ACCEPT, (action, state) -> addbuttonuUI(action, MobilePad.buttonA, state));
 				inline forEachBound(Control.BACK, (action, state) -> addbuttonuUI(action, MobilePad.buttonB, state));
 		}
 	}
@@ -577,7 +576,7 @@ class Controls extends FlxActionSet
 				inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonRight2, state));
 			case "NONE": // do nothing
 			default:
-			    inline forEachBound(Control.NOTE_UP, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonUp, state));
+				inline forEachBound(Control.NOTE_UP, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonUp, state));
 				inline forEachBound(Control.NOTE_DOWN, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonDown, state));
 				inline forEachBound(Control.NOTE_LEFT, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonLeft, state));
 				inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonRight, state));
@@ -596,17 +595,17 @@ class Controls extends FlxActionSet
 				inline forEachBound(Control.NOTE_RIGHT, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonRight, state));
 			case "NONE" | "E" | "controlExtend": // do nothing
 			default:
-			    inline forEachBound(Control.ACCEPT, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonA, state));
+				inline forEachBound(Control.ACCEPT, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonA, state));
 				inline forEachBound(Control.BACK, (action, state) -> addbuttonuNOTES(action, MobilePad.buttonB, state));
 		}
 	}
-	
 
-	public function removeFlxInput(Tinputs) {
+	public function removeFlxInput(Tinputs)
+	{
 		for (action in this.digitalActions)
 		{
 			var i = action.inputs.length;
-			
+
 			while (i-- > 0)
 			{
 				var input = action.inputs[i];
@@ -617,7 +616,7 @@ class Controls extends FlxActionSet
 						action.remove(input);
 			}
 		}
-	}	
+	}
 	#end
 
 	override function update()
@@ -773,7 +772,7 @@ class Controls extends FlxActionSet
 			for (input in action.inputs)
 			{
 				if (device == null || isDevice(input, device))
-				byName[name].add(cast input);
+					byName[name].add(cast input);
 			}
 		}
 		#end
@@ -789,7 +788,7 @@ class Controls extends FlxActionSet
 				#else
 				for (gamepad in controls.gamepadsAdded)
 					if (gamepadsAdded.indexOf(gamepad) == -1)
-					  gamepadsAdded.push(gamepad);
+						gamepadsAdded.push(gamepad);
 				#end
 
 				mergeKeyboardScheme(controls.keyboardScheme);
@@ -824,12 +823,14 @@ class Controls extends FlxActionSet
 	 * Sets all actions that pertain to the binder to trigger when the supplied keys are used.
 	 * If binder is a literal you can inline this
 	 */
-        #if !android
+	#if !android
 	public function bindKeys(control:Control, keys:Array<FlxKey>)
 	{
 		var copyKeys:Array<FlxKey> = keys.copy();
-		for (i in 0...copyKeys.length) {
-			if(i == NONE) copyKeys.remove(i);
+		for (i in 0...copyKeys.length)
+		{
+			if (i == NONE)
+				copyKeys.remove(i);
 		}
 
 		#if (haxe >= "4.0.0")
@@ -842,8 +843,10 @@ class Controls extends FlxActionSet
 	public function unbindKeys(control:Control, keys:Array<FlxKey>)
 	{
 		var copyKeys:Array<FlxKey> = keys.copy();
-		for (i in 0...copyKeys.length) {
-			if(i == NONE) copyKeys.remove(i);
+		for (i in 0...copyKeys.length)
+		{
+			if (i == NONE)
+				copyKeys.remove(i);
 		}
 
 		#if (haxe >= "4.0.0")
@@ -859,7 +862,7 @@ class Controls extends FlxActionSet
 		inline forEachBound(control, (action, state) -> addKeys(action, keys, state));
 		#else
 		forEachBound(control, function(action, state) addKeys(action, keys, state));
-		#end	
+		#end
 	}
 
 	public function unbindKeys(control:Control, keys:Array<FlxKey>)
@@ -868,14 +871,14 @@ class Controls extends FlxActionSet
 		inline forEachBound(control, (action, _) -> removeKeys(action, keys));
 		#else
 		forEachBound(control, function(action, _) removeKeys(action, keys));
-		#end		
-	}	
+		#end
+	}
 	#end
 
 	inline static function addKeys(action:FlxActionDigital, keys:Array<FlxKey>, state:FlxInputState)
 	{
 		for (key in keys)
-			if(key != NONE)
+			if (key != NONE)
 				action.addKey(key, state);
 	}
 
@@ -897,7 +900,7 @@ class Controls extends FlxActionSet
 
 		keyboardScheme = scheme;
 		var keysMap = ClientPrefs.keyBinds;
-		
+
 		#if (haxe >= "4.0.0")
 		switch (scheme)
 		{
@@ -1009,7 +1012,7 @@ class Controls extends FlxActionSet
 	public function addGamepad(id:Int, ?buttonMap:Map<Control, Array<FlxGamepadInputID>>):Void
 	{
 		gamepadsAdded.push(id);
-		
+
 		#if (haxe >= "4.0.0")
 		for (control => buttons in buttonMap)
 			inline bindButtons(control, id, buttons);
@@ -1067,7 +1070,7 @@ class Controls extends FlxActionSet
 		]);
 		#else
 		addGamepadLiteral(id, [
-			//Swap A and B for switch
+			// Swap A and B for switch
 			Control.ACCEPT => [B, START],
 			Control.BACK => [A],
 			Control.UI_UP => [DPAD_UP, LEFT_STICK_DIGITAL_UP, RIGHT_STICK_DIGITAL_UP],

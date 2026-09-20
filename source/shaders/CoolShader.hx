@@ -65,7 +65,6 @@ class CoolShader extends FlxShader
 			gl_FragColor = vec4(finalColor, tex.a);
 		}
 	')
-
 	public function new()
 	{
 		super();
@@ -77,7 +76,7 @@ class CoolShader extends FlxShader
 	{
 		uTime.value[0] += elapsed;
 	}
-	
+
 	public function setColor(color:Array<Float>)
 	{
 		uColor.value = color;

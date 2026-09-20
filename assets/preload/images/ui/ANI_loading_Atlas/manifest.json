@@ -1,0 +1,94 @@
+{
+  "source": "C:/Users/34275/Documents/lolppg/Texture2D/sactx-1024x1024-ETC2-ANI_loading_Atlas-ca91bb45.png",
+  "count": 11,
+  "components": [
+    {
+      "name": "comp_000.png",
+      "x": 232,
+      "y": 15,
+      "w": 120,
+      "h": 31,
+      "area": 1585
+    },
+    {
+      "name": "comp_001.png",
+      "x": 0,
+      "y": 54,
+      "w": 57,
+      "h": 13,
+      "area": 535
+    },
+    {
+      "name": "comp_002.png",
+      "x": 210,
+      "y": 68,
+      "w": 111,
+      "h": 22,
+      "area": 1371
+    },
+    {
+      "name": "comp_003.png",
+      "x": 0,
+      "y": 144,
+      "w": 34,
+      "h": 14,
+      "area": 385
+    },
+    {
+      "name": "comp_004.png",
+      "x": 0,
+      "y": 158,
+      "w": 200,
+      "h": 54,
+      "area": 6656
+    },
+    {
+      "name": "comp_005.png",
+      "x": 0,
+      "y": 288,
+      "w": 332,
+      "h": 84,
+      "area": 13351
+    },
+    {
+      "name": "comp_006.png",
+      "x": 179,
+      "y": 453,
+      "w": 234,
+      "h": 75,
+      "area": 8331
+    },
+    {
+      "name": "comp_007.png",
+      "x": 2,
+      "y": 566,
+      "w": 194,
+      "h": 38,
+      "area": 5190
+    },
+    {
+      "name": "comp_008.png",
+      "x": 392,
+      "y": 635,
+      "w": 147,
+      "h": 32,
+      "area": 2140
+    },
+    {
+      "name": "comp_009.png",
+      "x": 0,
+      "y": 662,
+      "w": 737,
+      "h": 362,
+      "area": 176663
+    },
+    {
+      "name": "comp_010.png",
+      "x": 618,
+      "y": 947,
+      "w": 103,
+      "h": 25,
+      "area": 1210
+    }
+  ]
+}

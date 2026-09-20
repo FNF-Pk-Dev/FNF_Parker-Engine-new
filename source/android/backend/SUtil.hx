@@ -12,21 +12,20 @@ import haxe.CallStack;
 import haxe.io.Path;
 import sys.FileSystem;
 import sys.io.File;
-import flash.system.System;
+import openfl.system.System;
 
 /**
  * ...
  * @author: Saw (M.A. Jigsaw)
  */
-
 using StringTools;
 
 class SUtil
 {
 	#if android
 	private static var aDir:String = null; // android dir
-	#end
 
+	#end
 	public static function getPath():String
 	{
 		#if android
@@ -68,7 +67,7 @@ class SUtil
 		errMsg += e.error;
 
 		if (!FileSystem.exists(SUtil.getPath() + "crash"))
-		FileSystem.createDirectory(SUtil.getPath() + "crash");
+			FileSystem.createDirectory(SUtil.getPath() + "crash");
 
 		File.saveContent(SUtil.getPath() + path, errMsg + "\n");
 
@@ -107,4 +106,4 @@ class SUtil
 			File.saveBytes(savePath, OpenFlAssets.getBytes(copyPath));
 	}
 	#end
-} 
+}

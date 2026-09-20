@@ -1,17 +1,5 @@
 package;
 
-import flixel.graphics.FlxGraphic;
-import flixel.FlxG;
-import flixel.FlxGame;
-import flixel.FlxState;
-import openfl.Assets;
-import openfl.Lib;
-import openfl.display.BitmapData;
-import backend.obj.FPSCounter;
-import openfl.display.Sprite;
-import openfl.events.Event;
-import openfl.display.StageScaleMode;
-import lime.app.Application;
 #if desktop
 import backend.Discord.DiscordClient;
 #end
@@ -26,10 +14,22 @@ import sys.FileSystem;
 import sys.io.File;
 import sys.io.Process;
 #end
+import backend.obj.FPSCounter;
+import flixel.FlxG;
+import flixel.FlxGame;
+import flixel.FlxState;
+import flixel.graphics.FlxGraphic;
+import openfl.Assets;
+import openfl.Lib;
+import openfl.display.BitmapData;
+import openfl.display.Sprite;
+import openfl.display.StageScaleMode;
+import openfl.events.Event;
+import lime.app.Application;
 import haxe.Json;
+import haxe.crypto.Md5;
 import haxe.io.Bytes;
 import haxe.zip.Uncompress;
-import haxe.crypto.Md5;
 
 using StringTools;
 
@@ -37,7 +37,7 @@ class Main extends Sprite
 {
 	public static var backPressed:Bool = false;
 
-	var game = {
+	var game:Dynamic = {
 		width: 1280,
 		height: 720,
 		initState: StartupState,
@@ -53,6 +53,7 @@ class Main extends Sprite
 
 	public static var fpsVar:FPSCounter;
 	public static var scaleMode:ScaleModeRezie;
+
 	public var scripts:FunkinHScript;
 
 	public static function main():Void
@@ -90,8 +91,10 @@ class Main extends Sprite
 		setupGame();
 	}
 
-	public static function setScaleMode(scale:String){
-		switch(scale){
+	public static function setScaleMode(scale:String):Void
+	{
+		switch (scale)
+		{
 			default:
 				Lib.current.stage.scaleMode = StageScaleMode.NO_SCALE;
 			case 'EXACT_FIT':
@@ -155,21 +158,24 @@ class Main extends Sprite
 		}
 	}
 
-	static function onResize(w,h) 
+	static function onResize(w, h)
 	{
-		final scale:Float = Math.max(1,Math.min(w / FlxG.width, h / FlxG.height));
-		if (fpsVar != null) {
+		final scale:Float = Math.max(1, Math.min(w / FlxG.width, h / FlxG.height));
+		if (fpsVar != null)
+		{
 			fpsVar.scaleX = fpsVar.scaleY = scale;
 		}
-
-		@:privateAccess if (FlxG.cameras != null) for (i in FlxG.cameras.list) if (i != null && i._filters != null) resetSpriteCache(i.flashSprite);
-		if (FlxG.game != null) resetSpriteCache(FlxG.game);
-		
+		@:privateAccess if (FlxG.cameras != null)
+			for (i in FlxG.cameras.list)
+				if (i != null && i._filters != null)
+					resetSpriteCache(i.flashSprite);
+		if (FlxG.game != null)
+			resetSpriteCache(FlxG.game);
 	}
 
 	public static function resetSpriteCache(sprite:Sprite):Void
 	{
-		@:privateAccess 
+		@:privateAccess
 		{
 			sprite.__cacheBitmap = null;
 			sprite.__cacheBitmapData = null;
@@ -195,16 +201,13 @@ class Main extends Sprite
 		if (backPressed && FlxG.state != null && FlxG.state.visible)
 		{
 			backPressed = false;
-			
+
 			if (Std.is(FlxG.state, states.game.PlayState))
 			{
 				var playState:states.game.PlayState = cast FlxG.state;
 				if (!playState.paused && !playState.endingSong)
 				{
-					playState.openSubState(new substates.PauseSubState(
-						playState.boyfriend.getScreenPosition().x,
-						playState.boyfriend.getScreenPosition().y
-					));
+					playState.openSubState(new substates.PauseSubState(playState.boyfriend.getScreenPosition().x, playState.boyfriend.getScreenPosition().y));
 				}
 			}
 			else if (Std.is(FlxG.state, states.TitleState))

@@ -4,13 +4,19 @@ import flixel.math.FlxPoint;
 import modchart.Modifier.ModifierOrder;
 import math.Vector3;
 
-class ScaleModifier extends NoteModifier {
-	override function getName()return 'mini';
-	override function getOrder()return PRE_REVERSE;
+class ScaleModifier extends NoteModifier
+{
+	override function getName()
+		return 'mini';
+
+	override function getOrder()
+		return PRE_REVERSE;
+
 	inline function lerp(a:Float, b:Float, c:Float)
 	{
 		return a + (b - a) * c;
 	}
+
 	function getScale(sprite:Dynamic, scale:FlxPoint, data:Int, player:Int)
 	{
 		var y = scale.y;
@@ -42,7 +48,7 @@ class ScaleModifier extends NoteModifier {
 
 		return scale;
 	}
-	
+
 	override function shouldExecute(player:Int, val:Float)
 		return true;
 
@@ -58,8 +64,9 @@ class ScaleModifier extends NoteModifier {
 	override function updateNote(beat:Float, note:Note, pos:Vector3, player:Int)
 	{
 		var scale = getScale(note, FlxPoint.weak(note.defScale.x, note.defScale.y), note.noteData, player);
-		if(note.isSustainNote)scale.y = note.defScale.y;
-		
+		if (note.isSustainNote)
+			scale.y = note.defScale.y;
+
 		note.scale.copyFrom(scale);
 		scale.putWeak();
 	}
@@ -86,5 +93,4 @@ class ScaleModifier extends NoteModifier {
 		}
 		return subMods;
 	}
-
 }

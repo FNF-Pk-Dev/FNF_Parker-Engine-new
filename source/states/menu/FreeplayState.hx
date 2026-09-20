@@ -4,7 +4,7 @@ package states.menu;
 import backend.Discord.DiscordClient;
 #end
 import editors.ChartingState;
-import flash.text.TextField;
+import openfl.text.TextField;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.addons.display.FlxGridOverlay;
@@ -35,8 +35,11 @@ class FreeplayState extends MusicBeatState
 	var songs:Array<SongMetadata> = [];
 
 	var selector:FlxText;
+
 	private static var curSelected:Int = 0;
+
 	var curDifficulty:Int = -1;
+
 	private static var lastDifficultyName:String = '';
 
 	var scoreBG:FlxSprite;
@@ -62,7 +65,7 @@ class FreeplayState extends MusicBeatState
 	{
 		// Paths.clearStoredMemory();
 		// Paths.clearUnusedMemory();
-		
+
 		persistentUpdate = true;
 		PlayState.isStoryMode = false;
 		WeekData.reloadWeekFiles(false);
@@ -72,8 +75,10 @@ class FreeplayState extends MusicBeatState
 		DiscordClient.changePresence("In the Menus", null);
 		#end
 
-		for (i in 0...WeekData.weeksList.length) {
-			if(weekIsLocked(WeekData.weeksList[i])) continue;
+		for (i in 0...WeekData.weeksList.length)
+		{
+			if (weekIsLocked(WeekData.weeksList[i]))
+				continue;
 
 			var leWeek:WeekData = WeekData.weeksLoaded.get(WeekData.weeksList[i]);
 			var leSongs:Array<String> = [];
@@ -90,7 +95,7 @@ class FreeplayState extends MusicBeatState
 			for (song in leWeek.songs)
 			{
 				var colors:Array<Int> = song[2];
-				if(colors == null || colors.length < 3)
+				if (colors == null || colors.length < 3)
 				{
 					colors = [146, 113, 253];
 				}
@@ -99,15 +104,15 @@ class FreeplayState extends MusicBeatState
 		}
 		WeekData.loadTheFirstEnabledMod();
 
-		/*		//KIND OF BROKEN NOW AND ALSO PRETTY USELESS//
+		/*//KIND OF BROKEN NOW AND ALSO PRETTY USELESS//
 
-		var initSonglist = CoolUtil.coolTextFile(Paths.txt('freeplaySonglist'));
-		for (i in 0...initSonglist.length)
-		{
-			if(initSonglist[i] != null && initSonglist[i].length > 0) {
-				var songArray:Array<String> = initSonglist[i].split(":");
-				addSong(songArray[0], 0, songArray[1], Std.parseInt(songArray[2]));
-			}
+			var initSonglist = CoolUtil.coolTextFile(Paths.txt('freeplaySonglist'));
+			for (i in 0...initSonglist.length)
+			{
+				if(initSonglist[i] != null && initSonglist[i].length > 0) {
+					var songArray:Array<String> = initSonglist[i].split(":");
+					addSong(songArray[0], 0, songArray[1], Std.parseInt(songArray[2]));
+				}
 		}*/
 
 		bg = new FlxSprite().loadGraphic(Paths.image('menuDesat'));
@@ -168,16 +173,17 @@ class FreeplayState extends MusicBeatState
 
 		add(scoreText);
 
-		if(curSelected >= songs.length) curSelected = 0;
+		if (curSelected >= songs.length)
+			curSelected = 0;
 		bg.color = songs[curSelected].color;
 		intendedColor = bg.color;
 
-		if(lastDifficultyName == '')
+		if (lastDifficultyName == '')
 		{
 			lastDifficultyName = CoolUtil.defaultDifficulty;
 		}
 		curDifficulty = Math.round(Math.max(0, CoolUtil.defaultDifficulties.indexOf(lastDifficultyName)));
-		
+
 		changeSelection();
 		changeDiff();
 
@@ -221,19 +227,20 @@ class FreeplayState extends MusicBeatState
 		text.scrollFactor.set();
 		add(text);
 
-                #if android
-                addTouchPad("FULL", "A_B_C_X_Y_Z");
-                #end
+		#if android
+		addTouchPad("FULL", "A_B_C_X_Y_Z");
+		#end
 
 		super.create();
 	}
 
-	override function closeSubState() {
+	override function closeSubState()
+	{
 		changeSelection(0, false);
 		persistentUpdate = true;
 		upordown = true;
 		#if android
-		removeTouchPad();  // Remove any existing touchpad first to prevent duplicates
+		removeTouchPad(); // Remove any existing touchpad first to prevent duplicates
 		addTouchPad("FULL", "A_B_C_X_Y_Z");
 		#end
 		super.closeSubState();
@@ -244,30 +251,35 @@ class FreeplayState extends MusicBeatState
 		songs.push(new SongMetadata(songName, weekNum, songCharacter, color));
 	}
 
-	function weekIsLocked(name:String):Bool {
+	function weekIsLocked(name:String):Bool
+	{
 		var leWeek:WeekData = WeekData.weeksLoaded.get(name);
-		return (!leWeek.startUnlocked && leWeek.weekBefore.length > 0 && (!StoryMenuState.weekCompleted.exists(leWeek.weekBefore) || !StoryMenuState.weekCompleted.get(leWeek.weekBefore)));
+		return (!leWeek.startUnlocked
+			&& leWeek.weekBefore.length > 0
+			&& (!StoryMenuState.weekCompleted.exists(leWeek.weekBefore) || !StoryMenuState.weekCompleted.get(leWeek.weekBefore)));
 	}
 
 	/*public function addWeek(songs:Array<String>, weekNum:Int, weekColor:Int, ?songCharacters:Array<String>)
-	{
-		if (songCharacters == null)
-			songCharacters = ['bf'];
-
-		var num:Int = 0;
-		for (song in songs)
 		{
-			addSong(song, weekNum, songCharacters[num]);
-			this.songs[this.songs.length-1].color = weekColor;
+			if (songCharacters == null)
+				songCharacters = ['bf'];
 
-			if (songCharacters.length != 1)
-				num++;
-		}
+			var num:Int = 0;
+			for (song in songs)
+			{
+				addSong(song, weekNum, songCharacters[num]);
+				this.songs[this.songs.length-1].color = weekColor;
+
+				if (songCharacters.length != 1)
+					num++;
+			}
 	}*/
-
 	var instPlaying:Int = -1;
+
 	public static var vocals:FlxSound = null;
+
 	var holdTime:Float = 0;
+
 	override function update(elapsed:Float)
 	{
 		if (FlxG.sound.music.volume < 0.7)
@@ -284,11 +296,13 @@ class FreeplayState extends MusicBeatState
 			lerpRating = intendedRating;
 
 		var ratingSplit:Array<String> = Std.string(Highscore.floorDecimal(lerpRating * 100, 2)).split('.');
-		if(ratingSplit.length < 2) { //No decimals, add an empty space
+		if (ratingSplit.length < 2)
+		{ // No decimals, add an empty space
 			ratingSplit.push('');
 		}
-		
-		while(ratingSplit[1].length < 2) { //Less than 2 decimals in it, add decimals then
+
+		while (ratingSplit[1].length < 2)
+		{ // Less than 2 decimals in it, add decimals then
 			ratingSplit[1] += '0';
 		}
 
@@ -302,60 +316,63 @@ class FreeplayState extends MusicBeatState
 		var ctrl = FlxG.keys.justPressed.CONTROL #if android || _touchpad.buttonC.justPressed #end;
 
 		var shiftMult:Int = 1;
-		if(FlxG.keys.pressed.SHIFT #if android || _touchpad.buttonZ.pressed #end) shiftMult = 3;
-        if (upordown)
-        {
-		if(songs.length > 1)
+		if (FlxG.keys.pressed.SHIFT #if android || _touchpad.buttonZ.pressed #end)
+			shiftMult = 3;
+		if (upordown)
 		{
-			if (upP)
+			if (songs.length > 1)
 			{
-				changeSelection(-shiftMult);
-				holdTime = 0;
-			}
-			if (downP)
-			{
-				changeSelection(shiftMult);
-				holdTime = 0;
-			}
-
-			if(controls.UI_DOWN || controls.UI_UP)
-			{
-				var checkLastHold:Int = Math.floor((holdTime - 0.5) * 10);
-				holdTime += elapsed;
-				var checkNewHold:Int = Math.floor((holdTime - 0.5) * 10);
-
-				if(holdTime > 0.5 && checkNewHold - checkLastHold > 0)
+				if (upP)
 				{
-					changeSelection((checkNewHold - checkLastHold) * (controls.UI_UP ? -shiftMult : shiftMult));
+					changeSelection(-shiftMult);
+					holdTime = 0;
+				}
+				if (downP)
+				{
+					changeSelection(shiftMult);
+					holdTime = 0;
+				}
+
+				if (controls.UI_DOWN || controls.UI_UP)
+				{
+					var checkLastHold:Int = Math.floor((holdTime - 0.5) * 10);
+					holdTime += elapsed;
+					var checkNewHold:Int = Math.floor((holdTime - 0.5) * 10);
+
+					if (holdTime > 0.5 && checkNewHold - checkLastHold > 0)
+					{
+						changeSelection((checkNewHold - checkLastHold) * (controls.UI_UP ? -shiftMult : shiftMult));
+						changeDiff();
+					}
+				}
+
+				if (FlxG.mouse.wheel != 0)
+				{
+					FlxG.sound.play(Paths.sound('scrollMenu'), 0.2);
+					changeSelection(-shiftMult * FlxG.mouse.wheel, false);
 					changeDiff();
 				}
 			}
-
-			if(FlxG.mouse.wheel != 0)
-			{
-				FlxG.sound.play(Paths.sound('scrollMenu'), 0.2);
-				changeSelection(-shiftMult * FlxG.mouse.wheel, false);
+			if (controls.UI_LEFT_P)
+				changeDiff(-1);
+			else if (controls.UI_RIGHT_P)
+				changeDiff(1);
+			else if (upP || downP)
 				changeDiff();
-			}
-		}
-		if (controls.UI_LEFT_P)
-			changeDiff(-1);
-		else if (controls.UI_RIGHT_P)
-			changeDiff(1);
-		else if (upP || downP) changeDiff();
 		}
 
 		if (controls.BACK)
 		{
 			persistentUpdate = false;
-			if(colorTween != null) {
+			if (colorTween != null)
+			{
 				colorTween.cancel();
 			}
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			MusicBeatState.switchState(new MainMenuState());
 		}
 
-		if(ctrl)
+		if (ctrl)
 		{
 			#if android
 			removeTouchPad();
@@ -363,9 +380,9 @@ class FreeplayState extends MusicBeatState
 			persistentUpdate = false;
 			openSubState(new GameplayChangersSubstate());
 		}
-		else if(space)
+		else if (space)
 		{
-			if(instPlaying != curSelected)
+			if (instPlaying != curSelected)
 			{
 				#if PRELOAD_ALL
 				destroyFreeplayVocals();
@@ -388,17 +405,19 @@ class FreeplayState extends MusicBeatState
 				#end
 			}
 		}
-
 		else if (accepted && upordown)
 		{
-		    upordown = false;
+			upordown = false;
 			persistentUpdate = false;
 			var songLowercase:String = Paths.formatToSongPath(songs[curSelected].songName);
 			var poop:String = Highscore.formatSong(songLowercase, curDifficulty);
 			#if MODS_ALLOWED
-			if(!sys.FileSystem.exists(Paths.modsJson(songLowercase + '/' + poop)) && !sys.FileSystem.exists(Paths.json(songLowercase + '/' + poop))) {
+			if (!sys.FileSystem.exists(Paths.modsJson(songLowercase + '/' + poop))
+				&& !sys.FileSystem.exists(Paths.json(songLowercase + '/' + poop)))
+			{
 			#else
-			if(!OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop))) {
+			if (!OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop)))
+			{
 			#end
 				// poop = songLowercase;
 				// curDifficulty = 1;
@@ -414,73 +433,76 @@ class FreeplayState extends MusicBeatState
 			}
 			trace(poop);
 			/*
-			grpSongs.forEach(function(spr:FlxSprite)
-			{
-				if (curSelected != spr.ID)
-				{
-					FlxTween.tween(spr, {alpha: 0}, 0.4, {
-						ease: FlxEase.quadOut,
-						onComplete: function(twn:FlxTween)
-						{
-							spr.kill();
-						}
-					});
-				}
-			}
-			
-			for (i in 0...iconArray.length)
-			{
-					FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
-						ease: FlxEase.quadOut,
-						onComplete: function(twn:FlxTween)
-						{
-							iconArray[i].kill();
-						}
-					});
-			}
-			*/
+							grpSongs.forEach(function(spr:FlxSprite)
+							{
+								if (curSelected != spr.ID)
+								{
+									FlxTween.tween(spr, {alpha: 0}, 0.4, {
+										ease: FlxEase.quadOut,
+										onComplete: function(twn:FlxTween)
+										{
+											spr.kill();
+										}
+									});
+								}
+							}
+	
+							for (i in 0...iconArray.length)
+							{
+									FlxTween.tween(iconArray[i], {alpha: 0}, 0.4, {
+										ease: FlxEase.quadOut,
+										onComplete: function(twn:FlxTween)
+										{
+											iconArray[i].kill();
+										}
+									});
+							}
+			 */
 			iconArray[curSelected].alpha = 1;
-			
+
 			FlxG.sound.play(Paths.sound('confirmMenu'));
 			PlayState.SONG = Song.loadFromJson(poop, songLowercase);
 			PlayState.isStoryMode = false;
 			PlayState.storyDifficulty = curDifficulty;
 			new FlxTimer().start(1.5, function(tmr:FlxTimer)
 			{
-			LoadingState.loadAndSwitchState(new PlayState());
-			upordown = true;
+				LoadingState.loadAndSwitchState(new PlayState());
+				upordown = true;
 			});
 
 			FlxTween.tween(FlxG.camera, {zoom: 1.2}, 1.2, {ease: FlxEase.quadOut});
 
 			trace('CURRENT WEEK: ' + WeekData.getWeekFileName());
-			if(colorTween != null) {
+			if (colorTween != null)
+			{
 				colorTween.cancel();
 			}
-			
-			if (FlxG.keys.pressed.SHIFT #if android || _touchpad.buttonZ.pressed #end) {
-            LoadingState.loadAndSwitchState(new ChartingState());
+
+			if (FlxG.keys.pressed.SHIFT #if android || _touchpad.buttonZ.pressed #end)
+			{
+				LoadingState.loadAndSwitchState(new ChartingState());
 			}
 
 			FlxG.sound.music.volume = 0;
-					
+
 			destroyFreeplayVocals();
-					
 		}
-		else if(controls.RESET #if android || _touchpad.buttonY.justPressed #end)
-		{
-			#if android
-			removeTouchPad();
-			#end
-			persistentUpdate = false;
-			openSubState(new ResetScoreSubState(songs[curSelected].songName, curDifficulty, songs[curSelected].songCharacter));
-			FlxG.sound.play(Paths.sound('scrollMenu'));
-		}
+	else if (controls.RESET #if android || _touchpad.buttonY.justPressed #end)
+	{
+		#if android
+		removeTouchPad();
+		#end
+		persistentUpdate = false;
+		openSubState(new ResetScoreSubState(songs[curSelected].songName, curDifficulty, songs[curSelected].songCharacter));
+		FlxG.sound.play(Paths.sound('scrollMenu'));
+	}
 		super.update(elapsed);
 	}
 
-	public static function destroyFreeplayVocals() {
-		if(vocals != null) {
+	public static function destroyFreeplayVocals()
+	{
+		if (vocals != null)
+		{
 			vocals.stop();
 			vocals.destroy();
 		}
@@ -492,7 +514,7 @@ class FreeplayState extends MusicBeatState
 		curDifficulty += change;
 
 		if (curDifficulty < 0)
-			curDifficulty = CoolUtil.difficulties.length-1;
+			curDifficulty = CoolUtil.difficulties.length - 1;
 		if (curDifficulty >= CoolUtil.difficulties.length)
 			curDifficulty = 0;
 
@@ -510,7 +532,8 @@ class FreeplayState extends MusicBeatState
 
 	function changeSelection(change:Int = 0, playSound:Bool = true)
 	{
-		if(playSound) FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
+		if (playSound)
+			FlxG.sound.play(Paths.sound('scrollMenu'), 0.4);
 
 		curSelected += change;
 
@@ -518,15 +541,18 @@ class FreeplayState extends MusicBeatState
 			curSelected = songs.length - 1;
 		if (curSelected >= songs.length)
 			curSelected = 0;
-			
+
 		var newColor:Int = songs[curSelected].color;
-		if(newColor != intendedColor) {
-			if(colorTween != null) {
+		if (newColor != intendedColor)
+		{
+			if (colorTween != null)
+			{
 				colorTween.cancel();
 			}
 			intendedColor = newColor;
 			colorTween = FlxTween.color(bg, 1, bg.color, intendedColor, {
-				onComplete: function(twn:FlxTween) {
+				onComplete: function(twn:FlxTween)
+				{
 					colorTween = null;
 				}
 			});
@@ -562,35 +588,37 @@ class FreeplayState extends MusicBeatState
 				// item.setGraphicSize(Std.int(item.width));
 			}
 		}
-		
+
 		Paths.currentModDirectory = songs[curSelected].folder;
 		PlayState.storyWeek = songs[curSelected].week;
 
 		CoolUtil.difficulties = CoolUtil.defaultDifficulties.copy();
 		var diffStr:String = WeekData.getCurrentWeek().difficulties;
-		if(diffStr != null) diffStr = diffStr.trim(); //Fuck you HTML5
+		if (diffStr != null)
+			diffStr = diffStr.trim(); // Fuck you HTML5
 
-		if(diffStr != null && diffStr.length > 0)
+		if (diffStr != null && diffStr.length > 0)
 		{
 			var diffs:Array<String> = diffStr.split(',');
 			var i:Int = diffs.length - 1;
 			while (i > 0)
 			{
-				if(diffs[i] != null)
+				if (diffs[i] != null)
 				{
 					diffs[i] = diffs[i].trim();
-					if(diffs[i].length < 1) diffs.remove(diffs[i]);
+					if (diffs[i].length < 1)
+						diffs.remove(diffs[i]);
 				}
 				--i;
 			}
 
-			if(diffs.length > 0 && diffs[0].length > 0)
+			if (diffs.length > 0 && diffs[0].length > 0)
 			{
 				CoolUtil.difficulties = diffs;
 			}
 		}
-		
-		if(CoolUtil.difficulties.contains(CoolUtil.defaultDifficulty))
+
+		if (CoolUtil.difficulties.contains(CoolUtil.defaultDifficulty))
 		{
 			curDifficulty = Math.round(Math.max(0, CoolUtil.defaultDifficulties.indexOf(CoolUtil.defaultDifficulty)));
 		}
@@ -600,14 +628,15 @@ class FreeplayState extends MusicBeatState
 		}
 
 		var newPos:Int = CoolUtil.difficulties.indexOf(lastDifficultyName);
-		//trace('Pos of ' + lastDifficultyName + ' is ' + newPos);
-		if(newPos > -1)
+		// trace('Pos of ' + lastDifficultyName + ' is ' + newPos);
+		if (newPos > -1)
 		{
 			curDifficulty = newPos;
 		}
 	}
 
-	private function positionHighscore() {
+	private function positionHighscore()
+	{
 		scoreText.x = FlxG.width - scoreText.width - 6;
 
 		scoreBG.scale.x = FlxG.width - scoreText.x + 6;
@@ -615,9 +644,7 @@ class FreeplayState extends MusicBeatState
 		diffText.x = Std.int(scoreBG.x + (scoreBG.width / 2));
 		diffText.x -= diffText.width / 2;
 	}
-}
-
-class SongMetadata
+} class SongMetadata
 {
 	public var songName:String = "";
 	public var week:Int = 0;
@@ -632,7 +659,8 @@ class SongMetadata
 		this.songCharacter = songCharacter;
 		this.color = color;
 		this.folder = Paths.currentModDirectory;
-		if(this.folder == null) this.folder = '';
+		if (this.folder == null)
+			this.folder = '';
 	}
 }
 
@@ -640,6 +668,7 @@ class MissingFileSubState extends MusicBeatSubstate
 {
 	var errorMessage:String;
 	var canClose:Bool = false;
+
 	public function new(errorMessage:String)
 	{
 		super();
@@ -658,16 +687,17 @@ class MissingFileSubState extends MusicBeatSubstate
 		text.setFormat(Paths.font("vcr.ttf"), 32, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
 		text.screenCenter();
 		add(text);
-        
-        var infoText:FlxText = new FlxText(0, FlxG.height - 50, FlxG.width, "Press ESC or ENTER to close", 24);
-        infoText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
-        add(infoText);
+
+		var infoText:FlxText = new FlxText(0, FlxG.height - 50, FlxG.width, "Press ESC or ENTER to close", 24);
+		infoText.setFormat(Paths.font("vcr.ttf"), 24, FlxColor.WHITE, CENTER, FlxTextBorderStyle.OUTLINE, FlxColor.BLACK);
+		add(infoText);
 
 		#if android
 		addTouchPad("NONE", "A_B");
 		#end
-		
-		new FlxTimer().start(0.5, function(tmr:FlxTimer) {
+
+		new FlxTimer().start(0.5, function(tmr:FlxTimer)
+		{
 			canClose = true;
 		});
 	}

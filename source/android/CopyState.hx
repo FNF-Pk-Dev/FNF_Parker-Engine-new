@@ -1,5 +1,3 @@
-
-
 package android;
 
 #if mobile
@@ -18,6 +16,7 @@ import flixel.ui.FlxBar.FlxBarFillDirection;
 import sys.io.File;
 import sys.FileSystem;
 #end
+
 using StringTools;
 
 /**
@@ -103,7 +102,7 @@ class CopyState extends MusicBeatState
 				FlxG.sound.play(Paths.sound('confirmMenu')).onComplete = () ->
 				{
 					MusicBeatState.switchState(new StartupState());
-					 //Sys.exit(0);
+					// Sys.exit(0);
 				};
 			}
 
@@ -210,7 +209,7 @@ class CopyState extends MusicBeatState
 			if (filesToRemove.contains(file))
 				continue;
 
-			if(file.endsWith(IGNORE_FOLDER_FILE_NAME) && !directoriesToIgnore.contains(Path.directory(file)))
+			if (file.endsWith(IGNORE_FOLDER_FILE_NAME) && !directoriesToIgnore.contains(Path.directory(file)))
 				directoriesToIgnore.push(Path.directory(file));
 
 			if (directoriesToIgnore.length > 0)

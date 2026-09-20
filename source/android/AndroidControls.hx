@@ -4,42 +4,51 @@ import flixel.FlxG;
 import flixel.group.FlxSpriteGroup;
 import flixel.util.FlxSave;
 import flixel.math.FlxPoint;
-
 import android.FlxTouchPad;
 import android.FlxHitbox;
 import android.hitboxskin.*;
 
-class Config {
+class Config
+{
 	var save:FlxSave;
 
-	public function new() {
+	public function new()
+	{
 		save = new FlxSave();
 		save.bind("saved-controls");
 	}
 
-	public function getcontrolmode():Int {
-		if (save.data.buttonsmode != null) 
+	public function getcontrolmode():Int
+	{
+		if (save.data.buttonsmode != null)
 			return save.data.buttonsmode[0];
 		return 0;
 	}
 
-	public function setcontrolmode(mode:Int = 0):Int {
-		if (save.data.buttonsmode == null) save.data.buttonsmode = new Array();
+	public function setcontrolmode(mode:Int = 0):Int
+	{
+		if (save.data.buttonsmode == null)
+			save.data.buttonsmode = new Array();
 		save.data.buttonsmode[0] = mode;
 		save.flush();
 		return save.data.buttonsmode[0];
 	}
 
-	public function savecustom(_pad:FlxTouchPad) {
+	public function savecustom(_pad:FlxTouchPad)
+	{
 		if (save.data.buttons == null)
 		{
 			save.data.buttons = new Array();
-			for (buttons in _pad){
+			for (buttons in _pad)
+			{
 				save.data.buttons.push(FlxPoint.get(buttons.x, buttons.y));
 			}
-		}else{
+		}
+		else
+		{
 			var tempCount:Int = 0;
-			for (buttons in _pad){
+			for (buttons in _pad)
+			{
 				save.data.buttons[tempCount] = FlxPoint.get(buttons.x, buttons.y);
 				tempCount++;
 			}
@@ -47,20 +56,23 @@ class Config {
 		save.flush();
 	}
 
-	public function loadcustom(_pad:FlxTouchPad):FlxTouchPad {
-		if (save.data.buttons == null) 
+	public function loadcustom(_pad:FlxTouchPad):FlxTouchPad
+	{
+		if (save.data.buttons == null)
 			return _pad;
 		var tempCount:Int = 0;
-		for(buttons in _pad){
+		for (buttons in _pad)
+		{
 			buttons.x = save.data.buttons[tempCount].x;
 			buttons.y = save.data.buttons[tempCount].y;
 			tempCount++;
-		}	
+		}
 		return _pad;
 	}
 }
 
-class AndroidControls extends FlxSpriteGroup {
+class AndroidControls extends FlxSpriteGroup
+{
 	public var mode:ControlsGroup = HITBOX;
 
 	public var hbox:FlxHitbox;
@@ -71,14 +83,16 @@ class AndroidControls extends FlxSpriteGroup {
 
 	var config:Config;
 
-	public function new() {
+	public function new()
+	{
 		super();
 
 		config = new Config();
 
 		mode = getModeFromNumber(config.getcontrolmode());
 
-		switch (mode){
+		switch (mode)
+		{
 			case VIRTUALPAD_RIGHT:
 				initControler(0);
 			case VIRTUALPAD_LEFT:
@@ -88,31 +102,40 @@ class AndroidControls extends FlxSpriteGroup {
 			case DUO:
 				initControler(3);
 			case HITBOX:
-		    if(ClientPrefs.hitboxmode == 'New'){
-		    initControler(5);
-		    }else if(ClientPrefs.hitboxmode == 'Gradient'){
-		    initControler(6);
-		    }else if(ClientPrefs.hitboxmode == 'Classic'){
-		    initControler(4);
-		    }else if(ClientPrefs.hitboxmode == 'Old'){
-		    initControler(7);
-		    }
-			case KEYBOARD:// nothing
+				if (ClientPrefs.hitboxmode == 'New')
+				{
+					initControler(5);
+				}
+				else if (ClientPrefs.hitboxmode == 'Gradient')
+				{
+					initControler(6);
+				}
+				else if (ClientPrefs.hitboxmode == 'Classic')
+				{
+					initControler(4);
+				}
+				else if (ClientPrefs.hitboxmode == 'Old')
+				{
+					initControler(7);
+				}
+			case KEYBOARD: // nothing
 		}
 	}
 
-	function initControler(vpadMode:Int) {
-		switch (vpadMode){
+	function initControler(vpadMode:Int)
+	{
+		switch (vpadMode)
+		{
 			case 0:
 				vpad = new FlxTouchPad("RIGHT_FULL", "controlExtend");
-				add(vpad);					
+				add(vpad);
 			case 1:
 				vpad = new FlxTouchPad("FULL", "controlExtend");
-				add(vpad);		
+				add(vpad);
 			case 2:
 				vpad = new FlxTouchPad("RIGHT_FULL", "controlExtend");
 				vpad = config.loadcustom(vpad);
-				add(vpad);	
+				add(vpad);
 			case 3:
 				vpad = new FlxTouchPad("DUO", "controlExtend");
 				add(vpad);
@@ -120,41 +143,44 @@ class AndroidControls extends FlxSpriteGroup {
 				hbox = new FlxHitbox(0.75, ClientPrefs.globalAntialiasing);
 				add(hbox);
 			case 5:
-			  newhbox = new FlxNewHitbox();
-			  add(newhbox);
+				newhbox = new FlxNewHitbox();
+				add(newhbox);
 			case 6:
-			  ghbox = new Gradient(4, Std.int(FlxG.width / 4), FlxG.height, [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000]);
-			  add(ghbox);
+				ghbox = new Gradient(4, Std.int(FlxG.width / 4), FlxG.height, [0xFF00FF, 0x00FFFF, 0x00FF00, 0xFF0000]);
+				add(ghbox);
 			case 7:
 				oldhbox = new Old();
 				add(oldhbox);
 			default:
 				vpad = new FlxTouchPad("RIGHT_FULL", "controlExtend");
-				add(vpad);				
+				add(vpad);
 		}
 	}
 
-	public static function getModeFromNumber(modeNum:Int):ControlsGroup {
-		return switch (modeNum){
-			case 0: 
+	public static function getModeFromNumber(modeNum:Int):ControlsGroup
+	{
+		return switch (modeNum)
+		{
+			case 0:
 				VIRTUALPAD_RIGHT;
-			case 1: 
+			case 1:
 				VIRTUALPAD_LEFT;
-			case 2: 
+			case 2:
 				VIRTUALPAD_CUSTOM;
-			case 3: 
+			case 3:
 				DUO;
-			case 4:	
+			case 4:
 				HITBOX;
-			case 5: 
+			case 5:
 				KEYBOARD;
-			default: 
+			default:
 				VIRTUALPAD_RIGHT;
 		}
 	}
 }
 
-enum ControlsGroup {
+enum ControlsGroup
+{
 	VIRTUALPAD_RIGHT;
 	VIRTUALPAD_LEFT;
 	VIRTUALPAD_CUSTOM;

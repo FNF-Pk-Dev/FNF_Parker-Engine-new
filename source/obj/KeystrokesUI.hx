@@ -34,10 +34,30 @@ class KeystrokesUI extends FlxSpriteGroup
 	};
 
 	var buttons:Array<Dynamic> = [
-		{dir: 'left', key: 'note_left', hex: 0xC24B99, noteData: 0}, // Purple
-		{dir: 'down', key: 'note_down', hex: 0x00FFFF, noteData: 1}, // Cyan
-		{dir: 'up', key: 'note_up', hex: 0x12FA05, noteData: 2}, // Green
-		{dir: 'right', key: 'note_right', hex: 0xF9393F, noteData: 3} // Red
+		{
+			dir: 'left',
+			key: 'note_left',
+			hex: 0xC24B99,
+			noteData: 0
+		}, // Purple
+		{
+			dir: 'down',
+			key: 'note_down',
+			hex: 0x00FFFF,
+			noteData: 1
+		}, // Cyan
+		{
+			dir: 'up',
+			key: 'note_up',
+			hex: 0x12FA05,
+			noteData: 2
+		}, // Green
+		{
+			dir: 'right',
+			key: 'note_right',
+			hex: 0xF9393F,
+			noteData: 3
+		} // Red
 	];
 
 	var keyStates:Map<String, Dynamic> = new Map();
@@ -65,16 +85,20 @@ class KeystrokesUI extends FlxSpriteGroup
 
 		// 1. Initialize Pools
 		beams = new FlxTypedGroup<KeyBeam>(CONFIG.MAX_BEAMS);
-		for (i in 0...CONFIG.MAX_BEAMS) beams.add(new KeyBeam());
+		for (i in 0...CONFIG.MAX_BEAMS)
+			beams.add(new KeyBeam());
 
 		particles = new FlxTypedGroup<KeyParticle>(CONFIG.MAX_PARTICLES);
-		for (i in 0...CONFIG.MAX_PARTICLES) particles.add(new KeyParticle());
+		for (i in 0...CONFIG.MAX_PARTICLES)
+			particles.add(new KeyParticle());
 
 		bursts = new FlxTypedGroup<KeyBurst>(CONFIG.MAX_BURSTS);
-		for (i in 0...CONFIG.MAX_BURSTS) bursts.add(new KeyBurst());
+		for (i in 0...CONFIG.MAX_BURSTS)
+			bursts.add(new KeyBurst());
 
 		stars = new FlxTypedGroup<KeyStar>(16);
-		for (i in 0...16) stars.add(new KeyStar());
+		for (i in 0...16)
+			stars.add(new KeyStar());
 
 		// 2. Initialize Buttons
 		for (i in 0...buttons.length)
@@ -82,7 +106,7 @@ class KeystrokesUI extends FlxSpriteGroup
 			var btn = buttons[i];
 			var xPos = CONFIG.START_X + (i * (CONFIG.BUTTON_SIZE + CONFIG.BUTTON_SPACING));
 			var yPos = CONFIG.START_Y;
-			
+
 			keyStates.set(btn.key, {pressed: false, beamTimer: 0.0});
 
 			var ui:Dynamic = {};
@@ -91,7 +115,8 @@ class KeystrokesUI extends FlxSpriteGroup
 
 			// --- Color Calculation (Manual HSV Shift) ---
 			var baseColor = FlxColor.fromInt(btn.hex);
-			if(ClientPrefs.arrowHSV != null && ClientPrefs.arrowHSV.length > btn.noteData) {
+			if (ClientPrefs.arrowHSV != null && ClientPrefs.arrowHSV.length > btn.noteData)
+			{
 				var hsv = ClientPrefs.arrowHSV[btn.noteData];
 				// Apply Hue (hsv[0] is in degrees)
 				baseColor.hue += hsv[0];
@@ -183,14 +208,16 @@ class KeystrokesUI extends FlxSpriteGroup
 	{
 		super.update(elapsed);
 		var dt = Math.min(elapsed, 0.1);
-		
+
 		// Stats Logic
 		npsTimer += dt;
-		if (npsTimer >= 1) {
+		if (npsTimer >= 1)
+		{
 			npsCount = 0;
 			npsTimer = 0;
 		}
-		if (statScale > 1) {
+		if (statScale > 1)
+		{
 			statScale = FlxMath.lerp(statScale, 1, dt * 15);
 			npsText.scale.set(statScale, statScale);
 			totText.scale.set(statScale, statScale);
@@ -213,28 +240,44 @@ class KeystrokesUI extends FlxSpriteGroup
 
 			// Input Detection
 			var controlName = "";
-			switch(keyName) {
-				case 'note_left': controlName = 'NOTE_LEFT';
-				case 'note_down': controlName = 'NOTE_DOWN';
-				case 'note_up': controlName = 'NOTE_UP';
-				case 'note_right': controlName = 'NOTE_RIGHT';
+			switch (keyName)
+			{
+				case 'note_left':
+					controlName = 'NOTE_LEFT';
+				case 'note_down':
+					controlName = 'NOTE_DOWN';
+				case 'note_up':
+					controlName = 'NOTE_UP';
+				case 'note_right':
+					controlName = 'NOTE_RIGHT';
 			}
 
 			var currentState = FlxG.state;
-			if (Std.isOfType(currentState, MusicBeatState)) {
+			if (Std.isOfType(currentState, MusicBeatState))
+			{
 				var mbState:MusicBeatState = cast currentState;
 				@:privateAccess
-				if (mbState.controls != null) {
-					if (Reflect.getProperty(mbState.controls, controlName + "_P")) justPressed = true;
-					if (Reflect.getProperty(mbState.controls, controlName)) pressed = true;
-					if (Reflect.getProperty(mbState.controls, controlName + "_R")) justReleased = true;
+				if (mbState.controls != null)
+				{
+					if (Reflect.getProperty(mbState.controls, controlName + "_P"))
+						justPressed = true;
+					if (Reflect.getProperty(mbState.controls, controlName))
+						pressed = true;
+					if (Reflect.getProperty(mbState.controls, controlName + "_R"))
+						justReleased = true;
 				}
-			} else {
+			}
+			else
+			{
 				var bindKeys = ClientPrefs.keyBinds.get(keyName);
-				if (bindKeys != null) {
-					if (FlxG.keys.anyJustPressed(bindKeys)) justPressed = true;
-					if (FlxG.keys.anyPressed(bindKeys)) pressed = true;
-					if (FlxG.keys.anyJustReleased(bindKeys)) justReleased = true;
+				if (bindKeys != null)
+				{
+					if (FlxG.keys.anyJustPressed(bindKeys))
+						justPressed = true;
+					if (FlxG.keys.anyPressed(bindKeys))
+						pressed = true;
+					if (FlxG.keys.anyJustReleased(bindKeys))
+						justReleased = true;
 				}
 			}
 
@@ -285,7 +328,8 @@ class KeystrokesUI extends FlxSpriteGroup
 			if (pressed)
 			{
 				k.beamTimer += dt;
-				if (k.beamTimer > 0.05) {
+				if (k.beamTimer > 0.05)
+				{
 					spawnLaserBeam(ui.baseX, ui.baseY, color, colorSwap);
 					k.beamTimer = 0;
 				}
@@ -294,7 +338,7 @@ class KeystrokesUI extends FlxSpriteGroup
 				var shake = 1.5;
 				var rx = FlxG.random.float(-shake, shake);
 				var ry = FlxG.random.float(-shake, shake);
-				
+
 				ui.bg.x = ui.baseX + rx;
 				ui.bg.y = ui.baseY + ry;
 				ui.border.x = ui.baseX + rx;
@@ -310,7 +354,7 @@ class KeystrokesUI extends FlxSpriteGroup
 				FlxTween.tween(ui.bg.scale, {x: 1, y: 1}, t, {ease: FlxEase.elasticOut});
 				FlxTween.tween(ui.border.scale, {x: 1, y: 1}, t, {ease: FlxEase.elasticOut});
 				FlxTween.tween(ui.inner.scale, {x: 1, y: 1}, t, {ease: FlxEase.elasticOut});
-				
+
 				// Reset positions
 				ui.bg.x = ui.baseX;
 				ui.bg.y = ui.baseY;
@@ -330,13 +374,15 @@ class KeystrokesUI extends FlxSpriteGroup
 	{
 		var beam = beams.recycle(KeyBeam);
 		beam.spawn(x + (CONFIG.BUTTON_SIZE - 40) / 2, y, color);
-		if(colorSwap != null) beam.shader = colorSwap.shader;
+		if (colorSwap != null)
+			beam.shader = colorSwap.shader;
 		add(beam);
 	}
 
 	function spawnStarBurst(cx:Float, cy:Float, color:FlxColor)
 	{
-		for (i in 0...2) {
+		for (i in 0...2)
+		{
 			var star = stars.recycle(KeyStar);
 			star.spawn(cx, cy, color, i == 1);
 			add(star);
@@ -352,7 +398,8 @@ class KeystrokesUI extends FlxSpriteGroup
 
 	function spawnSparkParticles(cx:Float, cy:Float, color:FlxColor)
 	{
-		for (i in 0...7) {
+		for (i in 0...7)
+		{
 			var p = particles.recycle(KeyParticle);
 			p.spawn(cx, cy, color);
 			add(p);
@@ -388,10 +435,12 @@ class KeyBeam extends FlxSprite
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		if (!visible) return;
+		if (!visible)
+			return;
 
 		life -= elapsed;
-		if (life <= 0) {
+		if (life <= 0)
+		{
 			kill();
 			return;
 		}
@@ -423,11 +472,12 @@ class KeyStar extends FlxSprite
 		this.color = color;
 		this.alpha = 1;
 		this.life = 0.25;
-		
+
 		baseAngle = FlxG.random.float(-15, 15);
-		if (isVertical) baseAngle += 90;
+		if (isVertical)
+			baseAngle += 90;
 		this.angle = baseAngle;
-		
+
 		this.scale.set(0.2, 1);
 		this.visible = true;
 	}
@@ -435,10 +485,12 @@ class KeyStar extends FlxSprite
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		if (!visible) return;
+		if (!visible)
+			return;
 
 		life -= elapsed;
-		if (life <= 0) {
+		if (life <= 0)
+		{
 			kill();
 			return;
 		}
@@ -447,9 +499,12 @@ class KeyStar extends FlxSprite
 		angle = baseAngle + (progress * 45);
 
 		var scaleX:Float = 0;
-		if (progress < 0.3) {
+		if (progress < 0.3)
+		{
 			scaleX = FlxMath.lerp(0.2, 1.8, progress / 0.3);
-		} else {
+		}
+		else
+		{
 			scaleX = FlxMath.lerp(1.8, 0, (progress - 0.3) / 0.7);
 		}
 
@@ -484,10 +539,12 @@ class KeyBurst extends FlxSprite
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		if (!visible) return;
+		if (!visible)
+			return;
 
 		life -= elapsed;
-		if (life <= 0) {
+		if (life <= 0)
+		{
 			kill();
 			return;
 		}
@@ -537,10 +594,12 @@ class KeyParticle extends FlxSprite
 	override function update(elapsed:Float)
 	{
 		super.update(elapsed);
-		if (!visible) return;
+		if (!visible)
+			return;
 
 		life -= elapsed;
-		if (life <= 0) {
+		if (life <= 0)
+		{
 			kill();
 			return;
 		}

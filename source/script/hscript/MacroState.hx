@@ -12,7 +12,7 @@ using Lambda;
 
 class MarcoState
 {
-	//NOT DONE
+	// NOT DONE
 	// this will be cool
 	// this has helped
 	// https://community.openfl.org/t/append-an-expr-in-haxe-macro-context/10311/2
@@ -55,62 +55,59 @@ class MarcoState
 			return expr;
 		}
 
-		fields.push(
-			{
-				name: "shouldBuildHardcoded",
-				access: [haxe.macro.Expr.Access.APrivate],
-				kind: FFun(
-					{
-						args: [],
-						expr: macro
-						{
-							var isHardcoded:Bool = true;
-							@:privateAccess
-							if (this.__script != null && this.__script._script.interp.locals.exists('isCleanState')) isHardcoded = false;
+		fields.push({
+			name: "shouldBuildHardcoded",
+			access: [haxe.macro.Expr.Access.APrivate],
+			kind: FFun({
+				args: [],
+				expr: macro
+				{
+					var isHardcoded:Bool = true;
+					@:privateAccess
+					if (this.__script != null && this.__script._script.interp.locals.exists('isCleanState'))
+						isHardcoded = false;
 
-							return isHardcoded;
-						}
-					}),
-				pos: position,
-			});
+					return isHardcoded;
+				}
+			}),
+			pos: position,
+		});
 
 		// injecting script var
-		fields.push(
-			{
-				name: "__script",
-				access: [haxe.macro.Expr.Access.APrivate],
-				kind: FVar(macro :funkin.data.scripts.FunkinIris, macro $v{null}),
-				pos: position,
-			});
+		fields.push({
+			name: "__script",
+			access: [haxe.macro.Expr.Access.APrivate],
+			kind: FVar(macro :funkin.data.scripts.FunkinIris, macro $v{null}),
+			pos: position,
+		});
 
 		// injecting the actual function which loads a script
-		fields.push(
-			{
-				name: "tryInitiatingStateScript",
-				access: [haxe.macro.Expr.Access.APrivate],
-				kind: FFun(
+		fields.push({
+			name: "tryInitiatingStateScript",
+			access: [haxe.macro.Expr.Access.APrivate],
+			kind: FFun({
+				args: [],
+				expr: macro
+				{
+					var clName = Type.getClassName(Type.getClass(this));
+					if (clName.contains('.'))
+						clName = clName.substr(clName.lastIndexOf('.') + 1, clName.length);
+
+					var scriptFile = HScript.getPath('states/' + clName, false);
+
+					var found = sys.FileSystem.exists(scriptFile);
+
+					if (found)
 					{
-						args: [],
-						expr: macro
-						{
-							var clName = Type.getClassName(Type.getClass(this));
-							if (clName.contains('.')) clName = clName.substr(clName.lastIndexOf('.') + 1, clName.length);
+						this.__script = HScript.fromFile(scriptFile);
+						this.__script.set('game', FlxG.state);
+					}
 
-							var scriptFile = HScript.getPath('states/' + clName, false);
-
-							var found = sys.FileSystem.exists(scriptFile);
-
-							if (found)
-							{
-								this.__script = HScript.fromFile(scriptFile);
-								this.__script.set('game', FlxG.state);
-							}
-
-							return found;
-						}
-					}),
-				pos: position,
-			});
+					return found;
+				}
+			}),
+			pos: position,
+		});
 
 		var fieldsToRemove:Array<Field> = [];
 
@@ -139,7 +136,8 @@ class MarcoState
 						default:
 							body = [f.expr];
 					}
-					if (body == null) body = [];
+					if (body == null)
+						body = [];
 
 					var funcName:String = i.name.toString();
 					funcName = funcName.charAt(0).toUpperCase() + funcName.substr(1);
@@ -154,7 +152,8 @@ class MarcoState
 
 							// trace('inserted ' + finalFuncName);
 
-							if (this.__script != null) this.__script.call(finalFuncName, $a{funcArgs});
+							if (this.__script != null)
+								this.__script.call(finalFuncName, $a{funcArgs});
 						});
 
 					// and then at the end
@@ -162,21 +161,21 @@ class MarcoState
 						{
 							var finalFuncName = 'on' + $v{funcName} + 'Post';
 							// trace('on' + finalFuncName + 'Post');
-							if (this.__script != null) this.__script.call(finalFuncName, $a{funcArgs});
+							if (this.__script != null)
+								this.__script.call(finalFuncName, $a{funcArgs});
 						});
 
 					var functionName:String = i.name.toString();
 
 					body = specificBodyInjections(functionName, body);
 
-					copied.push(
-						{
-							name: i.name,
-							pos: i.pos,
-							body: body,
-							access: i.access,
-							funcData: f
-						});
+					copied.push({
+						name: i.name,
+						pos: i.pos,
+						body: body,
+						access: i.access,
+						funcData: f
+					});
 
 					fieldsToRemove.push(i);
 
@@ -192,19 +191,17 @@ class MarcoState
 		for (i in copied)
 		{
 			// trace(i.name);
-			fields.push(
-				{
-					name: i.name,
-					pos: i.pos,
-					access: i.access,
-					kind: FFun(
-						{
-							params: i.funcData.params,
-							args: i.funcData.args,
-							ret: i.funcData.ret,
-							expr: macro $b{i.body}
-						})
-				});
+			fields.push({
+				name: i.name,
+				pos: i.pos,
+				access: i.access,
+				kind: FFun({
+					params: i.funcData.params,
+					args: i.funcData.args,
+					ret: i.funcData.ret,
+					expr: macro $b{i.body}
+				})
+			});
 		}
 
 		return fields;

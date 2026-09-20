@@ -11,6 +11,19 @@
 		"ifElse": "next",
 		"doWhile": "next",
 		"tryBody": "next",
-		"tryCatch": "next"
+		"tryCatch": "next",
+		"ifBody": "next",
+		"elseBody": "next",
+		"forBody": "next",
+		"whileBody": "next",
+		"doBody": "next",
+		"caseBody": "next",
+		"returnBody": "same"
+	},
+	"indentation": {
+		"character": "\t"
+	},
+	"imports": {
+		"sortImports": true
 	}
 }

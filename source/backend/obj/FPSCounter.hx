@@ -48,28 +48,31 @@ class FPSCounter extends TextField
 	{
 		final now:Float = haxe.Timer.stamp() * 1000;
 		times.push(now);
-		while (times[0] < now - 1000) times.shift();
+		while (times[0] < now - 1000)
+			times.shift();
 
 		// prevents the overlay from updating every frame, why would you need to anyways @crowplexus
-		if (deltaTimeout < 1000) {
+		if (deltaTimeout < 1000)
+		{
 			deltaTimeout += deltaTime;
 			return;
 		}
-		currentFPS = times.length < FlxG.updateFramerate ? times.length : FlxG.updateFramerate;		
+		currentFPS = times.length < FlxG.updateFramerate ? times.length : FlxG.updateFramerate;
 		updateText();
 		deltaTimeout = 0.0;
 	}
 
-	public dynamic function updateText():Void { // so people can override it in hscript
-        text = 'FPS: $currentFPS • Memory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}';
-		
-		
+	public dynamic function updateText():Void
+	{ // so people can override it in hscript
+		text = 'FPS: $currentFPS • Memory: ${flixel.util.FlxStringUtil.formatBytes(memoryMegas)}';
+
 		textColor = 0xFFFFFFFF;
 		if (currentFPS < FlxG.drawFramerate * 0.5)
 			textColor = 0xFFFF0000;
 	}
 
-	inline function get_memoryMegas():Float {
+	inline function get_memoryMegas():Float
+	{
 		return cast(System.totalMemory, UInt);
 	}
 }

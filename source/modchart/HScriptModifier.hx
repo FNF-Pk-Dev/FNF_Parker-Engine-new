@@ -1,8 +1,7 @@
 // @author Riconuts
-
 package modchart;
 
-//import playfields.NoteField;
+// import playfields.NoteField;
 import script.FunkinHScript;
 import script.hscript.HScript;
 import modchart.Modifier;
@@ -10,45 +9,45 @@ import math.Vector3;
 
 class HScriptModifier extends Modifier
 {
-    public var script:HScript;
+	public var script:HScript;
 	public var scripts:FunkinHScript;
 	public var name:String = "unknown";
 
-	public function new(modMgr:ModManager, ?parent:Modifier, script:FunkinHScript) 
+	public function new(modMgr:ModManager, ?parent:Modifier, script:FunkinHScript)
 	{
-	    scripts = new FunkinHScript();
+		scripts = new FunkinHScript();
 		scripts.onAddScript.push(modchart);
-		
+
 		this.script = script;
 		this.modMgr = modMgr;
 		this.parent = parent;
 
 		super(this.modMgr, this.parent);
 	}
-	
-	function modchart(){
-    	script.set("this", this);
-    	script.set("modMgr", this.modMgr);
-    	script.set("parent", this.parent);
-    	script.set("getValue", getValue);
-    	script.set("getPercent", getPercent);
-    	script.set("getSubmodValue", getSubmodValue);
-    	script.set("getSubmodPercent", getSubmodPercent);
-    	script.set("setValue", setValue);
-    	script.set("setPercent", setPercent);
-    	script.set("setSubmodValue", setSubmodValue);
-    	script.set("setSubmodPercent", setSubmodPercent);
-    
-    	script.executeFunc("onCreate");
-    	
-    	script.executeFunc("onCreatePost");
+
+	function modchart()
+	{
+		script.set("this", this);
+		script.set("modMgr", this.modMgr);
+		script.set("parent", this.parent);
+		script.set("getValue", getValue);
+		script.set("getPercent", getPercent);
+		script.set("getSubmodValue", getSubmodValue);
+		script.set("getSubmodPercent", getSubmodPercent);
+		script.set("setValue", setValue);
+		script.set("setPercent", setPercent);
+		script.set("setSubmodValue", setSubmodValue);
+		script.set("setSubmodPercent", setSubmodPercent);
+
+		script.executeFunc("onCreate");
+
+		script.executeFunc("onCreatePost");
 	}
 
 	@:noCompletion
 	private static final _scriptEnums:Map<String, Dynamic> = [
 		"NOTE_MOD" => NOTE_MOD,
 		"MISC_MOD" => MISC_MOD,
-
 		"FIRST" => FIRST,
 		"PRE_REVERSE" => PRE_REVERSE,
 		"REVERSE" => REVERSE,
@@ -59,27 +58,20 @@ class HScriptModifier extends Modifier
 
 	public static function fromString(modMgr:ModManager, ?parent:Modifier, scriptSource:String):HScriptModifier
 	{
-		return new HScriptModifier(
-			modMgr, 
-			parent, 
-			//FunkinHScript.fromString(scriptSource, "HScriptModifier", _scriptEnums, false)
-			scripts.addScript("HScriptModifier").executeString(scriptSource)
-		);
+		return new HScriptModifier(modMgr, parent, // FunkinHScript.fromString(scriptSource, "HScriptModifier", _scriptEnums, false)
+			scripts.addScript("HScriptModifier").executeString(scriptSource));
 	}
 
 	public static function fromName(modMgr:ModManager, ?parent:Modifier, scriptName:String):Null<HScriptModifier>
-	{		
+	{
 		var fileName:String = 'modifiers/$scriptName.hscript';
 		for (filePath in [#if MODS_ALLOWED Paths.modFolders(fileName), #end Paths.getPreloadPath(fileName)])
 		{
-			if (!FileSystem.exists(filePath)) continue;
+			if (!FileSystem.exists(filePath))
+				continue;
 
-			var mod = new HScriptModifier(
-				modMgr, 
-				parent, 
-				//FunkinHScript.fromFile(filePath, filePath, _scriptEnums, false)
-				scripts.addScript(filePath).executeString(filePath)
-			);
+			var mod = new HScriptModifier(modMgr, parent, // FunkinHScript.fromFile(filePath, filePath, _scriptEnums, false)
+				scripts.addScript(filePath).executeString(filePath));
 			mod.name = scriptName;
 			return mod;
 		}
@@ -119,7 +111,7 @@ class HScriptModifier extends Modifier
 	// they're used purely to get the value of a modifier and should not be overwritten
 	// you sure
 
-		override public function getValue(player:Int):Float
+	override public function getValue(player:Int):Float
 		return script.exitsVar("getValue") ? script.executeFunc("getValue", [player]) : super.getValue(player);
 
 	override public function getPercent(player:Int):Float
@@ -135,24 +127,24 @@ class HScriptModifier extends Modifier
 		return script.exitsVar("getSubmodPercent") ? script.executeFunc("getSubmodPercent", [modName, player]) : super.getSubmodPercent(modName, player);
 
 	override public function getSubmodValue(modName:String, player:Int)
-		return script.exitsVar("getSubmodValue") ? script.executeFunc("getSubmodValue", [modName, player]) : super.getSubmodValue(modName, player); 
+		return script.exitsVar("getSubmodValue") ? script.executeFunc("getSubmodValue", [modName, player]) : super.getSubmodValue(modName, player);
 
 	override public function getSubmods():Array<String>
 		return script.exitsVar("getSubmods") ? script.executeFunc("getSubmods") : super.getSubmods();
 
 	//
-	override public function updateReceptor(beat:Float, receptor:StrumNote, player:Int) 
-		return script.exitsVar("updateReceptor") ? script.executeFunc("updateReceptor", [beat, receptor, player]) : super.updateReceptor(beat, receptor, player);
+	override public function updateReceptor(beat:Float, receptor:StrumNote, player:Int)
+		return script.exitsVar("updateReceptor") ? script.executeFunc("updateReceptor",
+			[beat, receptor, player]) : super.updateReceptor(beat, receptor, player);
 
 	override public function updateNote(beat:Float, note:Note, player:Int)
 		return script.exitsVar("updateNote") ? script.executeFunc("updateNote", [beat, note, player]) : super.updateNote(beat, note, player);
 
-	// override public function getPos(diff:Float, tDiff:Float, beat:Float, pos:Vector3, data:Int, player:Int, obj:FlxSprite, field:NoteField):Vector3 
-		// return script.exists("getPos") ? script.executeFunc("getPos", [diff, tDiff, beat, pos, data, player, obj, field]) : super.getPos(diff, tDiff, beat, pos, data, player, obj, field);
-
-	// override public function modifyVert(beat:Float, vert:Vector3, idx:Int, obj:FlxSprite, pos:Vector3, player:Int, data:Int, field:NoteField):Vector3 
-		// return script.exists("modifyVert") ? script.executeFunc("modifyVert",
-			// [beat, vert, idx, obj, pos, player, data, field]) : super.modifyVert(beat, vert, idx, obj, pos, player, data, field);
+	// override public function getPos(diff:Float, tDiff:Float, beat:Float, pos:Vector3, data:Int, player:Int, obj:FlxSprite, field:NoteField):Vector3
+	// return script.exists("getPos") ? script.executeFunc("getPos", [diff, tDiff, beat, pos, data, player, obj, field]) : super.getPos(diff, tDiff, beat, pos, data, player, obj, field);
+	// override public function modifyVert(beat:Float, vert:Vector3, idx:Int, obj:FlxSprite, pos:Vector3, player:Int, data:Int, field:NoteField):Vector3
+	// return script.exists("modifyVert") ? script.executeFunc("modifyVert",
+	// [beat, vert, idx, obj, pos, player, data, field]) : super.modifyVert(beat, vert, idx, obj, pos, player, data, field);
 
 	override public function getExtraInfo(diff:Float, tDiff:Float, beat:Float, info:RenderInfo, obj:FlxSprite, player:Int, data:Int):RenderInfo
 	{
@@ -160,9 +152,9 @@ class HScriptModifier extends Modifier
 			[diff, tDiff, beat, info, obj, player, data]) : super.getExtraInfo(diff, tDiff, beat, info, obj, player, data);
 	}
 
-	override public function update(elapsed:Float, beat:Float) 
+	override public function update(elapsed:Float, beat:Float)
 		return script.exists("update") ? script.executeFunc("update", [elapsed, beat]) : super.update(elapsed, beat);
 
-	override public function isRenderMod():Bool 
+	override public function isRenderMod():Bool
 		return script.exists("isRenderMod") ? script.executeFunc("isRenderMod") : super.isRenderMod();
 }

@@ -5,17 +5,20 @@ import flixel.graphics.FlxGraphic;
 import openfl.display.BitmapData;
 import openfl.utils.Assets;
 
-//More button support (Some buttons doesn't have a texture)
-@:build(android.macros.ButtonMacro.createButtons(["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","SELECTOR"]))
-@:build(android.macros.ButtonMacro.createExtraButtons(30)) 
-class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
-	//DPad
+// More button support (Some buttons doesn't have a texture)
+@:build(android.macros.ButtonMacro.createButtons([
+	"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "SELECTOR"
+]))
+@:build(android.macros.ButtonMacro.createExtraButtons(30))
+class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton>
+{
+	// DPad
 	public var buttonLeft:MobileButton = new MobileButton(0, 0);
 	public var buttonUp:MobileButton = new MobileButton(0, 0);
 	public var buttonRight:MobileButton = new MobileButton(0, 0);
 	public var buttonDown:MobileButton = new MobileButton(0, 0);
 
-	//PAD DUO MODE
+	// PAD DUO MODE
 	public var buttonLeft2:MobileButton = new MobileButton(0, 0);
 	public var buttonUp2:MobileButton = new MobileButton(0, 0);
 	public var buttonRight2:MobileButton = new MobileButton(0, 0);
@@ -23,16 +26,52 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 
 	public var dPad:FlxTypedSpriteGroup<MobileButton>;
 	public var actions:FlxTypedSpriteGroup<MobileButton>;
-	public var createdButtons:Array<String> = ["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","SELECTOR","Left","Up","Right","Down","Left2","Up2","Right2","Down2"];
-	
+	public var createdButtons:Array<String> = [
+		"A",
+		"B",
+		"C",
+		"D",
+		"E",
+		"F",
+		"G",
+		"H",
+		"I",
+		"J",
+		"K",
+		"L",
+		"M",
+		"N",
+		"O",
+		"P",
+		"Q",
+		"R",
+		"S",
+		"T",
+		"U",
+		"V",
+		"W",
+		"X",
+		"Y",
+		"Z",
+		"SELECTOR",
+		"Left",
+		"Up",
+		"Right",
+		"Down",
+		"Left2",
+		"Up2",
+		"Right2",
+		"Down2"
+	];
+
 	/**
 	 * Create a gamepad.
 	 *
 	 * @param   DPadMode   The D-Pad mode. `LEFT_FULL` for example.
 	 * @param   ActionMode   The action buttons mode. `A_B_C` for example.
 	 */
-
-	public function new(DPad:String, Action:String) {
+	public function new(DPad:String, Action:String)
+	{
 		super();
 
 		dPad = new FlxTypedSpriteGroup<MobileButton>();
@@ -74,7 +113,7 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 	{
 		return createTouchButton(x, y, Frames, ColorS);
 	}
-	
+
 	private function createTouchButton(X:Float, Y:Float, Graphic:String, ?Color:FlxColor = 0xFFFFFF):MobileButton
 	{
 		var button = new MobileButton(X, Y);
@@ -99,21 +138,23 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		button.tag = Graphic.toUpperCase();
 		button.color = Color;
 		button.parentAlpha = button.alpha;
-		
+
 		return button;
 	}
 
-	public function createVirtualButton(x:Float, y:Float, Frames:String, ?ColorS:Int = 0xFFFFFF):MobileButton {
+	public function createVirtualButton(x:Float, y:Float, Frames:String, ?ColorS:Int = 0xFFFFFF):MobileButton
+	{
 		var frames:FlxGraphic;
 
 		final path:String = 'assets/moblie/MobileButton/VirtualPad/original/$Frames.png';
 		#if MODS_ALLOWED
 		final modsPath:String = Paths.modFolders('moblie/MobileButton/VirtualPad/original/$Frames');
-		if(sys.FileSystem.exists(modsPath))
+		if (sys.FileSystem.exists(modsPath))
 			frames = FlxGraphic.fromBitmapData(BitmapData.fromFile(modsPath));
-		else #end if(Assets.exists(path))
-			frames = FlxGraphic.fromBitmapData(Assets.getBitmapData(path));
 		else
+		#end if (Assets.exists(path))
+			frames = FlxGraphic.fromBitmapData(Assets.getBitmapData(path));
+	else
 			frames = FlxGraphic.fromBitmapData(Assets.getBitmapData('assets/moblie/MobileButton/VirtualPad/original/default.png'));
 
 		var button = new MobileButton(x, y);
@@ -130,7 +171,8 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton> {
 		button.antialiasing = ClientPrefs.globalAntialiasing;
 		button.tag = Frames.toUpperCase();
 
-		if (ColorS != -1) button.color = ColorS;
+		if (ColorS != -1)
+			button.color = ColorS;
 
 		return button;
 	}

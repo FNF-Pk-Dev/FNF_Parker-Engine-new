@@ -22,6 +22,16 @@ class CPPInterface
 		CPPWindows.setWindowAlpha(a);
 	}
 
+	public static function setTaskBarVisible(visible:Bool)
+	{
+		CPPWindows.setTaskBarVisible(visible);
+	}
+
+	public static function setWindowTransparent(enable:Bool)
+	{
+		CPPWindows.setWindowTransparent(enable);
+	}
+
 	public static function _setWindowLayered()
 	{
 		CPPWindows._setWindowLayered();

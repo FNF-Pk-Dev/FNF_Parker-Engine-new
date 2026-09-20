@@ -61,11 +61,13 @@ class MusicBeatSubstate extends FlxSubState
 		callOnScript('onCreate', []);
 	}
 
-	inline function isHardcodedState() return (script != null && !script.customMenu) || (script == null);
+	inline function isHardcodedState()
+		return (script != null && !script.customMenu) || (script == null);
 
 	inline function setOnScript(name:String, value:Dynamic)
 	{
-		if (script != null) script.set(name, value);
+		if (script != null)
+			script.set(name, value);
 	}
 
 	public function callOnScript(name:String, vars:Array<Any>, ignoreStops:Bool = false)
@@ -77,12 +79,15 @@ class MusicBeatSubstate extends FlxSubState
 			if (ret == GlobalScript.Function_Halt)
 			{
 				ret = returnVal;
-				if (!ignoreStops) return returnVal;
+				if (!ignoreStops)
+					return returnVal;
 			};
 
-			if (ret != GlobalScript.Function_Continue && ret != null) returnVal = ret;
+			if (ret != GlobalScript.Function_Continue && ret != null)
+				returnVal = ret;
 
-			if (returnVal == null) returnVal = GlobalScript.Function_Continue;
+			if (returnVal == null)
+				returnVal = GlobalScript.Function_Continue;
 		}
 		return returnVal;
 	}
@@ -92,9 +97,10 @@ class MusicBeatSubstate extends FlxSubState
 	var trackedinputsUI:Array<FlxActionInput> = [];
 	var trackedinputsNOTES:Array<FlxActionInput> = [];
 	#end
-	
+
 	#if android
-	public function addTouchPad(?DPad:String, ?Action:String) {
+	public function addTouchPad(?DPad:String, ?Action:String)
+	{
 		_touchpad = new FlxTouchPad(DPad, Action);
 		add(_touchpad);
 		controls.setTouchPadUI(_touchpad, DPad, Action);
@@ -104,27 +110,31 @@ class MusicBeatSubstate extends FlxSubState
 	#end
 
 	#if android
-	public function removeVirtualPad() {
+	public function removeVirtualPad()
+	{
 		controls.removeFlxInput(trackedinputsUI);
 		remove(_touchpad);
 	}
 	#end
 
 	#if android
-		public function addPadCamera() {
+	public function addPadCamera()
+	{
 		var camcontrol = new flixel.FlxCamera();
 		camcontrol.bgColor.alpha = 0;
 		FlxG.cameras.add(camcontrol, false);
 		_touchpad.cameras = [camcontrol];
 	}
 	#end
-	
-	override function destroy() {
+
+	override function destroy()
+	{
 		#if android
-		if (_touchpad != null){
-		if (trackedinputsUI != [])
-		controls.removeFlxInput(trackedinputsUI);
-	    }
+		if (_touchpad != null)
+		{
+			if (trackedinputsUI != [])
+				controls.removeFlxInput(trackedinputsUI);
+		}
 		#end
 
 		callOnScript('onDestroy', []);
@@ -133,7 +143,7 @@ class MusicBeatSubstate extends FlxSubState
 
 	override function update(elapsed:Float)
 	{
-		//everyStep();
+		// everyStep();
 		var oldStep:Int = curStep;
 
 		updateCurStep();
@@ -142,14 +152,13 @@ class MusicBeatSubstate extends FlxSubState
 		if (oldStep != curStep && curStep > 0)
 			stepHit();
 
-
 		super.update(elapsed);
 	}
 
 	private function updateBeat():Void
 	{
 		curBeat = Math.floor(curStep / 4);
-		curDecBeat = curDecStep/4;
+		curDecBeat = curDecStep / 4;
 	}
 
 	private function updateCurStep():Void
@@ -169,6 +178,6 @@ class MusicBeatSubstate extends FlxSubState
 
 	public function beatHit():Void
 	{
-		//do literally nothing dumbass
+		// do literally nothing dumbass
 	}
 }

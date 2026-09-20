@@ -17,10 +17,8 @@ class FunkinHScript extends FlxBasic
 	// 	// var script:HScript = HScriptUtil.getBasicScript();
 	// 	// HScriptUtil.setUpFlixelScript(script);
 	// 	// HScriptUtil.setUpFNFScript(script);
-
 	// 	@:privateAccess
 	// 	script._group = this;
-
 	// 	if (tag != null)
 	// 	{
 	// 		script.set("name", tag);
@@ -33,25 +31,20 @@ class FunkinHScript extends FlxBasic
 	// 		{
 	// 			if (script == null)
 	// 				continue;
-
 	// 			if (script.name.toLowerCase().contains("_hscript"))
 	// 				i++;
 	// 		}
-
 	// 		script.set("name", '_hscript$i');
 	// 		script.name = '_hscript$i';
 	// 	}
 	// 	trace('999');
-
 	// 	for (func in onAddScript)
 	// 	{
 	// 		if (func == null)
 	// 			continue;
 	// 		func(script);
 	// 	}
-
 	// 	scripts.push(script);
-
 	// 	return script;
 	// }
 
@@ -64,9 +57,12 @@ class FunkinHScript extends FlxBasic
 			if (_ == null)
 				continue;
 
-			try {
+			try
+			{
 				returns.push(_.executeFunc(name, args));
-			} catch(e:Dynamic) {
+			}
+			catch (e:Dynamic)
+			{
 				trace('Error executing $name: $e');
 				returns.push(null);
 			}
@@ -86,7 +82,6 @@ class FunkinHScript extends FlxBasic
 		}
 	}
 
-
 	public function initScript(name:String, folder:String)
 	{
 		if (this == null)
@@ -99,21 +94,23 @@ class FunkinHScript extends FlxBasic
 			var path:String = Paths.modFolders(folder + "/" + name);
 			if (FileSystem.exists(path))
 			{
-				try {
+				try
+				{
 					hx = File.getContent(path);
 					break;
-				} catch(e:Dynamic) {
+				}
+				catch (e:Dynamic)
+				{
 					trace('Failed to load script: $e');
 				}
 			}
 		}
 
-		if (hx == null) {
+		if (hx == null)
+		{
 			trace('Script $name not found in $folder');
 			return;
 		}
-
-	
 	}
 
 	public function setAll(name:String, val:Dynamic)
@@ -155,6 +152,4 @@ class FunkinHScript extends FlxBasic
 
 		return null;
 	}
-
-	
 }

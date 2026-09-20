@@ -29,7 +29,7 @@ class BGSprite extends FlxSprite
 			loadGraphic(Paths.image(image));
 			active = false;
 		}
-		
+
 		scrollFactor.set(scrollX, scrollY);
 		antialiasing = ClientPrefs.globalAntialiasing;
 	}

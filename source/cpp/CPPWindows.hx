@@ -29,7 +29,9 @@ class CPPWindows
         }
         UpdateWindow(window);
     ')
-	public static function _setWindowColorMode(mode:Int) {}
+	public static function _setWindowColorMode(mode:Int)
+	{
+	}
 
 	public static function setWindowColorMode(mode:WindowColorMode)
 	{
@@ -50,7 +52,9 @@ class CPPWindows
 	SetWindowLong(window, GWL_EXSTYLE, GetWindowLong(window, GWL_EXSTYLE) ^ WS_EX_LAYERED);
 	')
 	@:noCompletion
-	public static function _setWindowLayered() {}
+	public static function _setWindowLayered()
+	{
+	}
 
 	@:functionCode('
         HWND window = GetActiveWindow();
@@ -75,6 +79,44 @@ class CPPWindows
 	public static function setWindowAlpha(alpha:Float)
 	{
 		return alpha;
+	}
+
+	@:functionCode('
+		HWND taskbar = FindWindow(TEXT("Shell_TrayWnd"), NULL);
+		if (taskbar != NULL) {
+			ShowWindow(taskbar, visible ? SW_SHOW : SW_HIDE);
+		}
+	')
+	/**
+	 * Show or hide the Windows taskbar
+	 * @param visible
+	 */
+	public static function setTaskBarVisible(visible:Bool)
+	{
+	}
+
+	@:functionCode('
+		HWND window = GetActiveWindow();
+		if (window != NULL) {
+			long style = GetWindowLong(window, GWL_EXSTYLE);
+
+			if (enable) {
+				SetWindowLong(window, GWL_EXSTYLE, style | WS_EX_LAYERED);
+				// Black becomes the transparent color, only the drawn game content stays visible
+				SetLayeredWindowAttributes(window, RGB(0, 0, 0), 0, LWA_COLORKEY);
+			} else {
+				SetWindowLong(window, GWL_EXSTYLE, style & ~WS_EX_LAYERED);
+			}
+
+			SetWindowPos(window, NULL, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+		}
+	')
+	/**
+	 * Make the window see-through, keeping only the drawn game content
+	 * @param enable
+	 */
+	public static function setWindowTransparent(enable:Bool)
+	{
 	}
 
 	@:functionCode("

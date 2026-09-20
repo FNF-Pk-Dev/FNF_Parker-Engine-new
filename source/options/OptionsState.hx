@@ -3,7 +3,7 @@ package options;
 #if desktop
 import backend.Discord.DiscordClient;
 #end
-import flash.text.TextField;
+import openfl.text.TextField;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.addons.display.FlxGridOverlay;
@@ -14,9 +14,6 @@ import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import lime.utils.Assets;
 import flixel.FlxSubState;
-import flash.text.TextField;
-import flixel.FlxG;
-import flixel.FlxSprite;
 import flixel.util.FlxSave;
 import haxe.Json;
 import flixel.tweens.FlxEase;
@@ -34,11 +31,14 @@ class OptionsState extends MusicBeatState
 	var options:Array<String> = ['Note Colors', 'Controls', 'Graphics', 'Visuals and UI', 'Gameplay'];
 	var HUDwrinText:FlxText;
 	private var grpOptions:FlxTypedGroup<Alphabet>;
+
 	private static var curSelected:Int = 0;
 	public static var menuBG:FlxSprite;
 
-	function openSelectedSubstate(label:String) {
-		switch(label) {
+	function openSelectedSubstate(label:String)
+	{
+		switch (label)
+		{
 			case 'Note Colors':
 				#if android
 				removeTouchPad();
@@ -64,7 +64,7 @@ class OptionsState extends MusicBeatState
 				removeTouchPad();
 				#end
 				openSubState(new options.GameplaySettingsSubState());
-				//放心吧 ，没用了
+			// 放心吧 ，没用了
 			case 'Adjust Delay':
 				LoadingState.loadAndSwitchState(new options.NoteOffsetState());
 		}
@@ -74,7 +74,8 @@ class OptionsState extends MusicBeatState
 	// var selectorRight:Alphabet;
 	var velocityBackground:FlxBackdrop;
 
-	override function create() {
+	override function create()
+	{
 		Paths.clearStoredMemory();
 		Paths.clearUnusedMemory();
 
@@ -157,44 +158,53 @@ class OptionsState extends MusicBeatState
 		super.create();
 	}
 
-	override function closeSubState() {
+	override function closeSubState()
+	{
 		super.closeSubState();
 		ClientPrefs.saveSettings();
 	}
 
-	override function update(elapsed:Float) {
+	override function update(elapsed:Float)
+	{
 		super.update(elapsed);
 
-		if (controls.UI_UP_P) {
+		if (controls.UI_UP_P)
+		{
 			changeSelection(-1);
 		}
-		if (controls.UI_DOWN_P) {
+		if (controls.UI_DOWN_P)
+		{
 			changeSelection(1);
 		}
 
-		if (controls.BACK) {
+		if (controls.BACK)
+		{
 			FlxG.sound.play(Paths.sound('cancelMenu'));
 			MusicBeatState.switchState(substates.PauseSubState.options ? new PlayState() : new MainMenuState());
 		}
 
 		#if android
-		if (_touchpad.buttonX.justPressed) {
+		if (_touchpad.buttonX.justPressed)
+		{
 			FlxTransitionableState.skipNextTransIn = true;
 			FlxTransitionableState.skipNextTransOut = true;
 			MusicBeatState.switchState(new android.AndroidControlsMenu());
 		}
-		if (_touchpad.buttonY.justPressed) {
+		if (_touchpad.buttonY.justPressed)
+		{
 			removeTouchPad();
 			openSubState(new android.HitboxSettingsSubState());
 		}
 		#end
 
-		if (controls.ACCEPT) {
+		if (controls.ACCEPT)
+		{
 			openSelectedSubstate(options[curSelected]);
 		}
 	}
-	
-	function changeSelection(change:Int = 0) {
+
+	function changeSelection(change:Int = 0)
+	{
 		curSelected += change;
 		if (curSelected < 0)
 			curSelected = options.length - 1;
@@ -203,7 +213,8 @@ class OptionsState extends MusicBeatState
 
 		var bullShit:Int = 0;
 
-		for (item in grpOptions.members) {
+		for (item in grpOptions.members)
+		{
 			item.targetY = bullShit - curSelected;
 			bullShit++;
 
@@ -217,17 +228,20 @@ class OptionsState extends MusicBeatState
 			}
 
 			item.alpha = 0.6;
-			if (item.targetY == 0) {
+			if (item.targetY == 0)
+			{
 				item.alpha = 1;
 				// selectorLeft.x = item.x - 63;
 				// selectorLeft.y = item.y;
 				// selectorRight.x = item.x + item.width + 15;
 				// selectorRight.y = item.y;
-				
+
 				// Dynamic selection effect
 				FlxTween.cancelTweensOf(item);
 				FlxTween.tween(item, {x: 120, alpha: 1}, 0.2, {ease: FlxEase.quadOut});
-			} else {
+			}
+			else
+			{
 				FlxTween.cancelTweensOf(item);
 				FlxTween.tween(item, {x: 90, alpha: 0.6}, 0.2, {ease: FlxEase.quadOut});
 			}
