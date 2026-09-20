@@ -37,6 +37,13 @@
       "version": null
     },
     {
+      "name": "hscript-iris",
+      "type": "git",
+      "dir": null,
+      "ref": "main",
+      "url": "https://github.com/FNF-Pk-Dev/hscript-iris.git"
+    },
+    {
       "name": "hxcpp",
       "type": "git",
       "dir": null,
