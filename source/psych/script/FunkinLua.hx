@@ -2065,8 +2065,9 @@ class FunkinLua extends GlobalScript
 			return true;
 		});
 		#if android
-		set("addTouchPad", function(Dpad:String, Full:String) {
-			addTouchPad(Dpad, Full);
+		set("addTouchPad", function(Dpad:String, Full:String)
+		{
+			PlayState.instance.addTouchPad(Dpad, Full);
 			return true;
 		});
 		#end
