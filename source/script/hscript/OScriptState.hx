@@ -32,6 +32,11 @@ class OScriptState extends MusicBeatState
 		hscript.set("remove", remove);
 		hscript.set("insert", insert);
 		hscript.set("members", members);
+
+		#if android
+		hscript.set("addTouchPad", addTouchPad);
+		hscript.set("addPadCamera", addPadCamera);
+		#end
 	}
 
 	// 代理HScript的方法
