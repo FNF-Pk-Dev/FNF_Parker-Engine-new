@@ -84,7 +84,11 @@ class FunkinLua extends GlobalScript
 	// public var errorHandler:String->Void;
 	#if LUA_ALLOWED
 	public var lua:State = null;
+
+	/** Live proxies this script was given, see `setProxy()`. */
+	var proxy:LuaProxy = null;
 	#end
+
 	public var camTarget:FlxCamera;
 	public var scriptName:String = '';
 	public var scriptHxLuaCode:Dynamic = '';
@@ -210,8 +214,10 @@ class FunkinLua extends GlobalScript
 		var inPlayState:Bool = PlayState.instance != null && !menuMode;
 		var hasSong:Bool = PlayState.SONG != null;
 
-		// Psych 0.7's deprecated `this`: PlayState while a song runs, the menu state otherwise
-		set('this', getScriptState());
+		// Psych 0.7's deprecated `this`: PlayState while a song runs, the menu state otherwise.
+		// Bound as a live proxy, so `this.camGame:flash(...)` reaches the real camera instead of a
+		// one-off copy of the state whose object fields are all nil.
+		setProxy('this', getScriptState());
 
 		// Song/Week shit
 		set('curBpm', Conductor.bpm);
@@ -3884,6 +3890,11 @@ class FunkinLua extends GlobalScript
 			#else
 			luaTrace('Error running lua script: "$scriptName"\n' + err, true, false, FlxColor.RED);
 			#end
+			if (proxy != null)
+			{
+				proxy.dispose();
+				proxy = null;
+			}
 			Lua.close(lua);
 			lua = null;
 			return;
@@ -4973,6 +4984,26 @@ class FunkinLua extends GlobalScript
 		#end
 	}
 
+	/**
+	 * Binds `value` as the global `variable` of this script as a live proxy table (see `LuaProxy`)
+	 * instead of the field snapshot `set()` would make of it.
+	 *
+	 * That is what `this` needs: `Convert.toLua()` converts an object's fields one level deep, so a
+	 * script reading `camGame` or `boyfriend` off the value behind `this` used to find `nil`.
+	 */
+	public function setProxy(variable:String, value:Dynamic):Void
+	{
+		#if LUA_ALLOWED
+		if (lua == null || value == null)
+			return;
+
+		if (proxy == null)
+			proxy = new LuaProxy(lua, (text:String, color:FlxColor) -> luaTrace(text, true, false, color));
+
+		proxy.setGlobal(variable, value);
+		#end
+	}
+
 	public function addLocalCallback(name:String, myFunction:Dynamic)
 	{
 		callbacks.set(name, myFunction);
@@ -4998,6 +5029,13 @@ class FunkinLua extends GlobalScript
 	public function stop()
 	{
 		#if LUA_ALLOWED
+		if (proxy != null)
+		{
+			// The ids in the proxy tables only mean anything while this script is alive
+			proxy.dispose();
+			proxy = null;
+		}
+
 		if (lua != null)
 		{
 			Lua.close(lua);
