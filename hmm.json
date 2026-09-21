@@ -108,13 +108,6 @@
       "url": "https://github.com/Ajwyunsx/linc_luau.git"
     },
     {
-      "name": "lscript",
-      "type": "git",
-      "dir": null,
-      "ref": "main",
-      "url": "https://github.com/FNF-Pk-Dev/lscript.git"
-    },
-    {
       "name": "pyscript",
       "type": "git",
       "dir": null,

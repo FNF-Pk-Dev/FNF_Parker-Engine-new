@@ -5159,6 +5159,13 @@ class PlayState extends MusicBeatState
 			GlobalScript.releaseScript(py);
 		}
 
+		for (lscript in lscriptArray)
+		{
+			lscript.call('onDestroy', []);
+			lscript.stop();
+			GlobalScript.releaseScript(lscript);
+		}
+
 		for (hx in hscriptArray)
 		{
 			hx.call("onDestroy", []);
@@ -5761,7 +5768,7 @@ class PlayState extends MusicBeatState
 
 		for (script in lscriptArray)
 		{
-			if (script.paused)
+			if (GlobalScript.isScriptPaused(script))
 				continue;
 
 			if (exclusions.contains(script.scriptName))
@@ -5865,7 +5872,7 @@ class PlayState extends MusicBeatState
 		{
 			if (GlobalScript.scriptMatchesTag(script.scriptName, tag))
 			{
-				script.setPaused(paused);
+				GlobalScript.setScriptPaused(script, paused);
 				found = true;
 			}
 		}
@@ -6151,7 +6158,8 @@ class PlayState extends MusicBeatState
 
 	function initLScript(filePath:String)
 	{
-		var script:FunkinLScript = new FunkinLScript(filePath, true);
+		// The wrapper's own constructor doesn't run the body (no `executeScript`), `execute()` below does
+		var script:FunkinLScript = new FunkinLScript(filePath);
 		lscriptArray.push(script);
 		onAddSScript();
 		script.execute();

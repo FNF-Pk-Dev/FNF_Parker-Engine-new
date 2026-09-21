@@ -1,6 +1,6 @@
 package script;
 
-#if (LUA_ALLOWED || lscript)
+#if LUA_ALLOWED
 #if sys
 import sys.FileSystem;
 #end
@@ -11,13 +11,16 @@ import sys.FileSystem;
  *
  * The script runs *on* the state it replaces: `script.parent` (and `this`) is this state,
  * so every global the script assigns lands on it, and the `game`, `add`, `remove`, `insert`
- * and `members` globals that FunkinLScript binds to FlxG.state are pointed at this state
- * instead of the outgoing one.
+ * and `members` globals the wrapper binds to `PlayState.instance` / `FlxG.state` on its own
+ * are pointed at this state instead of the outgoing one.
  *
- * Callback order: the script body and `onCreate` (fired by `FunkinLScript.execute()`, the
- * same contract PlayState uses for its lscriptArray) run in the constructor, then `onLoad`,
- * then `onCreatePost` right after `super.create()`. From there `onStepHit`/`onBeatHit`,
- * `onUpdate`/`onUpdatePost` and `onDestroy`/`onDestroyPost` follow the state's lifecycle.
+ * Callback order: `loadScript()` binds the state first and then runs the script body plus
+ * `onCreate` through `FunkinLScript.execute()` (the same contract PlayState uses for its
+ * lscriptArray), all in the constructor — the wrapper holds its own Luau state and runs
+ * nothing by itself, so `setParent()` and `set()` are always in place before the first line
+ * of the script runs. Then `onLoad`, then `onCreatePost` right after `super.create()`. From
+ * there `onStepHit`/`onBeatHit`, `onUpdate`/`onUpdatePost` and `onDestroy`/`onDestroyPost`
+ * follow the state's lifecycle.
  */
 class LScriptSState extends MusicBeatState
 {
@@ -59,11 +62,12 @@ class LScriptSState extends MusicBeatState
 			return false;
 		}
 
-		lscript = new FunkinLScript(scriptPath, true);
+		// The body runs on `execute()` below, not here, so the bindings come first.
+		lscript = new FunkinLScript(scriptPath);
 
-		// The script runs on this state: `this` / `script.parent` are it, and the globals
-		// FunkinLScript had bound to FlxG.state (still the outgoing state here) plus `game`
-		// (PlayState.instance, null outside a song) are pointed at it instead.
+		// The script runs on this state: `this` / `script.parent` are it, and the globals the
+		// wrapper bound to `PlayState.instance` (`game`, null outside a song) / `FlxG.state`
+		// (still the outgoing state here) are pointed at it instead.
 		lscript.setParent(this);
 		lscript.set('this', this);
 		lscript.set('game', this);

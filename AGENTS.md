@@ -10,7 +10,7 @@ Guide for AI coding agents working on **Friday Night Funkin': Parker Engine**, a
 | Version | `0.2.8` (Project.xml) — `gitVersion.txt` still says `0.6.3` (stale, upstream leftover) |
 | App identity | package/file `com.laoan.pkengine`, company `Ajwwk`, executable `Pk Engine` |
 | Language | Haxe (CI and the reference dev machine use **4.3.7**) |
-| Stack | HaxeFlixel + OpenFL + Lime, `hscript`/`hscript-iris`, `flxanimate`, `flixel-ui`, `flxgif`, `hxvlc`, `linc_luajit`, `lscript`, `pyscript`, `faxe`, `discord_rpc`, `haxe-crypto` |
+| Stack | HaxeFlixel + OpenFL + Lime, `hscript`/`hscript-iris`, `flxanimate`, `flixel-ui`, `flxgif`, `hxvlc`, `linc_luajit`, `pyscript`, `faxe`, `discord_rpc`, `haxe-crypto` (the `.lscript` Luau runtime is built in, no `lscript` haxelib any more) |
 | Targets | Windows (primary), Android, HTML5; `linux`/`mac`/`switch` code paths exist |
 | Entry point | `source/Main.hx` → `FNFGame` (`flixel.FlxGame` subclass) → `StartupState` |
 
@@ -18,7 +18,7 @@ Fork-specific features you will not find in upstream Psych Engine:
 
 - `source/modchart/` — Schmovin'/Andromeda-style **note modifier stack**: `ModManager` (registry + `EventTimeline`), 15 built-in modifiers (`modifiers/`), events (`events/`), and `HScriptModifier` so scripts can define their own.
 - `source/options/` — Psych-0.7-style **option menu framework** (`BaseOptionsMenu`, `Option`, `OptionsState`, `*SubState` pages) alongside the older inline options code.
-- `source/script/` — HScript is first-class (`FunkinHScript`, `HScriptUtil`, `OScriptState`), next to `lscript` and Python; `FNFGame.switchState()` can replace a built-in state with a script.
+- `source/script/` — HScript is first-class (`FunkinHScript`, `HScriptUtil`, `OScriptState`), next to LScript (`.lscript`, its own Luau runtime in `FunkinLScript.hx` on `llua`) and Python; `FNFGame.switchState()` can replace a built-in state with a script.
 - PowerPuff-Girl themed loading/idle/intro screen and transitions (`backend/PowerPuffGirl.hx`, `PowerPuffTrail.hx`, `PowerPuffTransition.hx`, `obj/PowerPuffGirl.hx`), driven by data in `assets/preload/images/loading/loading.json`.
 - Custom screen transitions: `backend/CustomFadeTransition.hx`, `backend/CustomTilesTransition.hx` (sparrow `ui/diaTrans`) instead of stock `FlxTransitionSprite`.
 - `backend/ChartParser.hx` — builds charts out of image tiles (`data/<song>/<song>_sectionN.png`); currently only referenced from a commented-out line in PlayState.
@@ -191,7 +191,7 @@ Resolution rules worth remembering:
 
 ## 8. Scripting
 
-Extensions recognized by `HScriptUtil.extns`: **`.hx`, `.hscript`, `.hsc`, `.hxs`**; Lua is `.lua` (`psych/script/FunkinLua.hx`), lscript is `.lscript` (`FunkinLScript`), Python is `.py` (`FunkinPython`, `#if PYTHON_ALLOWED`).
+Extensions recognized by `HScriptUtil.extns`: **`.hx`, `.hscript`, `.hsc`, `.hxs`**; Lua is `.lua` (`psych/script/FunkinLua.hx`), lscript is `.lscript` (`FunkinLScript`, `#if LUA_ALLOWED`), Python is `.py` (`FunkinPython`, `#if PYTHON_ALLOWED`). `.lscript` is a **self-contained Luau runtime** (`llua` + `source/script/`): neither `Project.xml` nor `hmm.json` lists the `lscript` haxelib any more, so do not add it back and do not `import lscript.*`.
 
 Where scripts are auto-discovered (`states/game/PlayState.hx`):
 
@@ -210,7 +210,7 @@ Where scripts are auto-discovered (`states/game/PlayState.hx`):
 
 Callbacks are dispatched by name; the important ones: `onCreate`, `onCreatePost`, `onUpdate`, `onUpdatePost`, `onStepHit`, `onBeatHit`, `onSectionHit`, `onSongStart`, `onCountdownTick`, `onStartCountdown`, `onEndSong`, `onGameOver`, `onPause`, `onResume`, `onDestroy`, `onEvent`, `eventEarlyTrigger`, `onSpawnNote`, `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `noteMissPress`, `onUpdateScore`, `onRecalculateRating`, `popUpScore`, `onMoveCamera`, and for modcharts `preModifierRegister`, `postModifierRegister`, `generateModchart`. Return `script.GlobalScript.Function_Stop` (`'FUNC_STOP'`) to stop the chain, `Function_Continue` / `Function_Halt` for the other policies.
 
-LScript callbacks additionally have to be listed in `script/FunkinLScript.hx`'s `CALLBACKS`: they are registered as `false` in the script's globals before its body runs, because looking up a global the script never defined goes through the `_G` metatable `lscript.LScript` installs and kills the process there (unprotected Luau error). `FunkinLScript.call()` refuses to dispatch a name that is not in that list — extend it when a new callback is dispatched to lscripts.
+LScript callbacks additionally have to be listed in `script/FunkinLScript.hx`'s `CALLBACKS`. `call()` looks the name up as a plain global and dispatches it through a **protected llua call** (the same style `FunkinLua` uses): a callback the script did not define is simply absent from its globals and is skipped. There is no `_G` metatable forwarding undefined globals to `script.parent` any more — that forwarding is what used to make dispatching an unimplemented callback kill the process — but `call()` still refuses a name outside `CALLBACKS` and reports it on screen (`ScriptDebugOverlay` outside a song), so extend that list when a new callback is dispatched to lscripts. A Haxe value handed to a script (classes included) becomes a **proxy table** whose reads, writes and method calls go back to Haxe (`luaIndex()`, `luaSetProp()`, `luaInvoke()`, so `spr.x = 1` and `spr:playAnim('idle')` both work), and engine functions are bound through `bind()`, which calls them back through `luaCall()` — that is where their errors are reported instead of unwinding into the VM. `execute()` runs the body protected and then fires `onCreate`; the callback contract (same names, same order, `Function_Stop`/`Function_Continue`/`Function_Halt` returns) is unchanged.
 
 Global variables/functions exposed to HScript come from `script/FunkinHScript.hx` — that module now owns the whole engine (`HScript`, `Script`, `IFunkinScript`, `ScriptType`, `InterpPro`), and `FunkinHScript.setDefaultVars(script)` registers the default API (including `this`, which resolves to the interpreter's parent, else `PlayState.instance`, else `FlxG.state`) while `HScript.setDefaultVars()` just delegates to it, so `script/hscript/HScriptUtil.hx` (`setDefaultVars`) can still extend the list; PlayState then pushes game state (`curStep`, `curBeat`, `bpm`, `boyfriend`, `camGame`, `modManager`, …). `source/script/hscript/HScript.hx` and `InterpPro.hx` are typedef-only alias modules for the old `script.hscript.*` paths. Two-way variable binding is `script/Interact.hx`. `script/Macro.hx` (`addScriptingCallbacks`) is the build macro that injects script hooks into states/objects and honors `@:noScripting`.
 
@@ -229,7 +229,7 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 #if android          // Android — see also #if mobile
 #if web              // HTML5 (also: #if html5)
 #if MODS_ALLOWED     // <assets example_mods rename to mods/> + mod lookups in Paths
-#if LUA_ALLOWED      // linc_luajit + lscript
+#if LUA_ALLOWED      // linc_luajit + the built-in lscript (Luau) runtime
 #if PYTHON_ALLOWED   // pyscript
 #if VIDEOS_ALLOWED   // hxvlc
 #if ACHIEVEMENTS_ALLOWED
@@ -282,6 +282,7 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 | Legacy `script.hscript.*` HScript paths (typedef aliases) | `source/script/hscript/HScript.hx`, `InterpPro.hx` |
 | Lua runtime + custom menu states (`LuaSState`) | `source/psych/script/FunkinLua.hx` |
 | "Engine Custom ES" Lua dialect (extra callbacks, menu-mode registries) | `source/psych/script/ESCompat.hx` |
+| lscript (Luau) runtime + `states/<Name>.lscript` overrides | `source/script/FunkinLScript.hx`, `source/script/LScriptSState.hx` |
 | On-screen script errors outside PlayState (`LuaSState`/`LScriptSState`/`OScriptState`) | `source/script/ScriptDebugOverlay.hx` |
 | Mods menu / `pack.json` parsing | `source/states/menu/ModsMenuState.hx` |
 | Chart editor | `source/editors/ChartingState.hx` |

@@ -156,7 +156,6 @@
 	<haxelib name="flxgif" />
 	<haxelib name="hxvlc" if="VIDEOS_ALLOWED" />
 	<haxelib name="linc_luajit" if="LUA_ALLOWED"/>
-	<haxelib name="lscript" if="LUA_ALLOWED"/>
 	<haxelib name="pyscript" if="PYTHON_ALLOWED"/>
 	<haxelib name="faxe" if='switch'/>
 	
