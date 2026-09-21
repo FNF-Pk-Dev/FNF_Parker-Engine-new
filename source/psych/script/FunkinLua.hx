@@ -610,6 +610,35 @@ class FunkinLua extends GlobalScript
 			return runningScripts;
 		});
 
+		// Pause control: the script can suspend/wake itself, or another one through its name
+		set("pauseScript", function()
+		{
+			return setPaused(true);
+		});
+		set("resumeScript", function()
+		{
+			return setPaused(false);
+		});
+		set("setScriptPaused", function(tag:String, paused:Bool)
+		{
+			// Menu scripts have no PlayState to look up tags in, they only see each other
+			if (menuMode || PlayState.instance == null)
+			{
+				for (script in menuScripts)
+				{
+					if (!GlobalScript.scriptMatchesTag(script.scriptName, tag))
+						continue;
+
+					script.setPaused(paused);
+					return true;
+				}
+
+				return false;
+			}
+
+			return PlayState.instance.setScriptPaused(tag, paused);
+		});
+
 		set("callOnLuas", function(?funcName:String, ?args:Array<Dynamic>, ignoreStops = false, ignoreSelf = true, ?exclusions:Array<String>)
 		{
 			if (funcName == null)
@@ -4733,6 +4762,8 @@ class FunkinLua extends GlobalScript
 			}
 			if (PlayState.instance != null && !menuMode)
 				PlayState.instance.addTextToDebug(text, color);
+			else
+				ScriptDebugOverlay.report(text, color); // Menu scripts have no debug text to print on
 			trace(text);
 		}
 		#end
@@ -4791,7 +4822,7 @@ class FunkinLua extends GlobalScript
 			if (typeName != 'function')
 			{
 				if (type > Lua.LUA_TNIL)
-					luaTrace("ERROR (" + func + "): attempt to call a " + typeName + " value", false, false, FlxColor.RED);
+					luaTrace("ERROR (" + func + "): attempt to call a " + typeName + " value", menuMode, false, FlxColor.RED);
 
 				Lua.pop(lua, 1);
 				return GlobalScript.Function_Continue;
@@ -4814,7 +4845,9 @@ class FunkinLua extends GlobalScript
 			if (status != Lua.LUA_OK)
 			{
 				var error:String = getErrorMessage(status);
-				luaTrace("ERROR (" + func + "): " + error, false, false, FlxColor.RED);
+				// Menu scripts print on the overlay instead of PlayState's debug text, and that one is
+				// gated behind the script's own luaDebugMode, so their errors are always shown
+				luaTrace("ERROR (" + func + "): " + error, menuMode, false, FlxColor.RED);
 				return GlobalScript.Function_Continue;
 			}
 
@@ -5101,6 +5134,9 @@ class LuaSState extends MusicBeatState
 		if (excludeValues == null)
 			excludeValues = [];
 
+		if (lua == null || lua.paused)
+			return returnVal;
+
 		var myValue = lua.call(event, args);
 
 		if (myValue != null && myValue != GlobalScript.Function_Continue)
@@ -5140,7 +5176,11 @@ class LuaSState extends MusicBeatState
 		}
 		#end
 
-		trace('LuaSState: State script not found: $luaFile');
+		final missing:String = 'LuaSState: State script not found: $luaFile';
+		trace(missing);
+		// Nothing on screen said so before, and a state script that silently does nothing is exactly
+		// what the overlay is for
+		ScriptDebugOverlay.report(missing, FlxColor.RED);
 		return false;
 	}
 
@@ -5191,6 +5231,10 @@ class LuaSState extends MusicBeatState
 		camHUD = new FlxCamera();
 		camHUD.bgColor = 0;
 		FlxG.cameras.add(camHUD, false);
+
+		// Added after camHUD, so the overlay keeps drawing above it; also flushes what the script
+		// reported while this state wasn't on screen yet
+		ScriptDebugOverlay.attach(this);
 
 		// UPDATE: realised I should be using the "on" prefix just so if a script needs to call an internal function it doesnt cause issues
 		// (Also need to figure out how to give the super to the classes incase that's needed in the on[function] funcs though honestly thats what the post functions are for)

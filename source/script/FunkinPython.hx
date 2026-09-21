@@ -229,6 +229,23 @@ class FunkinPython extends FlxBasic
 		set("members", FlxG.state.members);
 		set('foreground', foreground);
 
+		// Pause control: the script can suspend/wake itself, or another one through its name
+		set("pauseScript", function()
+		{
+			return GlobalScript.setScriptPaused(this, true);
+		});
+		set("resumeScript", function()
+		{
+			return GlobalScript.setScriptPaused(this, false);
+		});
+		set("setScriptPaused", function(tag:String, paused:Bool)
+		{
+			if (PlayState.instance != null)
+				return PlayState.instance.setScriptPaused(tag, paused);
+
+			return false;
+		});
+
 		#if sys
 		// System utilities
 		setVars([["FileSystem", FileSystem], ["File", File], ["Sys", Sys]]);

@@ -5156,12 +5156,14 @@ class PlayState extends MusicBeatState
 		{
 			py.call('onDestroy', []);
 			py.stop();
+			GlobalScript.releaseScript(py);
 		}
 
 		for (hx in hscriptArray)
 		{
 			hx.call("onDestroy", []);
 			hx.stop();
+			GlobalScript.releaseScript(hx);
 		}
 
 		luaArray = [];
@@ -5729,6 +5731,10 @@ class PlayState extends MusicBeatState
 
 		for (script in hscriptArray)
 		{
+			// HScript wrappers don't extend GlobalScript, so their pause flag lives in its registry
+			if (GlobalScript.isScriptPaused(script))
+				continue;
+
 			if (exclusions.contains(script.scriptName))
 				continue;
 
@@ -5755,6 +5761,9 @@ class PlayState extends MusicBeatState
 
 		for (script in lscriptArray)
 		{
+			if (script.paused)
+				continue;
+
 			if (exclusions.contains(script.scriptName))
 				continue;
 
@@ -5781,6 +5790,9 @@ class PlayState extends MusicBeatState
 
 		for (script in pscriptArray)
 		{
+			if (GlobalScript.isScriptPaused(script))
+				continue;
+
 			if (exclusions.contains(script.scriptName))
 				continue;
 
@@ -5808,6 +5820,9 @@ class PlayState extends MusicBeatState
 
 		for (script in luaArray)
 		{
+			if (script.paused)
+				continue;
+
 			if (exclusions.contains(script.scriptName))
 				continue;
 
@@ -5822,6 +5837,58 @@ class PlayState extends MusicBeatState
 		}
 		#end
 		return returnVal;
+	}
+
+	/**
+		Pauses or resumes every script matching `tag`: either a script's `scriptName` (a Lua file
+		path, an HScript name like a notetype or character) or just its file name. Paused scripts
+		stay loaded and keep their state, they only stop receiving callbacks until resumed.
+		Returns whether at least one script matched.
+	**/
+	public function setScriptPaused(tag:String, paused:Bool):Bool
+	{
+		if (tag == null)
+			return false;
+
+		var found:Bool = false;
+
+		for (script in luaArray)
+		{
+			if (GlobalScript.scriptMatchesTag(script.scriptName, tag))
+			{
+				script.setPaused(paused);
+				found = true;
+			}
+		}
+
+		for (script in lscriptArray)
+		{
+			if (GlobalScript.scriptMatchesTag(script.scriptName, tag))
+			{
+				script.setPaused(paused);
+				found = true;
+			}
+		}
+
+		for (script in pscriptArray)
+		{
+			if (GlobalScript.scriptMatchesTag(script.scriptName, tag))
+			{
+				GlobalScript.setScriptPaused(script, paused);
+				found = true;
+			}
+		}
+
+		for (script in hscriptArray)
+		{
+			if (GlobalScript.scriptMatchesTag(script.scriptName, tag))
+			{
+				GlobalScript.setScriptPaused(script, paused);
+				found = true;
+			}
+		}
+
+		return found;
 	}
 
 	public function setOnScripts(variable:String, arg:Dynamic)
@@ -6061,6 +6128,21 @@ class PlayState extends MusicBeatState
 			script.stop();
 			return null;
 		}
+
+		// Pause control: HScripts don't extend GlobalScript, so they suspend through its registry
+		script.set('pauseScript', function()
+		{
+			return GlobalScript.setScriptPaused(script, true);
+		});
+		script.set('resumeScript', function()
+		{
+			return GlobalScript.setScriptPaused(script, false);
+		});
+		script.set('setScriptPaused', function(tag:String, paused:Bool)
+		{
+			return setScriptPaused(tag, paused);
+		});
+
 		script.call('onCreate');
 		hscriptArray.push(script);
 		onAddScript();

@@ -256,6 +256,23 @@ class FunkinLScript extends GlobalScript
 		set('foreground', foreground);
 		set('this', getCurrentState());
 
+		// Pause control: the script can suspend/wake itself, or another one through its name
+		set("pauseScript", function()
+		{
+			return setPaused(true);
+		});
+		set("resumeScript", function()
+		{
+			return setPaused(false);
+		});
+		set("setScriptPaused", function(tag:String, paused:Bool)
+		{
+			if (PlayState.instance != null)
+				return PlayState.instance.setScriptPaused(tag, paused);
+
+			return false;
+		});
+
 		#if android
 		set("addTouchPad", function(DPad:String, Action:String)
 		{
@@ -344,7 +361,8 @@ class FunkinLScript extends GlobalScript
 
 	/**
 	 * Script messages normally go to PlayState's debug text, which only exists while a song
-	 * is running — scripted states (see LScriptSState) have none, so log those instead.
+	 * is running — scripted states (see LScriptSState) have none, so print those on the shared
+	 * on-screen overlay (ScriptDebugOverlay) instead of dropping them.
 	 */
 	private function scriptMessage(msg:String, color:FlxColor):Void
 	{
@@ -352,7 +370,7 @@ class FunkinLScript extends GlobalScript
 		if (playState != null)
 			playState.addTextToDebug(msg, color);
 		else
-			FlxG.log.error(msg);
+			ScriptDebugOverlay.report(msg, color);
 	}
 
 	public function execute():Void
@@ -416,7 +434,8 @@ class FunkinLScript extends GlobalScript
 	public function new(script:String, unsafe:Bool = false)
 	{
 		scriptName = Path.withoutDirectory(script);
-		PlayState.instance.addTextToDebug("LUA support is disabled. Script functionality is limited.", FlxColor.YELLOW);
+		// PlayState may not exist (scripted states), ScriptDebugOverlay reports either way
+		ScriptDebugOverlay.report("LUA support is disabled. Script functionality is limited.", FlxColor.YELLOW);
 	}
 
 	public function execute():Void

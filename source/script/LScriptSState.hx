@@ -51,7 +51,11 @@ class LScriptSState extends MusicBeatState
 
 		if (scriptPath == null)
 		{
-			trace('LScriptSState: State script not found: $file');
+			final missing:String = 'LScriptSState: State script not found: $file';
+			trace(missing);
+			// Nothing on screen says so otherwise, and a state script that silently does nothing is
+			// exactly what the overlay is for
+			ScriptDebugOverlay.report(missing, FlxColor.RED);
 			return false;
 		}
 
@@ -74,7 +78,7 @@ class LScriptSState extends MusicBeatState
 
 	public function callOnLScript(event:String, args:Array<Dynamic>):Dynamic
 	{
-		if (lscript == null)
+		if (lscript == null || lscript.paused)
 			return GlobalScript.Function_Continue;
 
 		final myValue = lscript.call(event, args);
@@ -83,6 +87,9 @@ class LScriptSState extends MusicBeatState
 
 	override function create():Void
 	{
+		// Also flushes whatever the script reported while this state wasn't on screen yet
+		ScriptDebugOverlay.attach(this);
+
 		// onCreate already ran with the script body in the constructor
 		super.create();
 		callOnLScript('onCreatePost', []);

@@ -72,8 +72,13 @@ source/                     single classpath entry (<classpath name="source" />)
   substates/                PauseSubState, ResetScoreSubState, ButtonRemapSubstate, game/GameOver*
   obj/                      Note, Character, Boyfriend, HealthIcon, StrumNote, Alphabet, NoteSplash,
                             BGSprite, AttachedSprite/Text, VideoSprite, KeystrokesUI, PowerPuffGirl
-  script/                   FunkinHScript/LScript/Python, GlobalScript, Interact, Macro/MacroPro
-    hscript/                HScript, HScriptUtil (global script API), OScriptState, MacroState
+  script/                   FunkinHScript/LScript/Python, GlobalScript, Interact, Macro/MacroPro,
+                            LScriptSState, ScriptDebugOverlay (on-screen script errors)
+                            FunkinHScript.hx also holds the HScript engine: HScript, Script,
+                            IFunkinScript, ScriptType and InterpPro
+    hscript/                HScript/Script/IFunkinScript/ScriptType/InterpPro typedef aliases
+                            (→ script.FunkinHScript), HScriptUtil (global script API),
+                            OScriptState, MacroState
   psych/                    Psych-derived classes (FunkinLua, CallbackHandler, psych/cutscenes, psych/obj)
   modchart/                 ModManager, Modifier/NoteModifier/SubModifier/HScriptModifier,
                             Modcharts, EventTimeline, events/, modifiers/
@@ -205,13 +210,15 @@ Where scripts are auto-discovered (`states/game/PlayState.hx`):
 
 Callbacks are dispatched by name; the important ones: `onCreate`, `onCreatePost`, `onUpdate`, `onUpdatePost`, `onStepHit`, `onBeatHit`, `onSectionHit`, `onSongStart`, `onCountdownTick`, `onStartCountdown`, `onEndSong`, `onGameOver`, `onPause`, `onResume`, `onDestroy`, `onEvent`, `eventEarlyTrigger`, `onSpawnNote`, `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `noteMissPress`, `onUpdateScore`, `onRecalculateRating`, `popUpScore`, `onMoveCamera`, and for modcharts `preModifierRegister`, `postModifierRegister`, `generateModchart`. Return `script.GlobalScript.Function_Stop` (`'FUNC_STOP'`) to stop the chain, `Function_Continue` / `Function_Halt` for the other policies.
 
-Global variables/functions exposed to HScript come from `script/FunkinHScript.hx` — `FunkinHScript.setDefaultVars(script)` registers the whole default API (including `this`, which resolves to the interpreter's parent, else `PlayState.instance`, else `FlxG.state`) and `HScript.setDefaultVars()` just delegates to it, so `script/hscript/HScriptUtil.hx` (`setDefaultVars`) can still extend the list; PlayState then pushes game state (`curStep`, `curBeat`, `bpm`, `boyfriend`, `camGame`, `modManager`, …). The interpreter itself (`InterpPro`) also lives in `script/FunkinHScript.hx` (`script/hscript/InterpPro.hx` is a typedef alias for the old path). Two-way variable binding is `script/Interact.hx`. `script/Macro.hx` (`addScriptingCallbacks`) is the build macro that injects script hooks into states/objects and honors `@:noScripting`.
+Global variables/functions exposed to HScript come from `script/FunkinHScript.hx` — that module now owns the whole engine (`HScript`, `Script`, `IFunkinScript`, `ScriptType`, `InterpPro`), and `FunkinHScript.setDefaultVars(script)` registers the default API (including `this`, which resolves to the interpreter's parent, else `PlayState.instance`, else `FlxG.state`) while `HScript.setDefaultVars()` just delegates to it, so `script/hscript/HScriptUtil.hx` (`setDefaultVars`) can still extend the list; PlayState then pushes game state (`curStep`, `curBeat`, `bpm`, `boyfriend`, `camGame`, `modManager`, …). `source/script/hscript/HScript.hx` and `InterpPro.hx` are typedef-only alias modules for the old `script.hscript.*` paths. Two-way variable binding is `script/Interact.hx`. `script/Macro.hx` (`addScriptingCallbacks`) is the build macro that injects script hooks into states/objects and honors `@:noScripting`.
 
 ### Engine Custom ES dialect
 
 `source/psych/script/ESCompat.hx` is registered at the end of `FunkinLua`'s constructor and adds the ~70 callbacks the "Engine Custom ES" engine provides (`set`/`get`/`add`/`remove`/`scale`/`scroll`/`setCam`/`setOrder`, `setArray`/`addArray`/`setVarArray`, `stepEvent`, `switchLuaMenu`/`switchSourceMenu`, freeplay queries, `makeShader`/`setCameraShader`/`doTweenFloatArray`, `makeChar`/`setLongSing`/`MoveCamOnAnim`/`getAnimName`, `makeHealthBar`, `makeTrailSpirit`, `BGSprite`/`FlxBackdrop`/`ColorBox`, window helpers, strum/note helpers, typewriter texts). It never replaces a Psych callback, so Psych scripts keep their behaviour.
 
 Scripts of custom menu states run inside `LuaSState`, where there is no `PlayState.instance`: `FunkinLua` then keeps sprites/texts/tweens/timers/sounds and variables in its own `menuSprites`/`menuTexts`/`menuTweens`/`menuTimers`/`menuSounds`/`menuVariables` registries (see `FunkinLua.spriteMap()`, `tweenMap()`, `FunkinLua.getVariablesMap()`), adds objects to the `LuaSState` itself and falls back to `backend.player.PlayerSettings.player1.controls` for `keyJustPressed` & co. `LuaSState` dispatches `onUpdateOptions` every frame and `onEventSet(curStep)` every step (which is what drives `stepEvent()`). ES also gets `onTyping(tag)` from the typewriter and an emulated `onPlayAnim(tag, anim)` fired by `ESCompat.tick()` when a character changes animation.
+
+Script errors must still be visible without a PlayState: `source/script/ScriptDebugOverlay.hx` is the shared on-screen overlay the scripted states print on. `LuaSState`, `LScriptSState` and `OScriptState` call `ScriptDebugOverlay.attach(this)` from `create()`, and every message goes through `ScriptDebugOverlay.report(text, color)`, which keeps deferring to `PlayState.addTextToDebug` while a song runs and otherwise prints on the overlay (queued until the state's `create()` when reported from a constructor). The overlay renders on its own `FlxCamera`, which it re-appends as the last entry of `FlxG.cameras.list` so it stays above the state's sprites, substates and any camera a mod script adds; `OScriptState` also calls `ScriptDebugOverlay.hookScriptLog()` after building its script, so Iris messages (which `FunkinHScript.InitLogger()` routes through PlayState) survive outside a song.
 
 ## 9. Compile-time defines (`Project.xml`)
 
@@ -268,10 +275,12 @@ Scripts of custom menu states run inside `LuaSState`, where there is no `PlaySta
 | Song/section data, timing | `source/backend/songs/Song.hx`, `Section.hx`, `Conductor.hx` |
 | Week/stage/achievement data | `source/backend/game/WeekData.hx`, `StageData.hx`, `Achievements.hx` |
 | Modchart system | `source/modchart/ModManager.hx`, `Modifier.hx`, `Modcharts.hx` |
-| HScript API surface | `source/script/hscript/HScriptUtil.hx`, `HScript.hx` |
-| HScript engine core (interpreter + default vars) | `source/script/FunkinHScript.hx` |
+| HScript API surface | `source/script/hscript/HScriptUtil.hx` |
+| HScript engine core (HScript/Script/ScriptType/InterpPro + default vars) | `source/script/FunkinHScript.hx` |
+| Legacy `script.hscript.*` HScript paths (typedef aliases) | `source/script/hscript/HScript.hx`, `InterpPro.hx` |
 | Lua runtime + custom menu states (`LuaSState`) | `source/psych/script/FunkinLua.hx` |
 | "Engine Custom ES" Lua dialect (extra callbacks, menu-mode registries) | `source/psych/script/ESCompat.hx` |
+| On-screen script errors outside PlayState (`LuaSState`/`LScriptSState`/`OScriptState`) | `source/script/ScriptDebugOverlay.hx` |
 | Mods menu / `pack.json` parsing | `source/states/menu/ModsMenuState.hx` |
 | Chart editor | `source/editors/ChartingState.hx` |
 | Option menus | `source/options/OptionsState.hx`, `BaseOptionsMenu.hx` |

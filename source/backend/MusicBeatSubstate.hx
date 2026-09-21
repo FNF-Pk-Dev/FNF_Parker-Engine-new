@@ -73,7 +73,7 @@ class MusicBeatSubstate extends FlxSubState
 	public function callOnScript(name:String, vars:Array<Any>, ignoreStops:Bool = false)
 	{
 		var returnVal:Dynamic = GlobalScript.Function_Continue;
-		if (script != null)
+		if (script != null && !script.paused)
 		{
 			var ret:Dynamic = script.call(name, vars);
 			if (ret == GlobalScript.Function_Halt)

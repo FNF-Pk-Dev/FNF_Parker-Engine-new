@@ -55,7 +55,7 @@ class MusicBeatState extends FlxUIState
 
 	public function callOnScript(name:String, vars:Array<Any>, ignoreStops:Bool = false):Dynamic
 	{
-		if (script == null)
+		if (script == null || script.paused)
 			return GlobalScript.Function_Continue;
 
 		final ret = script.call(name, vars);
