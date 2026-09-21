@@ -44,6 +44,66 @@ class FunkinLScript extends GlobalScript
 	public var lua:LScript;
 	public var scriptName(default, null):String;
 
+	/**
+	 * Every callback the engine can dispatch to a script: the vocabulary of `PlayState.callOnScripts()`
+	 * (`callOnLuas()` / `callOnHScripts()` / `callOnLScripts()` / `callOnPScripts()` call sites) plus the
+	 * ones `LScriptSState` dispatches itself.
+	 *
+	 * They are registered as `false` before the script body runs, see `registerCallbacks()`: a script is
+	 * not expected to define all of them, and looking up one it didn't define is fatal in this Luau build
+	 * (see `call()`). A new engine callback has to be added here, otherwise `call()` reports it on screen
+	 * instead of dispatching it.
+	 */
+	public static final CALLBACKS:Array<String> = [
+		'SkinNoteSplash',
+		'eventEarlyTrigger',
+		'generateModchart',
+		'goodNoteHit',
+		'noteMiss',
+		'noteMissPress',
+		'onBeatHit',
+		'onCountdownStarted',
+		'onCountdownTick',
+		'onCreate',
+		'onCreatePost',
+		'onCustomSubstateCreate',
+		'onCustomSubstateCreatePost',
+		'onCustomSubstateDestroy',
+		'onCustomSubstateUpdate',
+		'onCustomSubstateUpdatePost',
+		'onDestroy',
+		'onDestroyPost',
+		'onEndSong',
+		'onEvent',
+		'onEventSet',
+		'onGameOver',
+		'onGameOverConfirm',
+		'onGameOverStart',
+		'onGhostTap',
+		'onKeyPress',
+		'onKeyRelease',
+		'onLoad',
+		'onMoveCamera',
+		'onNextDialogue',
+		'onPause',
+		'onRecalculateRating',
+		'onResume',
+		'onSectionHit',
+		'onSkipDialogue',
+		'onSongStart',
+		'onSpawnNote',
+		'onStartCountdown',
+		'onStepHit',
+		'onUpdate',
+		'onUpdateOptions',
+		'onUpdatePost',
+		'onUpdateScore',
+		'opponentNoteHit',
+		'popUpScore',
+		'postModifierRegister',
+		'preModifierRegister'
+	];
+
 	private var filePath:Null<String>;
 	private var closed:Bool = false;
 
@@ -68,6 +128,27 @@ class FunkinLScript extends GlobalScript
 			set(variable, arg);
 
 		setupErrorHandlers();
+		registerCallbacks();
+	}
+
+	/**
+	 * Puts every name in `CALLBACKS` into the script's globals as `false`.
+	 *
+	 * `LScript` closes the script body with `setmetatable(_G, ...)`, whose `__index` forwards every global
+	 * the script never defined to a Lua C callback that reflects the name onto `script.parent`. Depending on
+	 * the name that reflection fails, and it runs outside any protected call: the error it raises ends the
+	 * whole process (Luau panics on an unprotected error) instead of the lookup returning nil, which is how
+	 * dispatching a callback a script doesn't implement took the game down with no crash log - see `call()`.
+	 *
+	 * With the names already in the globals table that path is never reached: dispatch finds `false`,
+	 * `isfunction()` says no and the callback is skipped, while a script that does define one overwrites the
+	 * placeholder with its function (writing a global that already exists never reaches the metatable
+	 * either). Registering happens before the script body runs for that same reason.
+	 */
+	function registerCallbacks():Void
+	{
+		for (name in CALLBACKS)
+			set(name, false);
 	}
 
 	private function applyColorWorkarounds(code:String):String
@@ -407,6 +488,16 @@ class FunkinLScript extends GlobalScript
 	{
 		if (closed)
 			return GlobalScript.Function_Continue;
+
+		// Only dispatch what `registerCallbacks()` put in the script's globals: any other name would be a
+		// lookup of a global that may not exist, which is fatal (see `registerCallbacks()`). Reporting it
+		// keeps a callback that's missing from that list visible instead of turning it into another crash.
+		if (!CALLBACKS.contains(method))
+		{
+			scriptMessage('${scriptName}: "$method" is not a dispatchable callback, skipping it', FlxColor.RED);
+			return GlobalScript.Function_Continue;
+		}
+
 		var result = lua.callFunc(method, args != null ? args : []);
 		return result != null ? result : GlobalScript.Function_Continue;
 	}
