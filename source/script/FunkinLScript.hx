@@ -198,8 +198,7 @@ class FunkinLScript extends GlobalScript
 						}
 						else
 						{
-							PlayState.instance.addTextToDebug('Could not import class $className', FlxColor.RED);
-							FlxG.log.error('Could not import class $className');
+							scriptMessage('Could not import class $className', FlxColor.RED);
 						}
 					}
 					else
@@ -255,12 +254,67 @@ class FunkinLScript extends GlobalScript
 		set("insert", FlxG.state.insert);
 		set("members", FlxG.state.members);
 		set('foreground', foreground);
+		set('this', getCurrentState());
+
+		#if android
+		set("addTouchPad", function(DPad:String, Action:String)
+		{
+			if (PlayState.instance != null)
+			{
+				PlayState.instance.addTouchPad(DPad, Action);
+			}
+			else
+			{
+				callCurrentState('addTouchPad', [DPad, Action]);
+			}
+			return true;
+		});
+
+		set("removeTouchPad", function()
+		{
+			if (PlayState.instance != null)
+			{
+				PlayState.instance.removeTouchPad();
+			}
+			else
+			{
+				callCurrentState('removeTouchPad', []);
+			}
+			return true;
+		});
+		#end
 
 		#if sys
 		// System utilities
 		setVars([["FileSystem", FileSystem], ["File", File], ["Sys", Sys]]);
 		#end
 	}
+
+	/**
+	 * The state scripts act on: the ongoing song if there is one, otherwise the current state.
+	 */
+	private function getCurrentState():Dynamic
+	{
+		return PlayState.instance != null ? PlayState.instance : FlxG.state;
+	}
+
+	#if android
+	/**
+	 * Calls a method of the current state, used for states that have no `PlayState.instance`.
+	 */
+	private function callCurrentState(name:String, ?args:Array<Dynamic>):Void
+	{
+		final state:Dynamic = getCurrentState();
+		if (state == null)
+			return;
+
+		final method:Dynamic = Reflect.field(state, name);
+		if (method == null || !Reflect.isFunction(method))
+			return;
+
+		Reflect.callMethod(state, method, args != null ? args : []);
+	}
+	#end
 
 	private function setVars(vars:Array<Array<Dynamic>>):Void
 	{
@@ -275,17 +329,30 @@ class FunkinLScript extends GlobalScript
 		var location = filePath != null ? filePath : "inline script";
 		lua.parseError = (err:String) ->
 		{
-			PlayState.instance.addTextToDebug('Failed to parse script at ${location}: ${err}', FlxColor.RED);
+			scriptMessage('Failed to parse script at ${location}: ${err}', FlxColor.RED);
 		};
 		lua.functionError = (func:String, err:String) ->
 		{
-			PlayState.instance.addTextToDebug('Failed to call function "${func}" at ${location}: ${err}', FlxColor.RED);
+			scriptMessage('Failed to call function "${func}" at ${location}: ${err}', FlxColor.RED);
 		};
 		lua.tracePrefix = scriptName;
 		lua.print = (line:Int, s:String) ->
 		{
-			PlayState.instance.addTextToDebug('${scriptName}:${line}: ${s}', FlxColor.WHITE);
+			scriptMessage('${scriptName}:${line}: ${s}', FlxColor.WHITE);
 		};
+	}
+
+	/**
+	 * Script messages normally go to PlayState's debug text, which only exists while a song
+	 * is running — scripted states (see LScriptSState) have none, so log those instead.
+	 */
+	private function scriptMessage(msg:String, color:FlxColor):Void
+	{
+		final playState:PlayState = PlayState.instance;
+		if (playState != null)
+			playState.addTextToDebug(msg, color);
+		else
+			FlxG.log.error(msg);
 	}
 
 	public function execute():Void
@@ -331,6 +398,8 @@ class FunkinLScript extends GlobalScript
 		if (closed)
 			return;
 		lua.parent = parent;
+		// The owning state also becomes the script's `this`, scripts are usually created before their state is known
+		set('this', parent != null ? parent : getCurrentState());
 	}
 
 	public function stop():Void

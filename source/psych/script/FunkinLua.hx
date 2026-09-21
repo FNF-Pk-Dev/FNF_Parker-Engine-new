@@ -210,6 +210,9 @@ class FunkinLua extends GlobalScript
 		var inPlayState:Bool = PlayState.instance != null && !menuMode;
 		var hasSong:Bool = PlayState.SONG != null;
 
+		// Psych 0.7's deprecated `this`: PlayState while a song runs, the menu state otherwise
+		set('this', getScriptState());
+
 		// Song/Week shit
 		set('curBpm', Conductor.bpm);
 		set('bpm', hasSong ? PlayState.SONG.bpm : 0);
@@ -3920,6 +3923,24 @@ class FunkinLua extends GlobalScript
 			return menuOwner != null ? menuOwner : FlxG.state;
 		if (PlayState.instance != null)
 			return PlayState.instance.isDead ? GameOverSubstate.instance : PlayState.instance;
+		return FlxG.state;
+	}
+
+	/**
+	 * Psych 0.7's deprecated `this` global: the state the script runs inside. PlayState for
+	 * gameplay scripts, the owning menu state for the scripts LuaSState starts.
+	 */
+	public function getScriptState():FlxState
+	{
+		if (!menuMode && PlayState.instance != null)
+			return PlayState.instance;
+
+		if (currentMenuState != null)
+			return currentMenuState;
+
+		if (menuOwner != null)
+			return menuOwner;
+
 		return FlxG.state;
 	}
 

@@ -5,7 +5,8 @@ import flixel.FlxGame;
 /**
  * Extended FlxGame class that supports scripted state overrides.
  * Allows mod authors to replace built-in states with HScript implementations
- * (states/globals/<StateName>.hx) or Lua ones (states/<StateName>.lua).
+ * (states/globals/<StateName>.hx), Lua ones (states/<StateName>.lua) or LScript
+ * ones (states/<StateName>.lscript).
  */
 class FNFGame extends FlxGame
 {
@@ -28,6 +29,10 @@ class FNFGame extends FlxGame
 		flixel.FlxG.save.bind('funkin', CoolUtil.getSavePath());
 		ClientPrefs.loadPrefs();
 		Paths.pushGlobalMods();
+		#if android
+		// TitleState.create() normally loads the mobile pads; the touch controls need them
+		android.backend.MobileData.init();
+		#end
 	}
 
 	public override function switchState():Void
@@ -51,7 +56,7 @@ class FNFGame extends FlxGame
 			{
 				final simpleName = Type.getClassName(Type.getClass(_nextState)).split(".").pop();
 
-				// Try to find an HScript override for this state, it wins over the Lua one
+				// Try to find an HScript override for this state, it wins over Lua and LScript
 				var hscriptPath:String = null;
 				for (extn in HScriptUtil.extns)
 				{
@@ -75,6 +80,15 @@ class FNFGame extends FlxGame
 					if (Paths.exists(luaPath))
 					{
 						_nextState = new psych.script.FunkinLua.LuaSState(simpleName);
+					}
+					else
+					{
+						// LScript loses against both HScript and Lua
+						final lscriptPath = Paths.modFolders('states/$simpleName.lscript');
+						if (Paths.exists(lscriptPath))
+						{
+							_nextState = new LScriptSState(simpleName);
+						}
 					}
 				}
 				#end

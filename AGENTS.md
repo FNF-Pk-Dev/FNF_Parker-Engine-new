@@ -198,13 +198,14 @@ Where scripts are auto-discovered (`states/game/PlayState.hx`):
 | `stages/<stage>.<ext>` | stage scripts at song load |
 | `custom_events/<event>.<ext>`, `custom_notetypes/<type>.<ext>` | event/notetype registration |
 | `mods/<mod>/global.<ext>` | `Main` (`GLOBAL`) |
-| `states/globals/<StateName>.<ext>` | `FNFGame.switchState()` → `OScriptState` (wins over the Lua override) |
-| `states/<StateName>.lua` | `FNFGame.switchState()` → `LuaSState` (`#if LUA_ALLOWED && MODS_ALLOWED`) |
+| `states/globals/<StateName>.<ext>` | `FNFGame.switchState()` → `OScriptState` (wins over the Lua/LScript overrides) |
+| `states/<StateName>.lua` | `FNFGame.switchState()` → `LuaSState` (`#if LUA_ALLOWED && MODS_ALLOWED`, wins over LScript) |
+| `states/<StateName>.lscript` | `FNFGame.switchState()` → `script.LScriptSState` |
 | `scripts/menus/<StateName>.<ext>` | `MusicBeatState.setUpScript()` |
 
 Callbacks are dispatched by name; the important ones: `onCreate`, `onCreatePost`, `onUpdate`, `onUpdatePost`, `onStepHit`, `onBeatHit`, `onSectionHit`, `onSongStart`, `onCountdownTick`, `onStartCountdown`, `onEndSong`, `onGameOver`, `onPause`, `onResume`, `onDestroy`, `onEvent`, `eventEarlyTrigger`, `onSpawnNote`, `goodNoteHit`, `opponentNoteHit`, `noteMiss`, `noteMissPress`, `onUpdateScore`, `onRecalculateRating`, `popUpScore`, `onMoveCamera`, and for modcharts `preModifierRegister`, `postModifierRegister`, `generateModchart`. Return `script.GlobalScript.Function_Stop` (`'FUNC_STOP'`) to stop the chain, `Function_Continue` / `Function_Halt` for the other policies.
 
-Global variables/functions exposed to HScript come from `script/hscript/HScriptUtil.hx` (`setDefaultVars`) and `HScript.setDefaultVars()`; PlayState then pushes game state (`curStep`, `curBeat`, `bpm`, `boyfriend`, `camGame`, `modManager`, …). Two-way variable binding is `script/Interact.hx`. `script/Macro.hx` (`addScriptingCallbacks`) is the build macro that injects script hooks into states/objects and honors `@:noScripting`.
+Global variables/functions exposed to HScript come from `script/FunkinHScript.hx` — `FunkinHScript.setDefaultVars(script)` registers the whole default API (including `this`, which resolves to the interpreter's parent, else `PlayState.instance`, else `FlxG.state`) and `HScript.setDefaultVars()` just delegates to it, so `script/hscript/HScriptUtil.hx` (`setDefaultVars`) can still extend the list; PlayState then pushes game state (`curStep`, `curBeat`, `bpm`, `boyfriend`, `camGame`, `modManager`, …). The interpreter itself (`InterpPro`) also lives in `script/FunkinHScript.hx` (`script/hscript/InterpPro.hx` is a typedef alias for the old path). Two-way variable binding is `script/Interact.hx`. `script/Macro.hx` (`addScriptingCallbacks`) is the build macro that injects script hooks into states/objects and honors `@:noScripting`.
 
 ### Engine Custom ES dialect
 
@@ -268,6 +269,7 @@ Scripts of custom menu states run inside `LuaSState`, where there is no `PlaySta
 | Week/stage/achievement data | `source/backend/game/WeekData.hx`, `StageData.hx`, `Achievements.hx` |
 | Modchart system | `source/modchart/ModManager.hx`, `Modifier.hx`, `Modcharts.hx` |
 | HScript API surface | `source/script/hscript/HScriptUtil.hx`, `HScript.hx` |
+| HScript engine core (interpreter + default vars) | `source/script/FunkinHScript.hx` |
 | Lua runtime + custom menu states (`LuaSState`) | `source/psych/script/FunkinLua.hx` |
 | "Engine Custom ES" Lua dialect (extra callbacks, menu-mode registries) | `source/psych/script/ESCompat.hx` |
 | Mods menu / `pack.json` parsing | `source/states/menu/ModsMenuState.hx` |

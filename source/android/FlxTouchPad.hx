@@ -74,6 +74,9 @@ class FlxTouchPad extends FlxTypedSpriteGroup<MobileButton>
 	{
 		super();
 
+		// The pad modes aren't loaded yet when the first state is a scripted one
+		MobileData.ensureInit();
+
 		dPad = new FlxTypedSpriteGroup<MobileButton>();
 		dPad.scrollFactor.set();
 

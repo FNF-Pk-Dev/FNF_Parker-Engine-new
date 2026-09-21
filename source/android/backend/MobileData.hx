@@ -15,6 +15,19 @@ class MobileData
 	public static var forcedMode:Null<Int>;
 	public static var save:FlxSave;
 
+	private static var inited:Bool = false;
+
+	/**
+	 * Loads the mobile pad modes, but only the first time it's called.
+	 * Used by every code path that needs the modes (e.g. FlxTouchPad) so they also work
+	 * when the game never went through TitleState, like with a scripted first state.
+	 */
+	public static function ensureInit():Void
+	{
+		if (!inited)
+			init();
+	}
+
 	public static function init()
 	{
 		save = new FlxSave();
@@ -29,6 +42,8 @@ class MobileData
 			readDirectory(Path.join([folder, 'ActionModes']), actionModes);
 		}
 		#end
+
+		inited = true;
 	}
 
 	public static function setMobilePadCustom(mobilePad:FlxTouchPad):Void
