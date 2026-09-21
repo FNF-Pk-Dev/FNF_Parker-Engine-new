@@ -86,6 +86,16 @@ source/                     single classpath entry (<classpath name="source" />)
                             Notes/NoteOffset sub-states
   editors/                  MasterEditorMenu, ChartingState (3.4k lines), CharacterEditorState,
                             WeekEditorState, DialogueEditorState, BlockCodeEditorState, EditorLua
+    blockcode/              the block-code editor as a SUBSTATE that runs on top of a live PlayState:
+                            BlockCodeEditorSubstate (workspace/sidebar/snapping/pan/zoom),
+                            Block (draggable block + InputField), BlockLibrary (block catalogue),
+                            BlockConfigLoader (external JSON/Lua block configs), BlockSerializer
+                            (tree <-> JSON + FlxSave cache), BlockLuaGenerator, BlockLuaImporter,
+                            BlockFileIO (where the .lua is written), BlockScriptRuntime (hot reload
+                            inside the running song), BlockTimeline (step/beat/second ruler with
+                            drag-to-seek markers), BlockSoftKeyboard + BlockVirtualKeyboard (text
+                            entry incl. Android IME), BlockSavePanel/BlockCodePanel/BlockFileBrowser/
+                            BlockHelpOverlay/BlockContextMenu (panels), BlockTypes (data contract)
   cutscenes/                CutsceneHandler, DialogueBox
   shaders/                  RuntimeShader, ColorSwap, WiggleEffect, BlendModeEffect, CoolShader, OverlayShader
   android/                  Android-only code (touch controls, storage, hitbox skins, macros)
@@ -252,6 +262,8 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 - **Add a setting** — see §6 (field + `saveSettings`/`loadPrefs`) and add the UI entry in the matching `source/options/*SubState.hx`.
 - **Add a modchart modifier** — implement `modchart/Modifier.hx` (or `NoteModifier`) under `source/modchart/modifiers/` and register it in `ModManager.registerDefaultModifiers()`; scripts can also add modifiers at runtime through `HScriptModifier` / the modchart callbacks.
 - **Tweak gameplay** — `states/game/PlayState.hx` is the single hub: note spawning, `callOnScripts` hooks, camera, health, score, stage, modchart update (search for `modManager.updateTimeline`).
+- **Build Lua effects while the song plays (block editor)** — press **Key 3** (`debug_3`, `NINE`) during a song, or press "Play" in `editors/BlockCodeEditorState.hx` (it sets `PlayState.openBlockEditorOnStart`), to open `editors.blockcode.BlockCodeEditorSubstate` on top of the running `PlayState`. It live-reloads the script it saves through `BlockScriptRuntime`. Timeline markers carry a block stack each; they compile to `if curStep == N then` guards inside `onStepHit` (or to an `onEvent` guard when the marker has an event name). Everything is saved as `.lua` through `BlockFileIO` in one of three exec modes (`song`/`global`/`custom`) with a renameable script name.
+- **Add custom blocks for the block editor** — drop `blockcode/blocks.json` or `blockcode/blocks.lua` (plus anything in `blockcode/blocks/`) into a mod folder, or `assets/shared/blockcode/`. JSON and Lua schemas are documented at the top of `source/editors/blockcode/BlockConfigLoader.hx`; `example_mods/blockcode/` holds a working example of both. Blocks are matched to code by the `lua` template (`$1`, `${paramName}`), so no engine change is needed. The editor's file browser shows which files were scanned (`BlockConfigLoader.configSignature()`/`lastErrors()`).
 
 ## 11. Pitfalls
 
@@ -265,6 +277,8 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 - Null-check `FlxG.cameras`, `FlxG.sound`, `FlxG.state` and platforms before use — several states run on all three targets.
 - `source/psych/script/FunkinLua.hx` is a legacy monolith still in use; prefer adding features in `source/script/` and keep Lua API changes backward-compatible.
 - `mods/` and `modsList.txt` do not exist until the game creates them; always guard filesystem access.
+- `source/editors/blockcode/BlockTypes.hx` is the frozen data contract of the whole block editor package (substate, canvas, serializer, generator, importer, config loader all code against it). Append new optional fields; do not rename or remove existing ones without updating every consumer.
+- The block editor's keybind is `debug_3` (`NINE`), declared in `ClientPrefs.keyBinds` and surfaced in `source/options/ControlsSubState.hx` — add both when adding a new debug key.
 
 ## 12. Where to look first
 
@@ -289,4 +303,12 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 | On-screen script errors outside PlayState (`LuaSState`/`LScriptSState`/`OScriptState`) | `source/script/ScriptDebugOverlay.hx` |
 | Mods menu / `pack.json` parsing | `source/states/menu/ModsMenuState.hx` |
 | Chart editor | `source/editors/ChartingState.hx` |
+| Block code editor (standalone state, entry point) | `source/editors/BlockCodeEditorState.hx` |
+| Block code editor (real-time substate over PlayState) | `source/editors/blockcode/BlockCodeEditorSubstate.hx` |
+| Block catalogue / external block configs | `source/editors/blockcode/BlockLibrary.hx`, `BlockConfigLoader.hx` |
+| Blocks <-> JSON cache, Lua codegen, Lua -> blocks | `source/editors/blockcode/BlockSerializer.hx`, `BlockLuaGenerator.hx`, `BlockLuaImporter.hx` |
+| Where the generated Lua is saved | `source/editors/blockcode/BlockFileIO.hx` |
+| Hot reloading the script inside a running song | `source/editors/blockcode/BlockScriptRuntime.hx` |
+| Timeline (step/beat/second ruler, markers, drag to seek) | `source/editors/blockcode/BlockTimeline.hx` |
+| Text entry incl. the Android soft keyboard | `source/editors/blockcode/BlockSoftKeyboard.hx`, `BlockVirtualKeyboard.hx` |
 | Option menus | `source/options/OptionsState.hx`, `BaseOptionsMenu.hx` |

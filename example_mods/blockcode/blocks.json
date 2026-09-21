@@ -1,0 +1,47 @@
+{
+	"categories": [
+		{
+			"name": "My FX",
+			"color": "0xFFAA33CC",
+			"icon": "*",
+			"blocks": [
+				{
+					"type": "myFx.spawnRing",
+					"label": "spawn ring",
+					"description": "Spawns a ring sprite on the HUD at the given position.",
+					"lua": "spawnRing($1, $2, $3)",
+					"parameters": [
+						{ "name": "tag", "type": "string", "defaultValue": "ring" },
+						{ "name": "x", "type": "number", "defaultValue": 640 },
+						{ "name": "y", "type": "number", "defaultValue": 360 }
+					]
+				},
+				{
+					"type": "myFx.pulse",
+					"label": "pulse camera",
+					"description": "Makes the given camera pulse forever while the script is loaded.",
+					"lua": "pulseCamera($1, $2)",
+					"parameters": [
+						{ "name": "cam", "type": "select", "defaultValue": "game", "options": ["game", "hud"] },
+						{ "name": "strength", "type": "number", "defaultValue": 0.05 }
+					]
+				},
+				{
+					"type": "myFx.getValue",
+					"label": "get ring value",
+					"description": "Returns a value of the ring system; use it inside another block.",
+					"isReporter": true,
+					"lua": "getRingValue($1)",
+					"parameters": [{ "name": "what", "type": "string", "defaultValue": "count" }]
+				},
+				{
+					"type": "myFx.onRingHit",
+					"label": "when ring is hit",
+					"description": "Runs the blocks under this hat every time a ring is hit.",
+					"isHat": true,
+					"hatLua": "function onRingHit(tag)"
+				}
+			]
+		}
+	]
+}

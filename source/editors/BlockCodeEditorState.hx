@@ -244,7 +244,7 @@ class BlockCodeEditorState extends MusicBeatState
 		var btnY = 10;
 		var btnX = FlxG.width - 100;
 
-		var playBtn = new FlxButton(btnX, btnY + 30, "Play", function()
+		var playBtn = new FlxButton(btnX, btnY + 30, "Play + Edit", function()
 		{
 			testScript();
 		});
@@ -2191,6 +2191,8 @@ class BlockCodeEditorState extends MusicBeatState
 
 		PlayState.isBlockTest = true;
 		PlayState.blockScriptPath = path;
+		// Open the real-time block editor substate on top of the song once it is running
+		PlayState.openBlockEditorOnStart = true;
 
 		// Load a default song or current
 		if (PlayState.SONG == null)

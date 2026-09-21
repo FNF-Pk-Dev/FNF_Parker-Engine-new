@@ -208,11 +208,15 @@ class PlayState extends MusicBeatState
 	public static var songIsModcharted:Bool = false;
 	public static var isBlockTest:Bool = false;
 	public static var blockScriptPath:String = "";
+	/** Set by the block editor before loading a song so the real-time editor opens on top of it. */
+	public static var openBlockEditorOnStart:Bool = false;
 
 	public var healthGain:Float = 1;
 	public var healthLoss:Float = 1;
 	public var instakillOnMiss:Bool = false;
 	public var cpuControlled:Bool = false;
+	/** True while the block code editor substate is open on top of the song. */
+	public static var blockEditorActive:Bool = false;
 	public var practiceMode:Bool = false;
 
 	public var botplaySine:Float = 0;
@@ -326,6 +330,7 @@ class PlayState extends MusicBeatState
 	// Debug buttons
 	private var debugKeysChart:Array<FlxKey>;
 	private var debugKeysCharacter:Array<FlxKey>;
+	private var debugKeysBlockEditor:Array<FlxKey>;
 
 	// Less laggy controls
 	private var keysArray:Array<Dynamic>;
@@ -358,6 +363,7 @@ class PlayState extends MusicBeatState
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
 		debugKeysCharacter = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_2'));
+		debugKeysBlockEditor = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_3'));
 		PauseSubState.songName = null; // Reset to default
 		playbackRate = ClientPrefs.getGameplaySetting('songspeed', 1);
 
@@ -2776,7 +2782,13 @@ class PlayState extends MusicBeatState
 
 	override public function update(elapsed:Float)
 	{
-		if (isBlockTest && FlxG.keys.justPressed.ESCAPE)
+		if (openBlockEditorOnStart)
+		{
+			openBlockEditorOnStart = false;
+			openBlockEditor();
+		}
+
+		if (isBlockTest && FlxG.keys.justPressed.ESCAPE && subState == null)
 		{
 			if (FlxG.sound.music != null)
 				FlxG.sound.music.stop();
@@ -2879,14 +2891,19 @@ class PlayState extends MusicBeatState
 			botplayTxt.alpha = 1 - Math.sin((Math.PI * botplaySine) / 180);
 		}
 
-		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause)
+		if (controls.PAUSE #if android || FlxG.android.justReleased.BACK #end && startedCountdown && canPause && subState == null)
 		{
 			openPauseMenu();
 		}
 
-		if (FlxG.keys.anyJustPressed(debugKeysChart) && !endingSong && !inCutscene)
+		if (FlxG.keys.anyJustPressed(debugKeysChart) && !endingSong && !inCutscene && subState == null)
 		{
 			openChartEditor();
+		}
+
+		if (FlxG.keys.anyJustPressed(debugKeysBlockEditor) && !endingSong && !inCutscene && subState == null)
+		{
+			openBlockEditor();
 		}
 
 		// FlxG.watch.addQuick('VOL', vocals.amplitudeLeft);
@@ -2951,7 +2968,7 @@ class PlayState extends MusicBeatState
 		// MusicBeatState.switchState(new ModchartEditorState());
 		// }
 
-		if (FlxG.keys.anyJustPressed(debugKeysCharacter) && !endingSong && !inCutscene)
+		if (FlxG.keys.anyJustPressed(debugKeysCharacter) && !endingSong && !inCutscene && subState == null)
 		{
 			persistentUpdate = false;
 			paused = true;
@@ -3079,7 +3096,7 @@ class PlayState extends MusicBeatState
 		{
 			if (!inCutscene)
 			{
-				if (!cpuControlled)
+				if (!cpuControlled && !blockEditorActive)
 				{
 					keyShit();
 				}
@@ -3243,7 +3260,8 @@ class PlayState extends MusicBeatState
 						// Kill extremely late notes and cause misses
 						if (Conductor.songPosition > noteKillOffset + daNote.strumTime)
 						{
-							if (daNote.mustPress && !cpuControlled && !daNote.ignoreNote && !endingSong && (daNote.tooLate || !daNote.wasGoodHit))
+							if (daNote.mustPress && !cpuControlled && !blockEditorActive && !daNote.ignoreNote && !endingSong
+								&& (daNote.tooLate || !daNote.wasGoodHit))
 							{
 								noteMiss(daNote);
 							}
@@ -3291,6 +3309,12 @@ class PlayState extends MusicBeatState
 		callOnLuas('onUpdatePost', [elapsed]);
 
 		callOnScripts("onUpdatePost", [elapsed]);
+	}
+
+	function openBlockEditor()
+	{
+		// Real-time block code editor: opened on top of the running song so effects can be built live
+		openSubState(new editors.blockcode.BlockCodeEditorSubstate());
 	}
 
 	function openPauseMenu()
@@ -4459,6 +4483,7 @@ class PlayState extends MusicBeatState
 		// trace('Pressed: ' + eventKey);
 
 		if (!cpuControlled
+			&& !blockEditorActive
 			&& startedCountdown
 			&& !paused
 			&& key > -1

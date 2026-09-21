@@ -77,6 +77,12 @@ class AndroidBackHandler
 		if (FlxG.state != null && Std.is(FlxG.state, states.game.PlayState))
 		{
 			var playState:states.game.PlayState = cast FlxG.state;
+			if (playState.subState != null)
+			{
+				// The block code editor (and anything else implementing it) closes itself on back
+				editors.blockcode.BlockCodeEditorSubstate.closeIfOpen();
+				return true; // an open substate owns the back gesture
+			}
 			if (!playState.paused && !playState.endingSong)
 			{
 				playState.openSubState(new substates.PauseSubState(playState.boyfriend.getScreenPosition().x, playState.boyfriend.getScreenPosition().y));
