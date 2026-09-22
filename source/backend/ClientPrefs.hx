@@ -28,6 +28,8 @@ class ClientPrefs
 	public static var noteOffset:Int = 0;
 	public static var arrowHSV:Array<Array<Int>> = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
 	public static var vibration:Bool = false;
+	/** Draws the note keys plus their hit beams in the bottom-left corner (off by default). */
+	public static var keystrokesUI:Bool = false;
 	public static var ghostTapping:Bool = true;
 	public static var timeBarType:String = 'Time Left';
 	public static var scoreZoom:Bool = true;
@@ -126,6 +128,7 @@ class ClientPrefs
 		FlxG.save.data.hideHud = hideHud;
 		FlxG.save.data.arrowHSV = arrowHSV;
 		FlxG.save.data.vibration = vibration;
+		FlxG.save.data.keystrokesUI = keystrokesUI;
 		FlxG.save.data.ghostTapping = ghostTapping;
 		FlxG.save.data.timeBarType = timeBarType;
 		FlxG.save.data.scoreZoom = scoreZoom;
@@ -254,6 +257,10 @@ class ClientPrefs
 		if (FlxG.save.data.vibration != null)
 		{
 			vibration = FlxG.save.data.vibration;
+		}
+		if (FlxG.save.data.keystrokesUI != null)
+		{
+			keystrokesUI = FlxG.save.data.keystrokesUI;
 		}
 		if (FlxG.save.data.ghostTapping != null)
 		{

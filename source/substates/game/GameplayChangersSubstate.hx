@@ -180,6 +180,14 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	var holdTime:Float = 0;
 	var holdValue:Float = 0;
 
+	/**
+	 * `controls.ACCEPT` is a *held* action, so a button that stays down (a finger still on the pad,
+	 * or a pad that froze when the screen below stopped updating) used to flip a checkbox every
+	 * frame. Only the moment it goes from released to pressed counts, and this remembers the
+	 * previous frame.
+	 */
+	var acceptHeld:Bool = false;
+
 	override function update(elapsed:Float)
 	{
 		if (controls.UI_UP_P)
@@ -217,6 +225,9 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 
 		if (nextAccept <= 0)
 		{
+			var acceptPressed:Bool = controls.ACCEPT;
+			var acceptJustPressed:Bool = acceptPressed && !acceptHeld;
+
 			var usesCheckbox = true;
 			if (curOption.type != 'bool')
 			{
@@ -225,7 +236,7 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 
 			if (usesCheckbox)
 			{
-				if (controls.ACCEPT)
+				if (acceptJustPressed)
 				{
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 					curOption.setValue((curOption.getValue() == true) ? false : true);
@@ -375,6 +386,10 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 				reloadCheckboxes();
 			}
 		}
+
+		// Remembered for the edge detection above (`acceptHeld`); it has to be stored even while
+		// `nextAccept` swallows the press, or the opening press would count as an edge later on.
+		acceptHeld = controls.ACCEPT;
 
 		if (nextAccept > 0)
 		{

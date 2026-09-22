@@ -1140,6 +1140,9 @@ class PlayState extends MusicBeatState
 		}
 
 		keysUI = new KeystrokesUI(0, 0);
+		// Off by default: the note-key overlay in the bottom-left corner is opt-in ("Keystrokes UI"
+		// in Visuals & UI). Assigned before `add()` so it never flashes for a frame.
+		keysUI.visible = ClientPrefs.keystrokesUI;
 		add(keysUI);
 
 		strumLineNotes.cameras = [camHUD];

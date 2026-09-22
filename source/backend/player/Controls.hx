@@ -448,7 +448,80 @@ class Controls extends FlxActionSet
 	{
 		var input = new FlxActionInputDigitalIFlxInput(button, state);
 		trackedinputsUI.push(input);
+		// Remembered with its action so `parkTouchPadInputs()` can detach it again
+		padInputs.push({action: action, input: input});
 		action.add(input);
+	}
+
+	/** Every touch-pad input currently registered, with the action it was added to. */
+	var padInputs:Array<{action:FlxActionDigital, input:FlxActionInputDigitalIFlxInput}> = [];
+
+	/** Groups of inputs parked by a nested substate, most recent last. */
+	var parkedPadGroups:Array<Array<{action:FlxActionDigital, input:FlxActionInputDigitalIFlxInput}>> = [];
+
+	/**
+	 * Detaches the pad inputs of the screen below, so the substate that is opening can register its
+	 * own pad without two pads feeding the same actions.
+	 *
+	 * This matters because a substate stops the screen underneath it: that screen's pad stops
+	 * updating, so a button that happened to be held while the substate opened stays "pressed"
+	 * forever. The confirm action then reports a held press for the rest of the substate's life,
+	 * which on Android made a checkbox flip every frame and made the real A button unusable.
+	 * `unparkTouchPadInputs()` puts the previous pad back when the substate closes.
+	 */
+	public function parkTouchPadInputs():Void
+	{
+		var group = padInputs.copy();
+
+		for (entry in group)
+			entry.action.remove(entry.input);
+
+		parkedPadGroups.push(group);
+		padInputs = [];
+	}
+
+	/** Re-registers the pad inputs parked by the matching `parkTouchPadInputs()` call. */
+	public function unparkTouchPadInputs():Void
+	{
+		if (parkedPadGroups.length == 0)
+			return;
+
+		var group = parkedPadGroups.pop();
+
+		for (entry in group)
+		{
+			if (entry.action.inputs.indexOf(entry.input) == -1)
+				entry.action.add(entry.input);
+		}
+
+		padInputs = group;
+	}
+
+	/**
+	 * Forgets the pad inputs of a screen that is being destroyed, so a later
+	 * `unparkTouchPadInputs()` cannot resurrect a button that no longer exists.
+	 */
+	public function forgetTouchPadInputs(inputs:Array<FlxActionInput>):Void
+	{
+		if (inputs == null || inputs.length == 0)
+			return;
+
+		var i:Int = padInputs.length;
+		while (i-- > 0)
+		{
+			if (inputs.indexOf(padInputs[i].input) != -1)
+				padInputs.splice(i, 1);
+		}
+
+		for (group in parkedPadGroups)
+		{
+			var j:Int = group.length;
+			while (j-- > 0)
+			{
+				if (inputs.indexOf(group[j].input) != -1)
+					group.splice(j, 1);
+			}
+		}
 	}
 
 	public function addButtonUI(action:FlxActionDigital, button:FlxNewButton, state:FlxInputState)

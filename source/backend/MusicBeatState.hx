@@ -115,6 +115,7 @@ class MusicBeatState extends FlxUIState
 	{
 		controls.removeFlxInput(trackedinputsUI);
 		remove(_touchpad);
+		controls.forgetTouchPadInputs(trackedinputsUI);
 	}
 
 	public function addAndroidControls():Void

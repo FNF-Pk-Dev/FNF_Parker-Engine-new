@@ -126,6 +126,58 @@ class ControlsSubState extends MusicBeatSubstate
 	var leaving:Bool = false;
 	var bindingTime:Float = 0;
 
+	#if android
+	/**
+	 * Swaps the menu pad for a single B button while a key is being rebound.
+	 *
+	 * A phone has no keyboard, so the rebind prompt used to have no way out at all short of waiting
+	 * five seconds: the old pad's B mapped to `back` only in the menu branch. This single-button pad
+	 * (the user-visible "B" button) is what `controls.BACK` now reads inside the rebind branch.
+	 */
+	function useRebindPad():Void
+	{
+		if (_touchpad != null)
+			removeVirtualPad();
+		addTouchPad("NONE", "B");
+	}
+
+	/** Puts the menu's full pad back after a rebind was confirmed or cancelled. */
+	function useMenuPad():Void
+	{
+		if (_touchpad != null)
+			removeVirtualPad();
+		addTouchPad("FULL", "A_B");
+	}
+	#end
+
+	/** Leaves the rebind prompt without binding anything (B on mobile, the 5 second timeout). */
+	function cancelRebind():Void
+	{
+		// The prompt hides its bind text through `getInputTextNum()`, while the old timeout restored
+		// `curSelected`: restore both so the line is visible again whichever one was hidden.
+		restoreBindText(getInputTextNum());
+		restoreBindText(curSelected);
+
+		bindingTime = 0;
+		rebindingKey = false;
+		#if android
+		useMenuPad();
+		#end
+		FlxG.sound.play(Paths.sound('cancelMenu'));
+	}
+
+	/** Makes the bind line at `index` visible again, tolerating an out of range index. */
+	function restoreBindText(index:Int):Void
+	{
+		if (index < 0)
+			return;
+
+		if (grpInputs != null && index < grpInputs.length && grpInputs[index] != null)
+			grpInputs[index].alpha = 1;
+		if (grpInputsAlt != null && index < grpInputsAlt.length && grpInputsAlt[index] != null)
+			grpInputsAlt[index].alpha = 1;
+	}
+
 	override function update(elapsed:Float)
 	{
 		if (!rebindingKey)
@@ -176,44 +228,52 @@ class ControlsSubState extends MusicBeatSubstate
 					{
 						grpInputs[getInputTextNum()].alpha = 0;
 					}
+					#if android
+					// A phone has no keyboard, so the pad shrinks to a single B button while the prompt
+					// is up: one tap leaves it again (see `useRebindPad()`).
+					useRebindPad();
+					#end
 					FlxG.sound.play(Paths.sound('scrollMenu'));
 				}
 			}
 		}
 		else
 		{
-			var keyPressed:Int = FlxG.keys.firstJustPressed();
-			if (keyPressed > -1)
+			// On a phone the single B button of the rebind pad is the way out (there is no keyboard
+			// key to press and the system back gesture belongs to the OS here).
+			if (controls.BACK)
 			{
-				var keysArray:Array<FlxKey> = ClientPrefs.keyBinds.get(optionShit[curSelected][1]);
-				keysArray[curAlt ? 1 : 0] = keyPressed;
-
-				var opposite:Int = (curAlt ? 0 : 1);
-				if (keysArray[opposite] == keysArray[1 - opposite])
-				{
-					keysArray[opposite] = NONE;
-				}
-				ClientPrefs.keyBinds.set(optionShit[curSelected][1], keysArray);
-
-				reloadKeys();
-				FlxG.sound.play(Paths.sound('confirmMenu'));
-				rebindingKey = false;
+				cancelRebind();
 			}
-
-			bindingTime += elapsed;
-			if (bindingTime > 5)
+			else
 			{
-				if (curAlt)
+				var keyPressed:Int = FlxG.keys.firstJustPressed();
+				if (keyPressed > -1)
 				{
-					grpInputsAlt[curSelected].alpha = 1;
+					var keysArray:Array<FlxKey> = ClientPrefs.keyBinds.get(optionShit[curSelected][1]);
+					keysArray[curAlt ? 1 : 0] = keyPressed;
+
+					var opposite:Int = (curAlt ? 0 : 1);
+					if (keysArray[opposite] == keysArray[1 - opposite])
+					{
+						keysArray[opposite] = NONE;
+					}
+					ClientPrefs.keyBinds.set(optionShit[curSelected][1], keysArray);
+
+					reloadKeys();
+					FlxG.sound.play(Paths.sound('confirmMenu'));
+					rebindingKey = false;
+					#if android
+					useMenuPad();
+					#end
 				}
-				else
+
+				bindingTime += elapsed;
+				if (bindingTime > 5)
 				{
-					grpInputs[curSelected].alpha = 1;
+					// Waited long enough: treat it as a cancel, exactly like the B button
+					cancelRebind();
 				}
-				FlxG.sound.play(Paths.sound('scrollMenu'));
-				rebindingKey = false;
-				bindingTime = 0;
 			}
 		}
 

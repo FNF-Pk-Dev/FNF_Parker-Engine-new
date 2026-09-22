@@ -101,6 +101,12 @@ class MusicBeatSubstate extends FlxSubState
 	#if android
 	public function addTouchPad(?DPad:String, ?Action:String)
 	{
+		// A substate usually opens over a screen that already has a pad (the pause menu's A button, an
+		// options menu's D-pad). Two registered pads mean two inputs for the same action, and the one
+		// below is frozen while this substate is up - a button that was held when the substate opened
+		// would report `pressed` forever. Parking it leaves this pad as the only one feeding the
+		// Controls; `removeTouchPad()`/`destroy()` hand the previous pad back.
+		controls.parkTouchPadInputs();
 		_touchpad = new FlxTouchPad(DPad, Action);
 		add(_touchpad);
 		controls.setTouchPadUI(_touchpad, DPad, Action);
@@ -114,6 +120,10 @@ class MusicBeatSubstate extends FlxSubState
 	{
 		controls.removeFlxInput(trackedinputsUI);
 		remove(_touchpad);
+		_touchpad = null;
+		// The pad that was parked when this one was registered takes over again
+		controls.forgetTouchPadInputs(trackedinputsUI);
+		controls.unparkTouchPadInputs();
 	}
 	#end
 
@@ -134,6 +144,10 @@ class MusicBeatSubstate extends FlxSubState
 		{
 			if (trackedinputsUI != [])
 				controls.removeFlxInput(trackedinputsUI);
+			// destroy() does not go through `removeVirtualPad()`, so the parked pad of the screen
+			// below is handed back here.
+			controls.forgetTouchPadInputs(trackedinputsUI);
+			controls.unparkTouchPadInputs();
 		}
 		#end
 

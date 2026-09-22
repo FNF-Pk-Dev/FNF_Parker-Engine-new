@@ -13,12 +13,21 @@ class Hardware
 	public static inline var ORIENTATION_LANDSCAPE:Int = 2;
 
 	/**
-	 * Makes the Phone to vibrate, the time is in miliseconds btw.
+	 * Makes the Phone vibrate, the time is in milliseconds btw.
+	 *
+	 * Goes through lime's own haptic backend (`org/haxe/lime/GameActivity.vibrate`), which lime ships
+	 * in its Android template and which already handles the API-level differences (and returns
+	 * quietly when the device has no vibrator). The previous implementation called
+	 * `org/haxe/extension/Hardware` - a class no haxelib in this project provides - so every call was
+	 * a JNI lookup failure, which is the error that appeared in the log as soon as the "Vibrations"
+	 * setting was enabled on the phone.
 	 */
 	public static function vibrate(inputValue:Int):Void
 	{
-		var vibrate_jni = JNI.createStaticMethod("org/haxe/extension/Hardware", "vibrate", "(I)V");
-		vibrate_jni(inputValue);
+		#if (android || ios || web)
+		// `period == 0` = one vibration lasting `duration` ms, the same shape the old call had.
+		lime.ui.Haptic.vibrate(0, inputValue);
+		#end
 	}
 
 	/**

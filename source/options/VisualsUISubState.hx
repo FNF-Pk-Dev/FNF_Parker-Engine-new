@@ -41,6 +41,15 @@ class VisualsUISubState extends BaseOptionsMenu
 		var option:Option = new Option('Hide HUD', 'If checked, hides most HUD elements.', 'hideHud', 'bool', false);
 		addOption(option);
 
+		var option:Option = new Option('Keystrokes UI', "If checked, shows the note keys in the bottom-left corner while playing.", 'keystrokesUI', 'bool', false);
+		option.onChange = function()
+		{
+			// Applied live, so the toggle can be judged without leaving the menu
+			if (PlayState.instance != null && PlayState.instance.keysUI != null)
+				PlayState.instance.keysUI.visible = ClientPrefs.keystrokesUI;
+		};
+		addOption(option);
+
 		var option:Option = new Option('Time Bar:', "What should the Time Bar display?", 'timeBarType', 'string', 'Time Left',
 			['Time Left', 'Time Elapsed', 'Song Name', 'Disabled']);
 		addOption(option);
