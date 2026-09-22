@@ -6,29 +6,55 @@ import editors.blockcode.BlockTypes.BlockCodeEditorSettings;
 import editors.blockcode.BlockTypes.BlockData;
 import editors.blockcode.BlockTypes.BlockProject;
 import editors.blockcode.BlockTypes.ImportResult;
+import editors.blockcode.BlockTypes.ParamType;
 import editors.blockcode.BlockTypes.TimelineMarker;
+import flixel.FlxBasic;
 import flixel.FlxState;
 import flixel.addons.display.FlxGridOverlay;
 import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.input.touch.FlxTouch;
 import flixel.ui.FlxButton;
 import flixel.ui.FlxButton.FlxButtonState;
+import openfl.display.BitmapData;
 import openfl.geom.Rectangle;
 #if sys
 import sys.FileSystem;
 import sys.io.File;
 #end
 
+/** One axis aligned rectangle in screen pixels; every surface of this substate speaks it. */
+private typedef Rect =
+{
+	x:Float,
+	y:Float,
+	w:Float,
+	h:Float
+};
+
 /**
  * The block-code editor of Parker Engine as a substate on top of a running `PlayState`.
  *
  * This is `editors.BlockCodeEditorState` rebuilt for the "edit while the song plays" workflow:
- * the same workspace, sidebar, snapping, panning and zooming, the same colours and the same
- * pointer helpers, but every sprite is put on one of three cameras this substate adds itself
- * (`camEditor` for the workspace, `camSidebar` for the 320px sidebar, `camHUD` on top) instead
- * of resetting the camera list the way a standalone state can.
+ * the same workspace, palette, snapping, panning and zooming, the same colours and the same
+ * pointer helpers, but every sprite is put on one of four cameras this substate adds itself
+ * (`camEditor` for the workspace, `camPaletteBack`/`camPalette` for the palette, `camHUD` on
+ * top) instead of resetting the camera list the way a standalone state can.
  *
- * What the migration adds:
+ * Every measurement comes from `BlockLayout`, which turns the viewport into fonts, rows and
+ * touch targets:
+ *
+ * - **Landscape** keeps the left palette column (`BlockLayout.sidebarWidth()` plus the narrow
+ *   category rail) with the search field and the scrolling block list next to it.
+ * - **Portrait/compact** (`BlockLayout.sidebarVisible() == false`) moves the palette into the
+ *   bottom sheet: a drag handle, a horizontally scrollable row of category chips and the block
+ *   list under it. A chevron (or dragging the handle up/down) collapses the sheet down to the
+ *   chip row, which hands the freed height back to the workspace and the timeline.
+ * - The top bar wraps its buttons into `BlockLayout.topBarRows()` (or more) rows, keeping the
+ *   block counter on the first row and never letting two buttons touch.
+ * - A docked live code preview (the `BlockCodePreview` widget) sits against the right edge of
+ *   the workspace, visible by default only in a roomy landscape viewport.
+ *
+ * What the migration adds beyond the layout:
  *
  * - **Live song** - `PlayState.instance.persistentUpdate` is turned on while the editor is open,
  *   so the song keeps running and drawing behind it; a translucent backdrop keeps both layers
@@ -71,17 +97,13 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	public static inline var COLOR_BUTTON_WARN:Int = 0xFFE0AF68;
 	public static inline var COLOR_BUTTON_ACTION:Int = 0xFF7AA2F7;
 	public static inline var COLOR_DIM:Int = 0xAA000000;
+	public static inline var COLOR_SHEET_BG:Int = 0xFF16161E;
+	public static inline var COLOR_HANDLE:Int = 0xFF414868;
+	public static inline var COLOR_TILE_FILL:Int = 0xFFFFFFFF;
+	public static inline var COLOR_TILE_BORDER:Int = 0xFF5A5A5A;
+	public static inline var COLOR_TILE_GRIP:Int = 0xFF8A8A8A;
 
-	// --- Layout ---
-	public static inline var SIDEBAR_WIDTH:Float = 320;
-	public static inline var CATEGORY_STRIP_WIDTH:Float = 70;
-	public static inline var STATUS_HEIGHT:Float = 30;
-	public static inline var TIMELINE_HEIGHT:Float = 120;
-	public static inline var BASE_BUTTON_HEIGHT:Float = 44;
-	public static inline var BASE_FONT_SIZE:Int = 14;
-	public static inline var TOP_BAR_PADDING:Float = 5;
-	public static inline var BLOCK_COUNTER_WIDTH:Float = 156;
-	public static inline var ANDROID_SCALE:Float = 1.25;
+	// --- Behaviour (all geometry comes from `BlockLayout`) ---
 	public static inline var SNAP_DISTANCE:Float = 30;
 	public static inline var LONG_PRESS_TIME:Float = 0.5;
 	public static inline var AUTOSAVE_INTERVAL:Float = 5;
@@ -90,10 +112,16 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	public static inline var MIN_ZOOM:Float = 0.1;
 	public static inline var MAX_ZOOM:Float = 3;
 	public static inline var MAX_EVENT_OPTIONS:Int = 8;
-	public static inline var TIMELINE_RIGHT_MARGIN:Float = 90;
+	public static inline var SCROLLBAR_WIDTH:Float = 8;
+
+	/** Pointer travel (px) before a palette tap turns into a drag. */
+	public static inline var DRAG_SLOP:Float = 10;
+
+	/** Throttle for regenerating the Lua the live preview shows. */
+	public static inline var PREVIEW_CODE_INTERVAL:Float = 0.25;
 
 	/** Workspace id of the global scripts; a marker id is the workspace id of its stack. */
-	public static inline var GLOBAL_WORKSPACE:String = "";
+	public static inline var GLOBAL_WORKSPACE:String = '';
 
 	/** The editor currently on screen, so `closeIfOpen()` can find it. */
 	public static var instance(default, null):BlockCodeEditorSubstate;
@@ -101,7 +129,12 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	// --- Cameras ---
 	var camEditor:FlxCamera;
 	var camHUD:FlxCamera;
-	var camSidebar:FlxCamera;
+
+	/** Static palette decoration (panel background, rail background, rail buttons, scrollbar): never scrolls. */
+	var camPaletteBack:FlxCamera;
+
+	/** Scrolling palette content (section headers and block tiles), anchored to the list rect. */
+	var camPalette:FlxCamera;
 
 	// --- Workspace ---
 	var dimBackdrop:FlxSprite;
@@ -112,16 +145,80 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	/** Which workspace (see `GLOBAL_WORKSPACE`) every block belongs to. */
 	var blockWorkspace:Map<Block, String> = new Map();
 
-	// --- Sidebar ---
-	var categoryButtons:FlxTypedGroup<FlxButton>;
-	var blockButtons:FlxTypedGroup<FlxButton>;
-	var blockButtonMap:Map<FlxButton, BlockData> = new Map();
+	// --- Layout ---
+	var ready:Bool = false;
+	var layoutReady:Bool = false;
+	var appliedWidth:Float = -1;
+	var appliedHeight:Float = -1;
+	var appliedScale:Float = -1;
+	var appliedPortrait:Bool = false;
+	var appliedCompact:Bool = false;
+	var appliedNarrow:Bool = false;
+
+	var inset:Float = 8;
+	var gap:Float = 4;
+	var buttonHeight:Float = 38;
+	var barHeight:Float = 0;
+	var barRows:Int = 1;
+	var counterWidth:Float = 120;
+
+	var wsRect:Rect;
+	var timelineRect:Rect;
+	var paletteBand:Rect;
+	var paletteList:Rect;
+	var paletteStrip:Rect;
+	var searchRect:Rect;
+	var chipsRect:Rect;
+	var handleRect:Rect;
+	var chevronRect:Rect;
+	var scrollbarRect:Rect;
+	var searchHeight:Float = 34;
+	var chipsHeight:Float = 34;
+	var sheetHeight:Float = 0;
+	var trashSize:Float = 40;
+
+	// --- Palette ---
+	var paletteSections:Array<PaletteSection> = [];
+	var railButtons:Array<CategoryButton> = [];
+	var paletteChips:Array<CategoryButton> = [];
+	var paletteScroll:Float = 0;
+	var paletteContentHeight:Float = 0;
+	var paletteCollapsed:Bool = false;
+	var paletteBuildKey:String = '';
+	var activeCategory:String = '';
+	var chipsScroll:Float = 0;
+	var chipsContentWidth:Float = 0;
+	var railButtonSize:Float = 40;
 	var scrollTrack:FlxSprite;
 	var scrollThumb:FlxSprite;
-	var categories:Array<BlockCategory> = [];
-	var categoryYPositions:Map<String, Float> = new Map();
-	var categoryHeaders:Array<FlxText> = [];
-	var totalSidebarHeight:Float = 0;
+	var paletteBg:FlxSprite;
+	var paletteStripBg:FlxSprite;
+	var paletteSeparator:FlxSprite;
+	var handlePill:FlxSprite;
+	var collapseButton:FlxButton;
+	var searchField:InputField;
+	var searchFieldWidth:Float = 0;
+	var searchFieldHeight:Float = 0;
+	var searchText:String = '';
+
+	var isDraggingScroll:Bool = false;
+	var scrollDragOffset:Float = 0;
+	var paletteDragLastY:Float = 0;
+	var mouseScrollActive:Bool = false;
+	var paletteScrollTween:FlxTween;
+	var paletteScrollProxy:{value:Float};
+	var tilePress:PaletteTile = null;
+	var tilePressX:Float = 0;
+	var tilePressY:Float = 0;
+	var tileDragStarted:Bool = false;
+	var railPress:CategoryButton = null;
+	var chipPress:CategoryButton = null;
+	var chipsDragging:Bool = false;
+	var chipsDragStartX:Float = 0;
+	var chipsScrollStart:Float = 0;
+	var sheetDragging:Bool = false;
+	var sheetDragStartY:Float = 0;
+	var sheetDragMoved:Bool = false;
 
 	// --- HUD ---
 	var topBarBg:FlxSprite;
@@ -134,18 +231,19 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	var codeButton:FlxButton;
 	var filesButton:FlxButton;
 	var helpButton:FlxButton;
+	var previewButton:FlxButton;
 	var undoButton:FlxButton;
 	var redoButton:FlxButton;
 	var testButton:FlxButton;
 	var closeButton:FlxButton;
 	var markerButton:FlxButton;
 	var barButtons:Array<FlxButton> = [];
-	var barHeight:Float = 0;
-	var buttonHeight:Float = BASE_BUTTON_HEIGHT;
-	var mobileScale:Float = 1;
+	var barGroups:Array<Array<FlxButton>> = [];
+	var buttonColors:Map<FlxButton, Int> = new Map();
 
 	var statusBar:FlxSprite;
 	var statusText:FlxText;
+	var statusMessage:String = '';
 	var statusHold:Float = 0;
 	var blockCountText:FlxText;
 
@@ -153,9 +251,13 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	var trashLabel:FlxText;
 	var tooltipBox:FlxSprite;
 	var tooltipText:FlxText;
+	var tooltipMessage:String = '';
+	var tooltipBoxWidth:Float = 0;
+	var tooltipBoxHeight:Float = 0;
 
 	// --- Timeline ---
 	var timeline:BlockTimeline;
+	var timelinePlaced:Rect;
 	var songInfoReady:Bool = false;
 	var songInfoPoll:Float = 0;
 	var mappedSong:SwagSong = null;
@@ -169,6 +271,17 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	var virtualKeyboard:BlockVirtualKeyboard;
 	var prompt:PromptBox;
 	var panelOpen:Bool = false;
+	var panelsBuilt:Bool = false;
+	var contextMenuWidth:Float = 0;
+	var contextMenuHeight:Float = 0;
+
+	// --- Live preview ---
+	var preview:BlockCodePreview;
+	var previewRect:Rect;
+	var previewWanted:Bool = false;
+	var previewToggled:Bool = false;
+	var previewCodeDirty:Bool = true;
+	var previewCodeTimer:Float = 0;
 
 	// --- Interaction ---
 	var draggingBlock:Block = null;
@@ -181,10 +294,6 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	var zoomLevel:Float = 1;
 	var lastSpawnPos:FlxPoint = new FlxPoint(0, 0);
 
-	var isDraggingScroll:Bool = false;
-	var scrollDragOffset:Float = 0;
-	var sidebarDragLastY:Float = 0;
-
 	var pressHeldTime:Float = 0;
 	var pressStartX:Float = 0;
 	var pressStartY:Float = 0;
@@ -192,8 +301,6 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	var pointerSwallowed:Bool = false;
 	var contextMenuX:Float = 0;
 	var contextMenuY:Float = 0;
-	var contextMenuWidth:Float = 0;
-	var contextMenuHeight:Float = 0;
 	var contextBlock:Block = null;
 	var markerMoveSnapshot:Bool = false;
 
@@ -267,9 +374,6 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	{
 		instance = this;
 		parentState = FlxG.state;
-		mobileScale = #if android ANDROID_SCALE #else 1 #end;
-		buttonHeight = BASE_BUTTON_HEIGHT * mobileScale;
-		barHeight = buttonHeight + TOP_BAR_PADDING * 2;
 
 		// Keeps the song updating (and drawing) behind the editor. The value the song had is restored
 		// in `destroy()`: `PlayState.create()` sets it to true itself (source/states/game/PlayState.hx),
@@ -289,16 +393,10 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		blockContainer = new FlxTypedGroup<Block>();
 		add(blockContainer);
 
-		createTopBar();
-		createSidebar();
-		createStatusBar();
-		createTrashCan();
-		createTooltip();
-		createMarkerButton();
-		createTimeline();
-		createPanels();
+		// Builds the top bar, the palette, the status bar, the timeline, the preview and the panels
+		// in one pass, so a viewport change is handled by the very same code.
+		ensureLayout();
 
-		loadCategories();
 		loadCachedProject();
 		installInputHooks();
 		refreshTimelineSongInfo();
@@ -320,11 +418,14 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 		hookPreUpdate();
 		setStatus('Live editor - drag blocks, Space+drag to pan, Ctrl+S to save, ESC to close');
+
+		ready = true;
 		super.create();
 	}
 
 	override function destroy():Void
 	{
+		ready = false;
 		saveCache();
 		unhookPreUpdate();
 
@@ -342,6 +443,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 		instance = null;
 		clearBlocks();
+		destroyPaletteContent();
 		removeCameras();
 
 		super.destroy();
@@ -358,15 +460,19 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		camEditor.scroll.set(0, 0);
 		camEditor.zoom = 1;
 
-		camSidebar = new FlxCamera(0, 0, Std.int(SIDEBAR_WIDTH), FlxG.height);
-		camSidebar.bgColor.alpha = 0;
+		camPaletteBack = new FlxCamera(0, 0, 1, 1);
+		camPaletteBack.bgColor.alpha = 0;
+
+		camPalette = new FlxCamera(0, 0, 1, 1);
+		camPalette.bgColor.alpha = 0;
 
 		camHUD = new FlxCamera();
 		camHUD.bgColor.alpha = 0;
 
 		// Never the default draw target: the song's own sprites have to keep drawing on their cameras.
 		FlxG.cameras.add(camEditor, false);
-		FlxG.cameras.add(camSidebar, false);
+		FlxG.cameras.add(camPaletteBack, false);
+		FlxG.cameras.add(camPalette, false);
 		FlxG.cameras.add(camHUD, false);
 
 		zoomLevel = 1;
@@ -383,10 +489,15 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 			FlxG.cameras.remove(camHUD, true);
 			camHUD = null;
 		}
-		if (camSidebar != null)
+		if (camPalette != null)
 		{
-			FlxG.cameras.remove(camSidebar, true);
-			camSidebar = null;
+			FlxG.cameras.remove(camPalette, true);
+			camPalette = null;
+		}
+		if (camPaletteBack != null)
+		{
+			FlxG.cameras.remove(camPaletteBack, true);
+			camPaletteBack = null;
 		}
 		if (camEditor != null)
 		{
@@ -409,7 +520,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		workspaceBg.cameras = [camEditor];
 		add(workspaceBg);
 
-		gridBG = FlxGridOverlay.create(40, 40, FlxG.width * 4, FlxG.height * 4, true, COLOR_GRID_LINE, COLOR_BG);
+		gridBG = FlxGridOverlay.create(40, 40, Std.int(FlxG.width * 3), Std.int(FlxG.height * 3), true, COLOR_GRID_LINE, COLOR_BG);
 		if (gridBG != null)
 		{
 			gridBG.alpha = 0.4;
@@ -420,20 +531,377 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		}
 	}
 
+	/** Resizes the canvas backdrop after a viewport change. */
+	function resizeBackdrop():Void
+	{
+		if (dimBackdrop != null
+			&& (Std.int(dimBackdrop.width) != Std.int(BlockLayout.width) || Std.int(dimBackdrop.height) != Std.int(BlockLayout.height)))
+			dimBackdrop.makeGraphic(Std.int(Math.max(1, BlockLayout.width)), Std.int(Math.max(1, BlockLayout.height)), COLOR_DIM);
+
+		if (workspaceBg != null
+			&& (Std.int(workspaceBg.width) != Std.int(BlockLayout.width) || Std.int(workspaceBg.height) != Std.int(BlockLayout.height)))
+			workspaceBg.makeGraphic(Std.int(Math.max(1, BlockLayout.width)), Std.int(Math.max(1, BlockLayout.height)), COLOR_BG);
+	}
+
+	// ============================================================================================
+	// Layout: everything is derived from BlockLayout
+	// ============================================================================================
+
+	/** Recomputes the whole layout, but only when the viewport really changed. */
+	function ensureLayout():Void
+	{
+		BlockLayout.ensure();
+
+		if (layoutReady
+			&& BlockLayout.width == appliedWidth
+			&& BlockLayout.height == appliedHeight
+			&& BlockLayout.scale == appliedScale
+			&& BlockLayout.portrait == appliedPortrait
+			&& BlockLayout.compact == appliedCompact
+			&& BlockLayout.narrow == appliedNarrow)
+			return;
+
+		appliedWidth = BlockLayout.width;
+		appliedHeight = BlockLayout.height;
+		appliedScale = BlockLayout.scale;
+		appliedPortrait = BlockLayout.portrait;
+		appliedCompact = BlockLayout.compact;
+		appliedNarrow = BlockLayout.narrow;
+
+		applyLayout();
+	}
+
+	function emptyRect():Rect
+	{
+		return {
+			x: 0,
+			y: 0,
+			w: 0,
+			h: 0
+		};
+	}
+
+	static function pointInRect(x:Float, y:Float, r:Rect):Bool
+	{
+		if (r == null || r.w <= 0 || r.h <= 0)
+			return false;
+
+		return (x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h);
+	}
+
+	static function rectChanged(a:Rect, b:Rect):Bool
+	{
+		if (a == null || b == null)
+			return true;
+
+		return (a.x != b.x || a.y != b.y || a.w != b.w || a.h != b.h);
+	}
+
+	/** Height of the collapsed bottom sheet: the handle plus the category chips. */
+	function collapsedSheetHeight():Float
+	{
+		return gap + BlockLayout.touchSize() + gap + BlockLayout.touchSize() + gap;
+	}
+
+	/** Height of the palette column (landscape) or sheet (portrait), honouring the collapse. */
+	function currentSheetHeight():Float
+	{
+		if (!BlockLayout.portrait)
+			return 0;
+
+		return paletteCollapsed ? collapsedSheetHeight() : BlockLayout.paletteSheetHeight();
+	}
+
+	/** The band the palette occupies: the left column in landscape, the bottom sheet upright. */
+	function computePaletteBand():Rect
+	{
+		if (BlockLayout.sidebarVisible())
+			return {
+				x: 0,
+				y: wsRect.y,
+				w: BlockLayout.sidebarWidth(),
+				h: wsRect.h
+			};
+
+		var h:Float = currentSheetHeight();
+		return {
+			x: 0,
+			y: BlockLayout.height - BlockLayout.statusHeight() - h,
+			w: BlockLayout.width,
+			h: h
+		};
+	}
+
+	/** Screen rect of the live code preview: docked against the right edge of the workspace. */
+	function computePreviewRect():Rect
+	{
+		var top:Float = wsRect.y + inset;
+		var bottom:Float = wsRect.y + wsRect.h - inset;
+
+		if (BlockLayout.portrait)
+			top += BlockLayout.touchSize() + gap;
+		else
+			bottom -= buttonHeight + gap;
+
+		var w:Float = Math.min(wsRect.w * 0.34, 420 * BlockLayout.scale);
+		var h:Float = Math.max(90, bottom - top);
+
+		return {
+			x: wsRect.x + wsRect.w - w - inset,
+			y: top,
+			w: w,
+			h: h
+		};
+	}
+
+	/** Rebuilds every rect, camera and widget position for the current `BlockLayout` metrics. */
+	function applyLayout():Void
+	{
+		layoutReady = true;
+
+		inset = BlockLayout.inset();
+		gap = BlockLayout.spacing('tight');
+		buttonHeight = BlockLayout.buttonHeight();
+		counterWidth = Math.max(BlockLayout.buttonWidth('Blocks: 000'), 84 * BlockLayout.scale);
+
+		ensureTopBar();
+		resizeBarButtons();
+
+		barRows = wrapTopBar(false);
+		barHeight = BlockLayout.topBarHeight(barRows);
+		buttonHeight = BlockLayout.buttonHeight();
+
+		computeRects();
+		applyCameraRects();
+		resizeBackdrop();
+
+		ensureStatusBar();
+		ensureTrash();
+		ensureTooltip();
+		ensureMarkerButton();
+
+		layoutTopBar();
+		layoutBlockCounter();
+		layoutStatusBar();
+		ensurePaletteChrome();
+		layoutPaletteChrome();
+		ensureSearchField();
+		rebuildPaletteContent();
+		layoutTrash();
+		layoutMarkerButton();
+		placeTimeline();
+		placePreview();
+		placePanels();
+
+		if (!previewToggled)
+			previewWanted = !BlockLayout.portrait && !BlockLayout.compact;
+
+		syncPreview();
+		updatePreviewButton();
+		refreshPaletteVisibility();
+
+		#if android
+		if (ready)
+			setupEditorTouchPad();
+		#end
+	}
+
+	/** The canvas band: below the real (wrapped) top bar, above the timeline. */
+	function computeRects():Void
+	{
+		var statusY:Float = BlockLayout.height - BlockLayout.statusHeight();
+
+		sheetHeight = currentSheetHeight();
+
+		var timelineHeight:Float = BlockLayout.timelineHeight();
+		var timelineY:Float = BlockLayout.portrait ? (statusY - sheetHeight - timelineHeight) : (statusY - timelineHeight);
+
+		var sidebar:Float = BlockLayout.sidebarVisible() ? BlockLayout.sidebarWidth() : 0;
+		var wsY:Float = Math.max(BlockLayout.workspace().y, barHeight + gap);
+
+		wsRect = {
+			x: sidebar,
+			y: wsY,
+			w: Math.max(160, BlockLayout.width - sidebar),
+			h: Math.max(100, timelineY - gap - wsY)
+		};
+
+		var timelineX:Float = BlockLayout.sidebarVisible() ? (sidebar + gap) : inset;
+		var timelineRight:Float = BlockLayout.portrait ? inset : BlockLayout.timelineRightMargin();
+
+		timelineRect = {
+			x: timelineX,
+			y: timelineY,
+			w: Math.max(160, BlockLayout.width - timelineX - timelineRight),
+			h: timelineHeight
+		};
+
+		paletteBand = computePaletteBand();
+
+		searchHeight = Math.max(BlockLayout.touchSize() * (BlockLayout.portrait ? 0.9 : 1), 34 * BlockLayout.scale);
+		chipsHeight = BlockLayout.touchSize();
+
+		if (BlockLayout.sidebarVisible())
+		{
+			var stripW:Float = BlockLayout.categoryStripWidth();
+			paletteStrip = {
+				x: 0,
+				y: paletteBand.y,
+				w: stripW,
+				h: paletteBand.h
+			};
+
+			var columnX:Float = stripW + gap;
+			var columnW:Float = Math.max(80, paletteBand.w - stripW - gap * 2 - SCROLLBAR_WIDTH * BlockLayout.scale);
+			var normal:Float = BlockLayout.spacing('normal');
+
+			searchRect = {
+				x: columnX,
+				y: paletteBand.y + gap,
+				w: columnW,
+				h: searchHeight
+			};
+
+			// The list starts directly under the search field, and its first category header is the
+			// first row of the list content, so `normal` is the entire gap between the two.
+			paletteList = {
+				x: columnX,
+				y: searchRect.y + searchHeight + normal,
+				w: columnW,
+				h: Math.max(40, paletteBand.y + paletteBand.h - (searchRect.y + searchHeight + normal) - gap)
+			};
+
+			// The chip row belongs to the portrait sheet; in the column the categories live in the rail.
+			chipsHeight = 0;
+			chipsRect = emptyRect();
+			handleRect = emptyRect();
+			chevronRect = emptyRect();
+		}
+		else
+		{
+			paletteStrip = emptyRect();
+
+			var handleH:Float = BlockLayout.touchSize();
+			var columnX:Float = gap;
+			var columnW:Float = Math.max(80, paletteBand.w - gap * 2 - SCROLLBAR_WIDTH * BlockLayout.scale);
+
+			handleRect = {
+				x: 0,
+				y: paletteBand.y,
+				w: paletteBand.w,
+				h: handleH
+			};
+			chevronRect = {
+				x: paletteBand.w - inset - BlockLayout.touchSize(),
+				y: paletteBand.y,
+				w: BlockLayout.touchSize(),
+				h: handleH
+			};
+
+			if (paletteCollapsed)
+			{
+				searchRect = emptyRect();
+				paletteList = emptyRect();
+				chipsRect = {
+					x: gap,
+					y: paletteBand.y + handleH + gap,
+					w: paletteBand.w - gap * 2,
+					h: chipsHeight
+				};
+			}
+			else
+			{
+				searchRect = {
+					x: columnX,
+					y: paletteBand.y + handleH + gap,
+					w: columnW,
+					h: searchHeight
+				};
+				chipsRect = {
+					x: gap,
+					y: searchRect.y + searchHeight + gap,
+					w: paletteBand.w - gap * 2,
+					h: chipsHeight
+				};
+				paletteList = {
+					x: columnX,
+					y: chipsRect.y + chipsHeight + BlockLayout.spacing('normal'),
+					w: columnW,
+					h: Math.max(40, paletteBand.y + paletteBand.h - (chipsRect.y + chipsHeight + BlockLayout.spacing('normal')) - gap)
+				};
+			}
+		}
+
+		if (paletteList.h > 0)
+			scrollbarRect = {
+				x: paletteBand.x + paletteBand.w - SCROLLBAR_WIDTH * BlockLayout.scale - gap * 0.5,
+				y: paletteList.y,
+				w: SCROLLBAR_WIDTH * BlockLayout.scale,
+				h: paletteList.h
+			};
+		else
+			scrollbarRect = emptyRect();
+
+		previewRect = computePreviewRect();
+	}
+
+	/** Sizes and places the four cameras on the rects `computeRects()` produced. */
+	function applyCameraRects():Void
+	{
+		var screenW:Int = Std.int(Math.max(1, BlockLayout.width));
+		var screenH:Int = Std.int(Math.max(1, BlockLayout.height));
+
+		if (camEditor != null)
+		{
+			camEditor.setSize(screenW, screenH);
+			camEditor.setPosition(0, 0);
+		}
+
+		if (camHUD != null)
+		{
+			camHUD.setSize(screenW, screenH);
+			camHUD.setPosition(0, 0);
+			camHUD.scroll.set(0, 0);
+		}
+
+		if (camPaletteBack != null)
+		{
+			camPaletteBack.setSize(Std.int(Math.max(1, paletteBand.w)), Std.int(Math.max(1, paletteBand.h)));
+			camPaletteBack.setPosition(Std.int(paletteBand.x), Std.int(paletteBand.y));
+			// Sprites of the palette are laid out in screen coordinates, so the camera has to look at
+			// exactly the band it covers: world == screen at scroll 0.
+			camPaletteBack.scroll.set(paletteBand.x, paletteBand.y);
+			camPaletteBack.visible = (paletteBand.w > 0 && paletteBand.h > 0);
+		}
+
+		if (camPalette != null)
+		{
+			// The palette content is authored in list-local coordinates and this camera *is* the list
+			// rect, so the content can never be offset by the band it lives in: local (0, 0) is the top
+			// left corner of the list, and only the scroll moves it.
+			camPalette.setSize(Std.int(Math.max(1, paletteList.w)), Std.int(Math.max(1, paletteList.h)));
+			camPalette.setPosition(Std.int(paletteList.x), Std.int(paletteList.y));
+			camPalette.scroll.set(0, paletteScroll);
+			camPalette.visible = (paletteList.w > 0 && paletteList.h > 0);
+		}
+	}
+
 	// ============================================================================================
 	// Top bar
 	// ============================================================================================
 
-	function createTopBar():Void
+	function ensureTopBar():Void
 	{
-		topBarBg = new FlxSprite().makeGraphic(FlxG.width, Std.int(barHeight), COLOR_BAR);
+		if (topBarBg != null)
+			return;
+
+		topBarBg = new FlxSprite().makeGraphic(1, 1, COLOR_BAR);
 		topBarBg.scrollFactor.set(0, 0);
 		topBarBg.cameras = [camHUD];
 		add(topBarBg);
 
 		globalTabButton = makeButton('Global scripts', selectGlobalWorkspace, COLOR_BUTTON_ACTIVE);
 		markerTabButton = makeButton('No marker', selectMarkerWorkspace, COLOR_BUTTON);
-
 		pauseButton = makeButton('Pause song', toggleSongPause, COLOR_BUTTON_WARN);
 		liveButton = makeButton('Live on', toggleLiveReload, COLOR_BUTTON_GOOD);
 		saveButton = makeButton('Save', saveAndReload, COLOR_BUTTON_GOOD);
@@ -441,72 +909,43 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		codeButton = makeButton('Code', openCodePanel, COLOR_BUTTON_ACTION);
 		filesButton = makeButton('Files', openFileBrowser, COLOR_BUTTON_ACTION);
 		helpButton = makeButton('Help', openHelpPanel, COLOR_BUTTON);
+		previewButton = makeButton('Preview', togglePreview, COLOR_BUTTON);
 		undoButton = makeButton('Undo', undo, COLOR_BUTTON);
 		redoButton = makeButton('Redo', redo, COLOR_BUTTON);
 		testButton = makeButton('Test', testInSong, COLOR_BUTTON_GOOD);
 		closeButton = makeButton('Close', exitEditor, COLOR_TRASH);
 
-		layoutTopBar();
-	}
-
-	function layoutTopBar():Void
-	{
-		var raw:Array<FlxButton> = [
-			globalTabButton,
-			markerTabButton,
-			pauseButton,
-			liveButton,
-			saveButton,
-			saveAsButton,
-			codeButton,
-			filesButton,
-			helpButton,
-			undoButton,
-			redoButton,
-			testButton,
-			closeButton
+		// The bar reads as groups: which workspace is being edited, the song controls, saving, the
+		// side panels, the live preview and finally the history / session buttons.
+		barGroups = [
+			[globalTabButton, markerTabButton],
+			[pauseButton, liveButton],
+			[saveButton, saveAsButton],
+			[codeButton, filesButton, helpButton],
+			[previewButton],
+			[undoButton, redoButton, testButton, closeButton]
 		];
 
 		barButtons = [];
-		for (button in raw)
+		for (group in barGroups)
 		{
-			if (button != null)
-				barButtons.push(button);
-		}
-
-		var padding:Float = TOP_BAR_PADDING * mobileScale;
-		var rightLimit:Float = FlxG.width - BLOCK_COUNTER_WIDTH - padding;
-		var x:Float = padding;
-		var y:Float = padding;
-
-		for (button in barButtons)
-		{
-			if (x + button.width > rightLimit && x > padding)
+			for (button in group)
 			{
-				x = padding;
-				y += buttonHeight + padding;
+				if (button != null)
+					barButtons.push(button);
 			}
-
-			button.setPosition(x, y);
-			button.visible = true;
-			x += button.width + padding;
 		}
 
-		var wanted:Float = y + buttonHeight + padding;
-		if (Math.abs(wanted - barHeight) > 0.5)
-		{
-			barHeight = wanted;
-			if (topBarBg != null)
-				topBarBg.makeGraphic(FlxG.width, Std.int(barHeight), COLOR_BAR);
-		}
+		updatePreviewButton();
 	}
 
 	function makeButton(label:String, callback:Void->Void, color:Int):FlxButton
 	{
 		var button:FlxButton = new FlxButton(0, 0, label, callback);
-		button.makeGraphic(Std.int(buttonWidth(label)), Std.int(buttonHeight), color);
+		button.makeGraphic(Std.int(BlockLayout.buttonWidth(label)), Std.int(BlockLayout.buttonHeight()), color);
 		button.visible = false;
 		button.cameras = [camHUD];
+		buttonColors.set(button, color);
 		styleButtonLabel(button);
 		// Buttons are only created here, so this is the one place that has to register them with
 		// the substate: without it they exist, get positioned, and are never drawn.
@@ -515,11 +954,13 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		return button;
 	}
 
-	function buttonWidth(label:String):Float
+	function buttonColor(button:FlxButton):Int
 	{
-		var text:String = (label == null) ? '' : label;
-		var estimated:Float = text.length * (BASE_FONT_SIZE * 0.62) * mobileScale + 22 * mobileScale;
-		return Math.max(62 * mobileScale, estimated);
+		if (button == null)
+			return COLOR_BUTTON;
+
+		var color:Null<Int> = buttonColors.get(button);
+		return (color == null) ? COLOR_BUTTON : color;
 	}
 
 	function styleButtonLabel(button:FlxButton):Void
@@ -527,7 +968,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		if (button == null || button.label == null)
 			return;
 
-		button.label.setFormat(Paths.font('vcr.ttf'), Std.int(BASE_FONT_SIZE * mobileScale), FlxColor.WHITE, CENTER);
+		button.label.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('body'), FlxColor.WHITE, CENTER);
 		button.label.fieldWidth = Std.int(Math.max(1, button.width));
 		centerButtonLabel(button);
 	}
@@ -562,250 +1003,240 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		if (button == null)
 			return;
 
+		buttonColors.set(button, color);
 		button.makeGraphic(Std.int(Math.max(1, button.width)), Std.int(Math.max(1, button.height)), color);
 		styleButtonLabel(button);
 	}
 
-	// ============================================================================================
-	// Sidebar
-	// ============================================================================================
-
-	function createSidebar():Void
+	/** Resizes every bar button to the current metrics, keeping its colour and its label. */
+	function resizeBarButtons():Void
 	{
-		var strip:FlxSprite = new FlxSprite(0, 0).makeGraphic(Std.int(CATEGORY_STRIP_WIDTH), FlxG.height, COLOR_SIDEBAR_STRIP);
-		strip.scrollFactor.set(0, 0);
-		strip.cameras = [camSidebar];
-		add(strip);
+		for (button in barButtons)
+		{
+			if (button == null)
+				continue;
 
-		var sidebarBg:FlxSprite = new FlxSprite(CATEGORY_STRIP_WIDTH,
-			0).makeGraphic(Std.int(SIDEBAR_WIDTH - CATEGORY_STRIP_WIDTH), FlxG.height, COLOR_SIDEBAR_BG);
-		sidebarBg.scrollFactor.set(0, 0);
-		sidebarBg.cameras = [camSidebar];
-		add(sidebarBg);
+			var w:Int = Std.int(Math.max(1, BlockLayout.buttonWidth(button.text)));
+			var h:Int = Std.int(Math.max(1, BlockLayout.buttonHeight()));
+			if (Std.int(button.width) == w && Std.int(button.height) == h)
+				continue;
 
-		var separator:FlxSprite = new FlxSprite(SIDEBAR_WIDTH - 1, 0).makeGraphic(1, FlxG.height, COLOR_SEPARATOR);
-		separator.scrollFactor.set(0, 0);
-		separator.cameras = [camSidebar];
-		add(separator);
-
-		categoryButtons = new FlxTypedGroup<FlxButton>();
-		add(categoryButtons);
-
-		blockButtons = new FlxTypedGroup<FlxButton>();
-		add(blockButtons);
-
-		scrollTrack = new FlxSprite(SIDEBAR_WIDTH - 10, 0).makeGraphic(10, FlxG.height, COLOR_SCROLL_TRACK);
-		scrollTrack.scrollFactor.set(0, 0);
-		scrollTrack.cameras = [camSidebar];
-		add(scrollTrack);
-
-		scrollThumb = new FlxSprite(SIDEBAR_WIDTH - 10, 0).makeGraphic(10, 50, COLOR_SCROLL_THUMB);
-		scrollThumb.scrollFactor.set(0, 0);
-		scrollThumb.cameras = [camSidebar];
-		add(scrollThumb);
+			button.makeGraphic(w, h, buttonColor(button));
+			styleButtonLabel(button);
+		}
 	}
 
-	function loadCategories():Void
+	/** Right limit for the buttons of one row: row 0 keeps clear of the block counter. */
+	function topBarRowLimit(row:Int):Float
 	{
-		BlockLibrary.ensureLoaded();
-		categories = BlockLibrary.categories;
+		if (row == 0)
+			return BlockLayout.width - counterWidth - inset;
 
-		var categorySize:Float = Math.min(50 * mobileScale, CATEGORY_STRIP_WIDTH - 16);
-		var categoryX:Float = (CATEGORY_STRIP_WIDTH - categorySize) * 0.5;
-		var categoryY:Float = 20;
-		var blockListX:Float = 80;
-		var blockListY:Float = 20;
-		var blockButtonWidth:Float = SIDEBAR_WIDTH - blockListX - 14;
+		return BlockLayout.width - inset;
+	}
 
-		for (category in categories)
+	/**
+	 * Lays the grouped buttons out with `BlockLayout.spacing()` between them, wrapping a whole
+	 * group onto the next row when it would cross the counter (row 0) or the screen edge.
+	 * With `apply == false` it only counts the rows.
+	 */
+	function wrapTopBar(apply:Bool):Int
+	{
+		var groupGap:Float = BlockLayout.spacing('normal');
+		var x:Float = inset;
+		var y:Float = gap;
+		var row:Int = 0;
+		var limit:Float = topBarRowLimit(0);
+
+		for (group in barGroups)
 		{
-			if (category == null)
+			if (group == null || group.length == 0)
 				continue;
 
-			var button:FlxButton = new FlxButton(categoryX, categoryY, '', function()
+			var groupWidth:Float = 0;
+			var used:Int = 0;
+			for (button in group)
 			{
-				scrollToCategory(category.name);
-			});
-			button.makeGraphic(Std.int(categorySize), Std.int(categorySize), category.color);
-			button.text = category.icon;
-			button.cameras = [camSidebar];
-			button.scrollFactor.set(0, 0);
-			button.label.setFormat(Paths.font('vcr.ttf'), Std.int(24 * mobileScale), FlxColor.WHITE, CENTER);
-			button.label.fieldWidth = Std.int(categorySize);
-			for (point in button.labelOffsets)
-			{
-				if (point != null)
-					point.set(point.x, (categorySize - button.label.height) * 0.5);
-			}
-			categoryButtons.add(button);
-
-			categoryY += categorySize + 10 * mobileScale;
-
-			categoryYPositions.set(category.name, blockListY);
-
-			var header:FlxText = new FlxText(blockListX, blockListY, 0, category.name, Std.int(16 * mobileScale));
-			header.setFormat(Paths.font('vcr.ttf'), Std.int(16 * mobileScale), category.color, LEFT);
-			header.cameras = [camSidebar];
-			add(header);
-			categoryHeaders.push(header);
-			blockListY += 30 * mobileScale;
-
-			if (category.blocks == null)
-				continue;
-
-			for (block in category.blocks)
-			{
-				if (block == null)
+				if (button == null)
 					continue;
 
-				var blockButton:FlxButton = new FlxButton(blockListX, blockListY, block.label, function()
-				{
-					addBlock(block);
-				});
-				blockButton.makeGraphic(Std.int(blockButtonWidth), Std.int(buttonHeight), block.color);
-				blockButton.cameras = [camSidebar];
-				blockButton.label.setFormat(Paths.font('vcr.ttf'), Std.int(BASE_FONT_SIZE * mobileScale), FlxColor.WHITE, CENTER);
-				blockButton.label.fieldWidth = Std.int(blockButtonWidth);
-
-				var offset:Float = (buttonHeight - blockButton.label.height) * 0.5;
-				if (offset < 0)
-					offset = 0;
-				for (point in blockButton.labelOffsets)
-				{
-					if (point != null)
-						point.set(point.x, offset);
-				}
-
-				blockButtonMap.set(blockButton, block);
-				blockButtons.add(blockButton);
-				blockListY += buttonHeight + 6 * mobileScale;
+				if (used > 0)
+					groupWidth += gap;
+				groupWidth += Math.max(1, button.width);
+				used++;
 			}
 
-			blockListY += 20 * mobileScale;
+			if (used == 0)
+				continue;
+
+			if (x > inset && x + groupWidth > limit)
+			{
+				row++;
+				x = inset;
+				y = gap + row * (buttonHeight + gap);
+				limit = topBarRowLimit(row);
+			}
+
+			for (button in group)
+			{
+				if (button == null)
+					continue;
+
+				if (apply)
+				{
+					button.setPosition(x, y);
+					button.visible = true;
+				}
+
+				x += Math.max(1, button.width) + gap;
+			}
+
+			x += groupGap - gap;
 		}
 
-		totalSidebarHeight = blockListY;
-
-		// An external block config may have added a category the sidebar scroll maths never saw.
-		camSidebar.scroll.y = 0;
+		return row + 1;
 	}
 
-	/** Throws the sidebar buttons and headers away and builds them again from the library. */
-	function rebuildSidebar():Void
+	function layoutTopBar():Void
 	{
-		for (button in categoryButtons.members.copy())
-		{
-			if (button == null)
-				continue;
-			categoryButtons.remove(button, true);
-			button.destroy();
-		}
-
-		for (button in blockButtons.members.copy())
-		{
-			if (button == null)
-				continue;
-			blockButtons.remove(button, true);
-			button.destroy();
-		}
-
-		for (header in categoryHeaders)
-		{
-			if (header == null)
-				continue;
-			remove(header);
-			header.destroy();
-		}
-
-		categoryHeaders = [];
-		blockButtonMap = new Map();
-		categoryYPositions = new Map();
-		totalSidebarHeight = 0;
-
-		loadCategories();
-	}
-
-	/** The context menu's "reload blocks": picks up block configs a mod added while the song runs. */
-	function reloadBlockLibrary():Void
-	{
-		BlockLibrary.reload();
-		rebuildSidebar();
-		setStatus('Block library reloaded - ' + BlockLibrary.allBlocks().length + ' blocks');
-		playSound('confirmMenu');
-	}
-
-	function scrollToCategory(categoryName:String):Void
-	{
-		if (!categoryYPositions.exists(categoryName))
+		var h:Int = Std.int(Math.max(1, barHeight));
+		if (topBarBg == null)
 			return;
 
-		var targetY:Float = categoryYPositions.get(categoryName);
-		FlxTween.cancelTweensOf(camSidebar.scroll);
-		FlxTween.tween(camSidebar.scroll, {y: targetY - 20}, 0.5, {ease: FlxEase.quartOut});
-		setStatus('Jumped to ' + categoryName);
-		playSound('scrollMenu');
+		if (Std.int(topBarBg.width) != Std.int(BlockLayout.width) || Std.int(topBarBg.height) != h)
+			topBarBg.makeGraphic(Std.int(Math.max(1, BlockLayout.width)), h, COLOR_BAR);
+
+		topBarBg.setPosition(0, 0);
+		wrapTopBar(true);
+	}
+
+	function layoutBlockCounter():Void
+	{
+		if (blockCountText == null)
+			return;
+
+		blockCountText.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('small'), COLOR_BLOCK_COUNT, RIGHT);
+		blockCountText.fieldWidth = Std.int(Math.max(40, counterWidth));
+		blockCountText.wordWrap = false;
+		blockCountText.setPosition(BlockLayout.width - counterWidth - inset, gap + (buttonHeight - blockCountText.height) * 0.5);
+	}
+
+	function updatePreviewButton():Void
+	{
+		if (previewButton == null)
+			return;
+
+		setButtonText(previewButton, 'Preview');
+		setButtonColor(previewButton, previewWanted ? COLOR_BUTTON_ACTIVE : COLOR_BUTTON);
 	}
 
 	// ============================================================================================
 	// Status bar, block counter, trash, tooltip
 	// ============================================================================================
 
+	function layoutStatusBar():Void
+	{
+		if (statusBar == null || statusText == null)
+			return;
+
+		var h:Int = Std.int(Math.max(1, BlockLayout.statusHeight()));
+
+		if (Std.int(statusBar.width) != Std.int(BlockLayout.width) || Std.int(statusBar.height) != h)
+			statusBar.makeGraphic(Std.int(Math.max(1, BlockLayout.width)), h, COLOR_STATUS_BAR);
+
+		statusBar.setPosition(0, BlockLayout.height - BlockLayout.statusHeight());
+
+		statusText.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('small'), COLOR_STATUS_TEXT, LEFT);
+		statusText.fieldWidth = Std.int(Math.max(60, BlockLayout.width - inset * 2));
+		statusText.wordWrap = false; // the two line wrap is done by `wrapStatus()`
+		statusText.setPosition(inset, BlockLayout.height - BlockLayout.statusHeight() + Math.max(2, gap * 0.5));
+		renderStatus(statusMessage);
+	}
+
 	function createStatusBar():Void
 	{
-		statusBar = new FlxSprite(0, FlxG.height - STATUS_HEIGHT).makeGraphic(FlxG.width, Std.int(STATUS_HEIGHT), COLOR_STATUS_BAR);
+		statusBar = new FlxSprite().makeGraphic(1, 1, COLOR_STATUS_BAR);
 		statusBar.scrollFactor.set(0, 0);
 		statusBar.cameras = [camHUD];
 		add(statusBar);
 
-		statusText = new FlxText(10, FlxG.height - STATUS_HEIGHT + 6, FlxG.width - 20,
-			'Ready - Drag to Move Blocks, Space+Drag to Pan, E/Q or Ctrl+Scroll to Zoom', 16);
-		statusText.setFormat(Paths.font('vcr.ttf'), 16, COLOR_STATUS_TEXT);
+		statusText = new FlxText(0, 0, 100, '', BlockLayout.font('small'));
+		statusText.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('small'), COLOR_STATUS_TEXT, LEFT);
 		statusText.scrollFactor.set(0, 0);
 		statusText.cameras = [camHUD];
 		add(statusText);
 
-		blockCountText = new FlxText(FlxG.width - BLOCK_COUNTER_WIDTH + 6, 10, BLOCK_COUNTER_WIDTH - 16, 'Blocks: 0', 20);
-		blockCountText.setFormat(Paths.font('vcr.ttf'), 20, COLOR_BLOCK_COUNT, RIGHT);
+		blockCountText = new FlxText(0, 0, 100, 'Blocks: 0', BlockLayout.font('small'));
+		blockCountText.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('small'), COLOR_BLOCK_COUNT, RIGHT);
 		blockCountText.scrollFactor.set(0, 0);
 		blockCountText.cameras = [camHUD];
 		add(blockCountText);
 	}
 
-	function createTrashCan():Void
-	{
-		trashCan = new FlxSprite(FlxG.width - 80, FlxG.height - 100).makeGraphic(60, 60, COLOR_TRASH);
-		trashCan.scrollFactor.set(0, 0);
-		trashCan.cameras = [camHUD];
-		add(trashCan);
-
-		trashLabel = new FlxText(trashCan.x, trashCan.y + 24, 60, 'TRASH', 12);
-		trashLabel.setFormat(Paths.font('vcr.ttf'), 12, FlxColor.WHITE, CENTER);
-		trashLabel.scrollFactor.set(0, 0);
-		trashLabel.cameras = [camHUD];
-		add(trashLabel);
-	}
-
-	function createTooltip():Void
-	{
-		tooltipBox = new FlxSprite().makeGraphic(300, 50, COLOR_TOOLTIP_BG);
-		tooltipBox.scrollFactor.set(0, 0);
-		tooltipBox.cameras = [camHUD];
-		tooltipBox.visible = false;
-		add(tooltipBox);
-
-		tooltipText = new FlxText(0, 0, 290, '', 14);
-		tooltipText.setFormat(Paths.font('vcr.ttf'), 14, FlxColor.WHITE);
-		tooltipText.scrollFactor.set(0, 0);
-		tooltipText.cameras = [camHUD];
-		tooltipText.visible = false;
-		add(tooltipText);
-	}
-
+	/** Sets the status line and restarts the hold timer. */
 	function setStatus(message:String):Void
 	{
 		statusHold = STATUS_HOLD;
-		if (statusText != null)
-			statusText.text = message;
+		statusMessage = (message == null) ? '' : message;
+		renderStatus(statusMessage);
+	}
+
+	/**
+	 * Draws a status message. Narrow viewports (phones in landscape, small windows) only have a
+	 * one line tall status bar, so the message is wrapped into two lines there — written here
+	 * instead of relying on `FlxText` wrapping, which would just overflow the bar.
+	 */
+	function renderStatus(message:String):Void
+	{
+		if (statusText == null)
+			return;
+
+		var text:String = (message == null) ? '' : message;
+		var rendered:String = BlockLayout.narrow ? wrapStatus(text) : text;
+
+		// Only on a real change: `FlxText` regenerates its field whenever the text is assigned.
+		if (statusText.text != rendered)
+			statusText.text = rendered;
+
+		if (preview != null && preview.isOpen())
+			preview.setStatus(text);
+	}
+
+	function wrapStatus(message:String):String
+	{
+		var maxWidth:Float = Math.max(80, BlockLayout.width - inset * 2 - counterWidth);
+		var perLine:Int = Std.int(Math.max(16, maxWidth / (BlockLayout.font('small') * 0.56)));
+		if (message.length <= perLine)
+			return message;
+
+		var cut:Int = -1;
+		var last:Int = message.length;
+		for (i in 0...perLine)
+		{
+			var index:Int = perLine - i;
+			if (index <= 0 || index >= message.length)
+				continue;
+			if (message.charAt(index) == ' ')
+			{
+				cut = index;
+				break;
+			}
+		}
+
+		if (cut <= 0)
+			cut = perLine;
+		if (cut > last)
+			cut = last;
+
+		var first:String = message.substr(0, cut);
+		var rest:String = message.substr(cut);
+		while (rest.length > 0 && rest.charAt(0) == ' ')
+			rest = rest.substr(1);
+
+		if (rest.length > perLine * 2)
+			rest = rest.substr(0, perLine * 2 - 3) + '...';
+
+		return first + '\n' + rest;
 	}
 
 	function updateStatusText(elapsed:Float):Void
@@ -820,13 +1251,15 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 				return;
 		}
 
-		statusText.text = contextHint();
+		var hint:String = contextHint();
+		statusMessage = hint;
+		renderStatus(hint);
 	}
 
 	function contextHint():String
 	{
 		if (isDragging)
-			return 'Drop on the trash or over the sidebar to delete - snapping distance is 30px';
+			return 'Drop on the trash or over the palette to delete - snapping distance is 30px';
 
 		if (isPanning)
 			return 'Panning - release to stop';
@@ -850,39 +1283,1484 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		blockCountText.text = 'Blocks: ' + workspaceBlocks(activeWorkspaceId()).length;
 	}
 
+	/** Rounded, tinted tile graphic: a white body and a grey outline the sprite tints per category. */
+	public static function buildTileBitmap(w:Int, h:Int, fill:Int, border:Int, gripColor:Int, grip:Bool):BitmapData
+	{
+		var width:Int = Std.int(Math.max(w, 1));
+		var height:Int = Std.int(Math.max(h, 1));
+		var data:BitmapData = new BitmapData(width, height, true, 0x00000000);
+		var radius:Int = Std.int(FlxMath.bound(height * 0.32, 3, 12));
+
+		fillRounded(data, 0, 0, width, height, radius, border);
+		fillRounded(data, 1, 1, width - 2, height - 2, Std.int(Math.max(radius - 1, 1)), fill);
+
+		if (grip)
+		{
+			var dotSize:Int = Std.int(FlxMath.bound(height * 0.11, 2, 5));
+			var dotGap:Int = dotSize + Std.int(FlxMath.bound(height * 0.09, 2, 6));
+			var total:Int = dotSize * 3 + (dotGap - dotSize) * 2;
+			var dotX:Int = Std.int(FlxMath.bound(height * 0.42, 6, 26));
+			var dotY:Int = Std.int(Math.max(0, (height - total) * 0.5));
+
+			for (i in 0...3)
+				data.fillRect(new Rectangle(dotX, dotY + i * dotGap, dotSize, dotSize), gripColor);
+		}
+
+		return data;
+	}
+
+	public static function fillRounded(data:BitmapData, x:Int, y:Int, w:Int, h:Int, radius:Int, color:Int):Void
+	{
+		if (w <= 0 || h <= 0)
+			return;
+
+		var r:Int = Std.int(Math.min(radius, Math.min(Math.floor(w / 2), Math.floor(h / 2))));
+		if (r <= 0)
+		{
+			data.fillRect(new Rectangle(x, y, w, h), color);
+			return;
+		}
+
+		data.fillRect(new Rectangle(x, y + r, w, h - r * 2), color);
+
+		for (i in 0...r)
+		{
+			var dy:Float = r - i - 0.5;
+			var inset:Int = Std.int(Math.ceil(r - Math.sqrt(Math.max(r * r - dy * dy, 0))));
+
+			data.fillRect(new Rectangle(x + inset, y + i, Math.max(1, w - inset * 2), 1), color);
+			data.fillRect(new Rectangle(x + inset, y + h - 1 - i, Math.max(1, w - inset * 2), 1), color);
+		}
+	}
+
+	/** Paints a sprite with a rounded body in `color` without touching its labels. */
+	public static function paintRounded(sprite:FlxSprite, w:Float, h:Float, color:Int, grip:Bool):Void
+	{
+		if (sprite == null)
+			return;
+
+		var iw:Int = Std.int(Math.max(1, w));
+		var ih:Int = Std.int(Math.max(1, h));
+
+		// Repainting an already matching body would allocate a fresh bitmap on every layout pass.
+		if (sprite.graphic != null && Std.int(sprite.width) == iw && Std.int(sprite.height) == ih && sprite.color == color)
+			return;
+
+		var data:BitmapData = buildTileBitmap(iw, ih, COLOR_TILE_FILL, COLOR_TILE_BORDER, COLOR_TILE_GRIP, grip);
+		sprite.pixels = data;
+		sprite.color = color;
+	}
+
+	function layoutTrash():Void
+	{
+		if (trashCan == null || trashLabel == null)
+			return;
+
+		if (BlockLayout.portrait)
+		{
+			trashSize = Math.max(BlockLayout.touchSize() * 1.15, 46 * BlockLayout.scale);
+			trashCan.setPosition(wsRect.x + wsRect.w - inset - trashSize, wsRect.y + inset);
+		}
+		else
+		{
+			trashSize = Math.min(BlockLayout.timelineHeight() - gap * 2, Math.max(BlockLayout.touchSize(), 56 * BlockLayout.scale));
+			var margin:Float = BlockLayout.timelineRightMargin();
+			trashCan.setPosition(BlockLayout.width - margin + (margin - trashSize) * 0.5, timelineRect.y + (timelineRect.h - trashSize) * 0.5);
+		}
+
+		trashSize = Math.max(24, trashSize);
+		paintRounded(trashCan, trashSize, trashSize, COLOR_TRASH, false);
+		trashCan.setPosition(trashCan.x, trashCan.y);
+
+		trashLabel.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('tiny'), FlxColor.WHITE, CENTER);
+		trashLabel.fieldWidth = Std.int(trashSize);
+		trashLabel.setPosition(trashCan.x, trashCan.y + (trashSize - trashLabel.height) * 0.5);
+	}
+
+	function createTrashCan():Void
+	{
+		trashCan = new FlxSprite().makeGraphic(1, 1, COLOR_TRASH);
+		trashCan.scrollFactor.set(0, 0);
+		trashCan.cameras = [camHUD];
+		add(trashCan);
+
+		trashLabel = new FlxText(0, 0, 60, 'TRASH', BlockLayout.font('tiny'));
+		trashLabel.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('tiny'), FlxColor.WHITE, CENTER);
+		trashLabel.scrollFactor.set(0, 0);
+		trashLabel.cameras = [camHUD];
+		add(trashLabel);
+	}
+
+	function createTooltip():Void
+	{
+		tooltipBox = new FlxSprite().makeGraphic(1, 1, COLOR_TOOLTIP_BG);
+		tooltipBox.scrollFactor.set(0, 0);
+		tooltipBox.cameras = [camHUD];
+		tooltipBox.visible = false;
+		add(tooltipBox);
+
+		tooltipText = new FlxText(0, 0, 100, '', BlockLayout.font('small'));
+		tooltipText.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('small'), FlxColor.WHITE);
+		tooltipText.scrollFactor.set(0, 0);
+		tooltipText.cameras = [camHUD];
+		tooltipText.visible = false;
+		add(tooltipText);
+	}
+
+	function showTooltip(text:String):Void
+	{
+		if (tooltipBox == null || tooltipText == null)
+			return;
+
+		if (text == null || text.length == 0)
+		{
+			tooltipBox.visible = false;
+			tooltipText.visible = false;
+			tooltipMessage = '';
+			return;
+		}
+
+		if (text != tooltipMessage)
+		{
+			tooltipMessage = text;
+			tooltipText.text = text;
+
+			var fontSize:Int = BlockLayout.font('small');
+			var pad:Float = BlockLayout.spacing('normal');
+			var maxWidth:Float = Math.min(BlockLayout.width * 0.5, 380 * BlockLayout.scale);
+			var wanted:Float = Math.min(maxWidth, text.length * fontSize * 0.62 + pad * 2);
+
+			tooltipBoxWidth = Math.max(80, wanted);
+			tooltipBoxHeight = Math.max(24, tooltipText.height + pad * 2);
+			tooltipText.setFormat(Paths.font('vcr.ttf'), fontSize, FlxColor.WHITE, LEFT);
+			tooltipText.fieldWidth = Std.int(Math.max(40, tooltipBoxWidth - pad * 2));
+			tooltipText.wordWrap = false;
+			tooltipText.setPosition(tooltipText.x, tooltipText.y);
+
+			tooltipBox.makeGraphic(Std.int(tooltipBoxWidth), Std.int(tooltipBoxHeight), COLOR_TOOLTIP_BG);
+		}
+
+		tooltipBox.visible = true;
+		tooltipText.visible = true;
+
+		var x:Float = getPointerScreenX() + 15;
+		var y:Float = getPointerScreenY() + 15;
+		if (x + tooltipBoxWidth + 8 > BlockLayout.width)
+			x = Math.max(inset, BlockLayout.width - tooltipBoxWidth - 8);
+		if (y + tooltipBoxHeight + 8 > BlockLayout.height)
+			y = Math.max(inset, BlockLayout.height - tooltipBoxHeight - 8);
+
+		tooltipBox.setPosition(x, y);
+		tooltipText.setPosition(x + BlockLayout.spacing('normal'), y + BlockLayout.spacing('normal') * 0.5);
+	}
+
+	// ============================================================================================
+	// Palette: chrome, category rail, chips, search and the block list
+	// ============================================================================================
+
+	/** Resizes a sprite to a rect when needed and moves it there. */
+	static function fitSprite(sprite:FlxSprite, x:Float, y:Float, w:Float, h:Float, color:Int):Void
+	{
+		if (sprite == null)
+			return;
+
+		var iw:Int = Std.int(Math.max(1, w));
+		var ih:Int = Std.int(Math.max(1, h));
+		if (Std.int(sprite.width) != iw || Std.int(sprite.height) != ih)
+			sprite.makeGraphic(iw, ih, color);
+
+		sprite.setPosition(x, y);
+	}
+
+	function ensureStatusBar():Void
+	{
+		if (statusBar == null)
+			createStatusBar();
+	}
+
+	function ensureTrash():Void
+	{
+		if (trashCan == null)
+			createTrashCan();
+	}
+
+	function ensureTooltip():Void
+	{
+		if (tooltipBox == null)
+			createTooltip();
+	}
+
+	function ensureMarkerButton():Void
+	{
+		if (markerButton != null)
+			return;
+
+		markerButton = makeButton('+ marker', function()
+		{
+			addMarkerAtCurrentStep();
+		}, COLOR_BUTTON_ACTIVE);
+	}
+
+	function ensurePaletteChrome():Void
+	{
+		if (paletteBg != null)
+			return;
+
+		paletteBg = new FlxSprite().makeGraphic(1, 1, COLOR_SIDEBAR_BG);
+		paletteBg.scrollFactor.set(0, 0);
+		paletteBg.cameras = [camPaletteBack];
+		add(paletteBg);
+
+		paletteStripBg = new FlxSprite().makeGraphic(1, 1, COLOR_SIDEBAR_STRIP);
+		paletteStripBg.scrollFactor.set(0, 0);
+		paletteStripBg.cameras = [camPaletteBack];
+		add(paletteStripBg);
+
+		paletteSeparator = new FlxSprite().makeGraphic(1, 1, COLOR_SEPARATOR);
+		paletteSeparator.scrollFactor.set(0, 0);
+		paletteSeparator.cameras = [camPaletteBack];
+		add(paletteSeparator);
+
+		scrollTrack = new FlxSprite().makeGraphic(1, 1, COLOR_SCROLL_TRACK);
+		scrollTrack.scrollFactor.set(0, 0);
+		scrollTrack.cameras = [camPaletteBack];
+		add(scrollTrack);
+
+		scrollThumb = new FlxSprite().makeGraphic(1, 1, COLOR_SCROLL_THUMB);
+		scrollThumb.scrollFactor.set(0, 0);
+		scrollThumb.cameras = [camPaletteBack];
+		add(scrollThumb);
+
+		handlePill = new FlxSprite().makeGraphic(1, 1, COLOR_HANDLE);
+		handlePill.scrollFactor.set(0, 0);
+		handlePill.cameras = [camHUD];
+		add(handlePill);
+
+		collapseButton = makeButton('v', togglePaletteCollapsed, COLOR_BUTTON);
+	}
+
+	function layoutPaletteChrome():Void
+	{
+		if (paletteBg == null)
+			return;
+
+		if (BlockLayout.sidebarVisible())
+		{
+			var stripW:Float = paletteStrip.w;
+			fitSprite(paletteStripBg, 0, paletteBand.y, stripW, paletteBand.h, COLOR_SIDEBAR_STRIP);
+			paletteStripBg.visible = true;
+
+			fitSprite(paletteBg, stripW, paletteBand.y, Math.max(1, paletteBand.w - stripW), paletteBand.h, COLOR_SIDEBAR_BG);
+			paletteBg.visible = true;
+
+			// Vertical separator between the palette column and the canvas.
+			fitSprite(paletteSeparator, paletteBand.w - 1, paletteBand.y, 1, paletteBand.h, COLOR_SEPARATOR);
+		}
+		else
+		{
+			paletteStripBg.visible = false;
+			fitSprite(paletteBg, paletteBand.x, paletteBand.y, paletteBand.w, paletteBand.h, COLOR_SHEET_BG);
+			paletteBg.visible = true;
+
+			// Horizontal separator between the canvas and the sheet.
+			fitSprite(paletteSeparator, paletteBand.x, paletteBand.y, paletteBand.w, 1, COLOR_SEPARATOR);
+		}
+
+		layoutSheetHandle();
+
+		if (collapseButton != null)
+		{
+			if (BlockLayout.portrait)
+			{
+				setButtonText(collapseButton, paletteCollapsed ? 'v' : '^');
+				fitButton(collapseButton, chevronRect.w, chevronRect.h);
+				centerButtonLabelIn(collapseButton, chevronRect.h);
+				collapseButton.setPosition(chevronRect.x, chevronRect.y);
+				collapseButton.visible = true;
+			}
+			else
+			{
+				collapseButton.visible = false;
+			}
+		}
+
+		ensureSearchField();
+		layoutSearchField();
+	}
+
+	/** The grab pill of the bottom sheet; dragging it collapses or expands the sheet. */
+	function layoutSheetHandle():Void
+	{
+		if (handlePill == null)
+			return;
+
+		if (!BlockLayout.portrait)
+		{
+			handlePill.visible = false;
+			return;
+		}
+
+		var pillW:Float = Math.min(72 * BlockLayout.scale, paletteBand.w * 0.35);
+		var pillH:Float = Math.max(4, 6 * BlockLayout.scale);
+
+		handlePill.visible = true;
+		fitSprite(handlePill, paletteBand.x + (paletteBand.w - pillW) * 0.5, handleRect.y + (handleRect.h - pillH) * 0.5, pillW, pillH, COLOR_HANDLE);
+	}
+
+	function fitButton(button:FlxButton, w:Float, h:Float):Void
+	{
+		if (button == null)
+			return;
+
+		var iw:Int = Std.int(Math.max(1, w));
+		var ih:Int = Std.int(Math.max(1, h));
+		if (Std.int(button.width) != iw || Std.int(button.height) != ih)
+			button.makeGraphic(iw, ih, buttonColor(button));
+
+		styleButtonLabel(button);
+	}
+
+	function centerButtonLabelIn(button:FlxButton, height:Float):Void
+	{
+		if (button == null || button.label == null || button.labelOffsets == null)
+			return;
+
+		var offset:Float = Math.max(0, (height - button.label.height) * 0.5);
+		for (point in button.labelOffsets)
+		{
+			if (point != null)
+				point.set(point.x, offset);
+		}
+	}
+
+	// --- Search field ---------------------------------------------------------------------------
+
+	function ensureSearchField():Void
+	{
+		var wantW:Float = Math.max(80, searchRect.w);
+		var wantH:Float = Math.max(28, searchHeight);
+
+		if (searchField != null && searchFieldWidth == wantW && searchFieldHeight == wantH)
+			return;
+
+		destroySearchField();
+
+		searchField = new InputField(searchRect.x, searchRect.y, wantW, wantH, '', ParamType.STRING, 'Search blocks');
+		searchField.value = searchText;
+		searchFieldWidth = wantW;
+		searchFieldHeight = wantH;
+
+		searchField.bg.cameras = [camHUD];
+		searchField.text.cameras = [camHUD];
+		searchField.placeholderText.cameras = [camHUD];
+		add(searchField.bg);
+		add(searchField.text);
+		add(searchField.placeholderText);
+
+		styleSearchField();
+	}
+
+	function destroySearchField():Void
+	{
+		if (searchField == null)
+			return;
+
+		if (editingField == searchField)
+		{
+			editingField = null;
+			Block.externalEditorActive = false;
+		}
+
+		remove(searchField.bg, true);
+		remove(searchField.text, true);
+		remove(searchField.placeholderText, true);
+		FlxDestroyUtil.destroy(searchField.bg);
+		FlxDestroyUtil.destroy(searchField.text);
+		FlxDestroyUtil.destroy(searchField.placeholderText);
+
+		searchField = null;
+		searchFieldWidth = 0;
+		searchFieldHeight = 0;
+	}
+
+	/** `InputField` centres its text; the search field reads better left aligned. */
+	function styleSearchField():Void
+	{
+		if (searchField == null)
+			return;
+
+		searchField.text.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('body'), COLOR_STATUS_TEXT, LEFT);
+		searchField.placeholderText.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('body'), COLOR_BLOCK_COUNT, LEFT);
+	}
+
+	function layoutSearchField():Void
+	{
+		if (searchField == null)
+			return;
+
+		searchField.width = Math.max(80, searchRect.w);
+		searchField.updatePosition(searchRect.x, searchRect.y);
+		styleSearchField();
+
+		var shown:Bool = searchRect.h > 0;
+		if (shown)
+		{
+			searchField.update(0);
+		}
+		else
+		{
+			searchField.unfocus();
+			searchField.bg.visible = false;
+			searchField.text.visible = false;
+			searchField.placeholderText.visible = false;
+		}
+	}
+
+	function updateSearchField(elapsed:Float):Void
+	{
+		if (searchField == null || searchRect.h <= 0)
+			return;
+
+		searchField.update(elapsed);
+
+		if (searchField.text.alignment != FlxTextAlign.LEFT)
+			styleSearchField();
+
+		var current:String = (searchField.value == null) ? '' : Std.string(searchField.value);
+		if (current != searchText)
+		{
+			searchText = current;
+			refreshPaletteVisibility();
+		}
+	}
+
+	// --- Content: sections, tiles, rail and chips ------------------------------------------------
+
+	function rebuildPaletteContent():Void
+	{
+		var key:String = Std.string(BlockLayout.width) + 'x' + Std.string(BlockLayout.height) + 'x' + Std.string(BlockLayout.scale)
+			+ (BlockLayout.portrait ? 'p' : 'l') + (BlockLayout.compact ? 'c' : 'n');
+
+		if (paletteBuildKey == key && paletteSections.length > 0)
+		{
+			if (BlockLayout.portrait && paletteCollapsed)
+			{
+				// The sheet is folded away: keep the content laid out as it was, so unfolding it
+				// restores the very same scroll position.
+				refreshPaletteVisibility();
+				applyPaletteScroll();
+				return;
+			}
+
+			layoutPaletteContent();
+			layoutRail();
+			layoutChips();
+			refreshPaletteVisibility();
+			applyPaletteScroll();
+			return;
+		}
+
+		paletteBuildKey = key;
+
+		destroyPaletteContent();
+		BlockLibrary.ensureLoaded();
+
+		var categories:Array<BlockCategory> = BlockLibrary.categories;
+
+		buildRail(categories);
+		buildChips(categories);
+		buildSections(categories);
+
+		paletteScroll = 0;
+		chipsScroll = 0;
+		layoutPaletteContent();
+		layoutRail();
+		layoutChips();
+		refreshPaletteVisibility();
+		applyPaletteScroll();
+	}
+
+	/**
+	 * The context menu's "reload blocks": picks up block configs a mod added (or fixed) while the
+	 * song runs. The palette caches itself per viewport, so the key is dropped to force a rebuild
+	 * from the reloaded library, and the loader's errors are reported in the status bar.
+	 */
+	function reloadBlockLibrary():Void
+	{
+		BlockLibrary.reload();
+
+		paletteBuildKey = '';
+		rebuildPaletteContent();
+
+		var blocks:Int = BlockLibrary.allBlocks().length;
+		var errors:Array<String> = BlockConfigLoader.lastErrors();
+
+		if (errors != null && errors.length > 0)
+			setStatus('Block library reloaded - ' + blocks + ' blocks, ' + errors.length + ' config error(s): ' + errors[0]);
+		else
+			setStatus('Block library reloaded - ' + blocks + ' blocks');
+
+		playSound('confirmMenu');
+	}
+
+	function destroyPaletteContent():Void
+	{
+		for (section in paletteSections)
+		{
+			if (section == null)
+				continue;
+
+			for (tile in section.tiles)
+			{
+				if (tile == null)
+					continue;
+
+				remove(tile.bg, true);
+				remove(tile.label, true);
+				tile.destroy();
+			}
+
+			remove(section.header, true);
+			remove(section.line, true);
+			section.destroy();
+		}
+		paletteSections = [];
+
+		for (button in railButtons)
+			destroyCategoryButton(button);
+		railButtons = [];
+
+		for (chip in paletteChips)
+			destroyCategoryButton(chip);
+		paletteChips = [];
+
+		activeCategory = '';
+		paletteContentHeight = 0;
+		chipsContentWidth = 0;
+	}
+
+	function destroyCategoryButton(button:CategoryButton):Void
+	{
+		if (button == null)
+			return;
+
+		remove(button.bg, true);
+		remove(button.label, true);
+		button.destroy();
+	}
+
+	function addCategoryButton(button:CategoryButton):Void
+	{
+		if (button == null)
+			return;
+
+		add(button.bg);
+		add(button.label);
+	}
+
+	/** Landscape only: the narrow rail of category buttons down the left of the palette column. */
+	function buildRail(categories:Array<BlockCategory>):Void
+	{
+		if (!BlockLayout.sidebarVisible() || categories == null)
+			return;
+
+		var count:Int = 0;
+		for (category in categories)
+		{
+			if (category != null)
+				count++;
+		}
+		if (count == 0)
+			return;
+
+		var size:Float = railSizeFor(count);
+		railButtonSize = size;
+
+		for (category in categories)
+		{
+			if (category == null)
+				continue;
+
+			// The rail is static chrome, so it lives on the palette background camera (which never
+			// scrolls) instead of the scrolling block list.
+			var button:CategoryButton = new CategoryButton(category, 0, 0, size, size, camPaletteBack, category.icon, Std.int(size * 0.55));
+			addCategoryButton(button);
+			button.setActive(false);
+			railButtons.push(button);
+		}
+	}
+
+	function railSizeFor(count:Int):Float
+	{
+		var stripW:Float = Math.max(24, BlockLayout.categoryStripWidth());
+		// Keep the rail (and its rounded outlines) clear of the screen edge.
+		var railW:Float = Math.max(24, stripW - inset * 2);
+		var available:Float = Math.max(40, paletteStrip.h - inset * 2);
+		var slot:Float = (available - BlockLayout.spacing('normal') * (count - 1)) / Math.max(1, count);
+		var wanted:Float = Math.min(slot, 56 * BlockLayout.scale);
+
+		return Math.max(20, Math.min(railW, wanted));
+	}
+
+	/** Portrait only: the horizontally scrollable category chips of the bottom sheet. */
+	function buildChips(categories:Array<BlockCategory>):Void
+	{
+		if (BlockLayout.sidebarVisible() || categories == null)
+			return;
+
+		var fontSize:Int = BlockLayout.font('small');
+
+		for (category in categories)
+		{
+			if (category == null)
+				continue;
+
+			var text:String = (category.icon == null || category.icon.length == 0) ? category.name : (category.icon + ' ' + category.name);
+			var width:Float = Math.max(chipsHeight, BlockLayout.buttonWidth(text) + gap * 2);
+
+			var chip:CategoryButton = new CategoryButton(category, 0, 0, width, chipsHeight, camHUD, text, fontSize);
+			addCategoryButton(chip);
+			chip.setActive(false);
+			paletteChips.push(chip);
+		}
+	}
+
+	function buildSections(categories:Array<BlockCategory>):Void
+	{
+		if (categories == null)
+			return;
+
+		var headerSize:Int = BlockLayout.font('small');
+		var compact:Bool = BlockLayout.compact;
+		var listW:Float = Math.max(40, paletteList.w);
+		var rowH:Float = BlockLayout.paletteRowHeight();
+
+		for (category in categories)
+		{
+			if (category == null || category.blocks == null || category.blocks.length == 0)
+				continue;
+
+			var section:PaletteSection = new PaletteSection(category, camPalette, headerSize);
+			section.header.text = category.name;
+			section.header.fieldWidth = Std.int(listW);
+			add(section.header);
+			add(section.line);
+
+			for (data in category.blocks)
+			{
+				if (data == null)
+					continue;
+
+				var tile:PaletteTile = new PaletteTile(data, category, listW, rowH, camPalette, compact);
+				add(tile.bg);
+				add(tile.label);
+				section.tiles.push(tile);
+			}
+
+			paletteSections.push(section);
+		}
+	}
+
+	/**
+	 * Lays the sections and tiles out in list-local coordinates: `0` is the top left corner of the
+	 * list rect, which is also the corner `camPalette` is anchored to.
+	 */
+	function layoutPaletteContent():Void
+	{
+		var listW:Float = Math.max(40, paletteList.w);
+		var rowH:Float = BlockLayout.paletteRowHeight();
+		var loose:Float = BlockLayout.spacing('loose');
+		var y:Float = 0;
+		var headerSize:Int = BlockLayout.font('small');
+		var first:Bool = true;
+
+		for (section in paletteSections)
+		{
+			if (section == null || section.tiles.length == 0)
+				continue;
+
+			// The rect of the list already holds the gap to the search field / chip row above, so the
+			// first header starts flush with it; the sections after it keep the roomy spacing.
+			if (!first)
+				y += loose;
+			first = false;
+
+			section.contentTop = y;
+			section.headerY = y;
+			section.headerHeight = Math.round(headerSize * 1.25);
+			section.header.setFormat(Paths.font('vcr.ttf'), headerSize, section.category.color, LEFT);
+			section.header.fieldWidth = Std.int(listW);
+			section.header.setPosition(0, y);
+
+			fitSprite(section.line, 0, y + section.headerHeight, listW, 1, section.category.color);
+			section.line.alpha = 0.55;
+
+			y += section.headerHeight + gap;
+
+			for (tile in section.tiles)
+			{
+				tile.x = 0;
+				tile.y = y;
+				tile.place(0, y, listW, rowH);
+				y += rowH + gap;
+			}
+
+			section.contentBottom = y;
+			y += BlockLayout.spacing('normal');
+		}
+
+		paletteContentHeight = Math.max(0, y - gap);
+		if (paletteList.h > 0)
+			paletteScroll = FlxMath.bound(paletteScroll, 0, Math.max(0, paletteContentHeight - paletteList.h));
+	}
+
+	function layoutRail():Void
+	{
+		if (railButtons.length == 0)
+			return;
+
+		var size:Float = railButtonSize;
+		var gapY:Float = BlockLayout.spacing('normal');
+		var total:Float = size * railButtons.length + gapY * (railButtons.length - 1);
+
+		// The chips never touch the screen edge: the rail is inset, and they are centred in whatever
+		// width is left between the two insets.
+		var left:Float = paletteStrip.x + inset;
+		var railW:Float = Math.max(size, paletteStrip.w - inset * 2);
+		var y:Float = paletteStrip.y + Math.max(inset, (paletteStrip.h - total) * 0.5);
+		var x:Float = left + (railW - size) * 0.5;
+
+		for (button in railButtons)
+		{
+			button.moveTo(x, y);
+			y += size + gapY;
+		}
+	}
+
+	function layoutChips():Void
+	{
+		if (paletteChips.length == 0)
+		{
+			chipsContentWidth = 0;
+			return;
+		}
+
+		var x:Float = chipsRect.x;
+		var y:Float = chipsRect.y + (chipsRect.h - chipsHeight) * 0.5;
+
+		for (chip in paletteChips)
+		{
+			chip.moveTo(x, y);
+			x += chip.width + gap;
+		}
+
+		chipsContentWidth = Math.max(0, x - chipsRect.x - gap);
+		chipsScroll = FlxMath.bound(chipsScroll, 0, Math.max(0, chipsContentWidth - chipsRect.w));
+		applyChipsScroll();
+	}
+
+	function applyChipsScroll():Void
+	{
+		for (chip in paletteChips)
+			chip.setOffset(-chipsScroll);
+	}
+
+	/** Content y -> screen y: the palette camera scrolls the content inside the list rect. */
+	function paletteScreenY(contentY:Float):Float
+	{
+		return paletteList.y + contentY - paletteScroll;
+	}
+
+	/** Hides tiles and headers that scroll out of the list, and applies the search filter. */
+	function refreshPaletteVisibility():Void
+	{
+		var filter:String = (searchText == null) ? '' : searchText.toLowerCase();
+		var list:Rect = paletteList;
+		var showList:Bool = (list.h > 0) && !(BlockLayout.portrait && paletteCollapsed);
+
+		for (section in paletteSections)
+		{
+			if (section == null)
+				continue;
+
+			var anyMatch:Bool = false;
+
+			for (tile in section.tiles)
+			{
+				if (tile == null)
+					continue;
+
+				var matches:Bool = (filter.length == 0) || tileMatches(tile, filter);
+				if (matches)
+					anyMatch = true;
+				else
+					tile.setVisible(false);
+
+				if (!matches)
+					continue;
+
+				var top:Float = paletteScreenY(tile.y);
+				var inside:Bool = showList && (top + tile.h > list.y) && (top < list.y + list.h);
+				tile.setVisible(inside);
+			}
+
+			var headerTop:Float = paletteScreenY(section.headerY);
+			var headerInside:Bool = showList && (headerTop + section.headerHeight > list.y) && (headerTop < list.y + list.h);
+			section.setHeaderVisible(anyMatch && headerInside);
+		}
+
+		if (filter.length > 0)
+		{
+			for (button in railButtons)
+			{
+				if (button != null)
+					button.setDimmed(!categoryHasMatch(button.category, filter));
+			}
+		}
+		else
+		{
+			for (button in railButtons)
+			{
+				if (button != null)
+					button.setDimmed(false);
+			}
+		}
+	}
+
+	/** Matches a tile against the search text: label, block type, category and description. */
+	function tileMatches(tile:PaletteTile, filter:String):Bool
+	{
+		if (tile == null || tile.data == null)
+			return false;
+
+		if (tile.data.label != null && tile.data.label.toLowerCase().indexOf(filter) >= 0)
+			return true;
+		if (tile.data.type != null && tile.data.type.toLowerCase().indexOf(filter) >= 0)
+			return true;
+		if (tile.data.category != null && tile.data.category.toLowerCase().indexOf(filter) >= 0)
+			return true;
+		if (tile.data.description != null && tile.data.description.toLowerCase().indexOf(filter) >= 0)
+			return true;
+
+		return false;
+	}
+
+	function categoryHasMatch(category:BlockCategory, filter:String):Bool
+	{
+		if (category == null || category.blocks == null)
+			return false;
+
+		if (category.name != null && category.name.toLowerCase().indexOf(filter) >= 0)
+			return true;
+
+		for (data in category.blocks)
+		{
+			if (data == null)
+				continue;
+			if (data.label != null && data.label.toLowerCase().indexOf(filter) >= 0)
+				return true;
+			if (data.type != null && data.type.toLowerCase().indexOf(filter) >= 0)
+				return true;
+		}
+
+		return false;
+	}
+
+	function findSection(categoryName:String):PaletteSection
+	{
+		for (section in paletteSections)
+		{
+			if (section != null && section.category != null && section.category.name == categoryName)
+				return section;
+		}
+
+		return null;
+	}
+
+	function setActiveCategory(categoryName:String):Void
+	{
+		if (activeCategory == categoryName)
+			return;
+
+		activeCategory = categoryName;
+
+		for (button in railButtons)
+		{
+			if (button != null && button.category != null)
+				button.setActive(button.category.name == categoryName);
+		}
+
+		for (chip in paletteChips)
+		{
+			if (chip != null && chip.category != null)
+				chip.setActive(chip.category.name == categoryName);
+		}
+	}
+
+	/** Highlights the category whose section sits at the top of the list. */
+	function updateActiveCategoryFromScroll():Void
+	{
+		var probe:Float = paletteScroll + gap;
+		var found:String = '';
+
+		for (section in paletteSections)
+		{
+			if (section == null || section.tiles.length == 0)
+				continue;
+			if (probe >= section.contentTop && probe < section.contentBottom + BlockLayout.spacing('normal'))
+			{
+				found = section.category.name;
+				break;
+			}
+		}
+
+		if (found.length > 0)
+			setActiveCategory(found);
+	}
+
+	function scrollToCategory(categoryName:String):Void
+	{
+		var section:PaletteSection = findSection(categoryName);
+		if (section == null)
+			return;
+
+		var maxScroll:Float = Math.max(0, paletteContentHeight - paletteList.h);
+		var target:Float = FlxMath.bound(section.contentTop - gap * 2, 0, maxScroll);
+
+		setActiveCategory(categoryName);
+		tweenPaletteScroll(target);
+
+		setStatus('Jumped to ' + categoryName);
+		playSound('scrollMenu');
+	}
+
+	/** Smoothly scrolls the palette list to a content offset. */
+	function tweenPaletteScroll(target:Float):Void
+	{
+		if (paletteScrollTween != null)
+		{
+			paletteScrollTween.cancel();
+			paletteScrollTween = null;
+		}
+
+		if (Math.abs(target - paletteScroll) < 1)
+		{
+			setPaletteScroll(target);
+			return;
+		}
+
+		paletteScrollProxy = {value: paletteScroll};
+		paletteScrollTween = FlxTween.tween(paletteScrollProxy, {value: target}, 0.35, {
+			ease: FlxEase.quartOut,
+			onUpdate: function(tween:FlxTween):Void
+			{
+				setPaletteScroll(paletteScrollProxy.value);
+			},
+			onComplete: function(tween:FlxTween):Void
+			{
+				paletteScrollTween = null;
+			}
+		});
+	}
+
+	function setPaletteScroll(value:Float):Void
+	{
+		var maxScroll:Float = Math.max(0, paletteContentHeight - paletteList.h);
+		var clamped:Float = FlxMath.bound(value, 0, maxScroll);
+		if (clamped == paletteScroll)
+		{
+			applyPaletteScroll();
+			return;
+		}
+
+		paletteScroll = clamped;
+		applyPaletteScroll();
+		refreshPaletteVisibility();
+		updateActiveCategoryFromScroll();
+	}
+
+	function applyPaletteScroll():Void
+	{
+		if (camPalette != null)
+			camPalette.scroll.y = paletteScroll;
+
+		updateScrollThumb();
+	}
+
+	function updateScrollThumb():Void
+	{
+		if (scrollTrack == null || scrollThumb == null)
+			return;
+
+		var maxScroll:Float = Math.max(0, paletteContentHeight - paletteList.h);
+		var trackH:Float = scrollbarRect.h;
+
+		if (maxScroll <= 0 || trackH <= 0 || paletteList.h <= 0)
+		{
+			scrollTrack.visible = false;
+			scrollThumb.visible = false;
+			return;
+		}
+
+		var ratio:Float = Math.min(1, paletteList.h / Math.max(1, paletteContentHeight));
+		var thumbH:Float = Math.max(24, trackH * ratio);
+		var thumbY:Float = scrollbarRect.y + (paletteScroll / maxScroll) * Math.max(0, trackH - thumbH);
+
+		scrollTrack.visible = true;
+		scrollThumb.visible = true;
+		fitSprite(scrollTrack, scrollbarRect.x, scrollbarRect.y, scrollbarRect.w, trackH, COLOR_SCROLL_TRACK);
+		fitSprite(scrollThumb, scrollbarRect.x, thumbY, scrollbarRect.w, thumbH, COLOR_SCROLL_THUMB);
+	}
+
+	function togglePaletteCollapsed():Void
+	{
+		setPaletteCollapsed(!paletteCollapsed);
+	}
+
+	/** Collapses the bottom sheet down to its chip row so the workspace can grow. */
+	function setPaletteCollapsed(collapsed:Bool):Void
+	{
+		if (!BlockLayout.portrait || paletteCollapsed == collapsed)
+			return;
+
+		paletteCollapsed = collapsed;
+		if (collapsed)
+			closeFieldEditor();
+
+		playSound('scrollMenu');
+		setStatus(collapsed ? 'Palette folded away - tap the chevron to bring it back' : 'Palette open');
+		applyLayout();
+		refreshPaletteVisibility();
+	}
+
+	// --- Palette scrolling ----------------------------------------------------------------------
+
+	function updatePaletteScroll(elapsed:Float):Void
+	{
+		if (camPalette == null)
+			return;
+
+		var blocked:Bool = pointerBlocked();
+		var list:Rect = paletteList;
+		var maxScroll:Float = Math.max(0, paletteContentHeight - list.h);
+
+		if (list.h <= 0)
+		{
+			updateScrollThumb();
+			return;
+		}
+
+		var px:Float = getPointerScreenX();
+		var py:Float = getPointerScreenY();
+		var before:Float = paletteScroll;
+
+		if (!blocked && !isDragging && tilePress == null && railPress == null && chipPress == null && !chipsDragging && !sheetDragging && !isDraggingScroll
+			&& !isPanning)
+		{
+			var overList:Bool = pointInRect(px, py, list);
+			var overPalette:Bool = isPointerOverPalette();
+
+			if (overList)
+			{
+				var touch:FlxTouch = getPrimaryTouch();
+
+				if (touch != null)
+				{
+					if (touch.justPressed)
+						paletteDragLastY = py;
+					else if (touch.pressed)
+					{
+						paletteScroll += paletteDragLastY - py;
+						paletteDragLastY = py;
+					}
+				}
+				else if (FlxG.mouse.pressed && !isPointerJustPressed())
+				{
+					// Dragging the list with the mouse works too (touch-screen laptops).
+					if (!mouseScrollActive)
+					{
+						mouseScrollActive = true;
+						paletteDragLastY = py;
+					}
+					else
+					{
+						paletteScroll += paletteDragLastY - py;
+						paletteDragLastY = py;
+					}
+				}
+			}
+
+			if (FlxG.mouse.wheel != 0)
+			{
+				if (overPalette)
+					paletteScroll -= FlxG.mouse.wheel * 40 * BlockLayout.scale;
+				else if (!isPointerOverTimeline())
+				{
+					if (FlxG.keys.pressed.CONTROL)
+					{
+						zoomLevel += FlxG.mouse.wheel * 0.1;
+						zoomLevel = FlxMath.bound(zoomLevel, MIN_ZOOM, MAX_ZOOM);
+						camEditor.zoom = zoomLevel;
+						setStatus('Zoom: ' + Math.round(zoomLevel * 100) + '%');
+					}
+					else
+					{
+						camEditor.scroll.y -= (FlxG.mouse.wheel * 40) / zoomLevel;
+					}
+				}
+			}
+		}
+
+		if (!isPointerPressed())
+			mouseScrollActive = false;
+
+		if (paletteScroll != before)
+		{
+			paletteScroll = FlxMath.bound(paletteScroll, 0, maxScroll);
+			applyPaletteScroll();
+			refreshPaletteVisibility();
+			updateActiveCategoryFromScroll();
+		}
+		else
+		{
+			// Also re-asserts the camera scroll, so the content cannot stay offset if anything else
+			// ever moves that camera.
+			applyPaletteScroll();
+		}
+	}
+
+	// --- Palette pointer handling ---------------------------------------------------------------
+
+	function handlePalettePress(justPressed:Bool, justReleased:Bool, pressed:Bool, px:Float, py:Float):Bool
+	{
+		var inside:Bool = pointInRect(px, py, paletteBand);
+		var busy:Bool = (tilePress != null || railPress != null || chipPress != null || chipsDragging || sheetDragging || isDraggingScroll);
+
+		if (justReleased)
+		{
+			finishPalettePress(px, py);
+			return busy || inside;
+		}
+
+		if (justPressed && inside)
+		{
+			pressConsumed = true;
+
+			if (BlockLayout.portrait && pointInRect(px, py, chevronRect))
+			{
+				togglePaletteCollapsed();
+				return true;
+			}
+
+			if (BlockLayout.portrait && pointInRect(px, py, handleRect))
+			{
+				sheetDragging = true;
+				sheetDragMoved = false;
+				sheetDragStartY = py;
+				return true;
+			}
+
+			if (searchField != null && pointInRect(px, py, searchRect))
+			{
+				// The `InputField` owns the tap: it goes through `Block.requestTextEdit` into
+				// `beginFieldEdit()`, which is where the soft/virtual keyboard opens.
+				return true;
+			}
+
+			if (chipsRect.h > 0 && pointInRect(px, py, chipsRect))
+			{
+				chipPress = chipAt(px, py);
+				chipsDragging = false;
+				chipsDragStartX = px;
+				chipsScrollStart = chipsScroll;
+				return true;
+			}
+
+			if (isOverScrollbar(px, py))
+			{
+				isDraggingScroll = true;
+				scrollDragOffset = py - scrollThumb.y;
+				return true;
+			}
+
+			railPress = railButtonAt(px, py);
+			if (railPress != null)
+				return true;
+
+			tilePress = tileAt(px, py);
+			if (tilePress != null)
+			{
+				tileDragStarted = false;
+				tilePressX = px;
+				tilePressY = py;
+				return true;
+			}
+
+			return true; // empty palette space still belongs to the palette
+		}
+
+		if (!pressed)
+			return busy || inside;
+
+		if (sheetDragging)
+		{
+			var travel:Float = py - sheetDragStartY;
+			var threshold:Float = BlockLayout.touchSize() * 0.5;
+			if (Math.abs(travel) > threshold)
+			{
+				sheetDragMoved = true;
+				setPaletteCollapsed(travel < 0);
+				sheetDragStartY = py;
+			}
+			return true;
+		}
+
+		if (tilePress != null && !isDragging && !tileDragStarted)
+		{
+			if (Math.abs(px - tilePressX) + Math.abs(py - tilePressY) > DRAG_SLOP)
+				startPaletteDrag(tilePress, px, py);
+			return true;
+		}
+
+		if (chipPress != null || chipsDragging)
+		{
+			if (!chipsDragging && Math.abs(px - chipsDragStartX) > DRAG_SLOP)
+				chipsDragging = true;
+
+			if (chipsDragging)
+			{
+				var maxScroll:Float = Math.max(0, chipsContentWidth - chipsRect.w);
+				chipsScroll = FlxMath.bound(chipsScrollStart - (px - chipsDragStartX), 0, maxScroll);
+				applyChipsScroll();
+			}
+
+			return true;
+		}
+
+		if (isDraggingScroll)
+		{
+			var trackH:Float = scrollbarRect.h;
+			var travel:Float = trackH - scrollThumb.height;
+			var ratio:Float = (travel <= 0) ? 0 : (py - scrollDragOffset - scrollbarRect.y) / travel;
+			setPaletteScroll(FlxMath.bound(ratio, 0, 1) * Math.max(0, paletteContentHeight - paletteList.h));
+			return true;
+		}
+
+		return busy || inside;
+	}
+
+	function finishPalettePress(px:Float, py:Float):Void
+	{
+		if (tilePress != null)
+		{
+			var tile:PaletteTile = tilePress;
+			tilePress = null;
+			if (!tileDragStarted)
+				spawnBlockFromTile(tile);
+		}
+
+		if (railPress != null)
+		{
+			var rail:CategoryButton = railPress;
+			railPress = null;
+			if (pointInRect(px, py, rail.rect))
+				scrollToCategory(rail.category.name);
+		}
+
+		if (chipPress != null)
+		{
+			var chip:CategoryButton = chipPress;
+			chipPress = null;
+			if (!chipsDragging && pointInRect(px, py, chip.rect))
+				scrollToCategory(chip.category.name);
+		}
+
+		if (sheetDragging)
+		{
+			var moved:Bool = sheetDragMoved;
+			sheetDragging = false;
+			sheetDragMoved = false;
+			if (!moved)
+				togglePaletteCollapsed();
+		}
+
+		chipsDragging = false;
+		isDraggingScroll = false;
+		tileDragStarted = false;
+	}
+
+	function tileScreenRect(tile:PaletteTile):Rect
+	{
+		return {
+			x: paletteList.x + tile.x,
+			y: paletteScreenY(tile.y),
+			w: tile.w,
+			h: tile.h
+		};
+	}
+
+	function tileAt(px:Float, py:Float):PaletteTile
+	{
+		for (section in paletteSections)
+		{
+			if (section == null)
+				continue;
+
+			for (tile in section.tiles)
+			{
+				if (tile == null || !tile.isShown())
+					continue;
+				if (pointInRect(px, py, tileScreenRect(tile)))
+					return tile;
+			}
+		}
+
+		return null;
+	}
+
+	function railButtonAt(px:Float, py:Float):CategoryButton
+	{
+		for (button in railButtons)
+		{
+			if (button != null && pointInRect(px, py, button.rect))
+				return button;
+		}
+
+		return null;
+	}
+
+	function chipAt(px:Float, py:Float):CategoryButton
+	{
+		for (chip in paletteChips)
+		{
+			if (chip != null && pointInRect(px, py, chip.rect))
+				return chip;
+		}
+
+		return null;
+	}
+
+	function isOverScrollbar(px:Float, py:Float):Bool
+	{
+		if (scrollTrack == null || !scrollTrack.visible)
+			return false;
+
+		return pointInRect(px, py, {
+			x: scrollbarRect.x,
+			y: scrollbarRect.y,
+			w: scrollbarRect.w,
+			h: scrollbarRect.h
+		});
+	}
+
+	/** A tap on a tile drops the block into the middle of the visible workspace. */
+	function spawnBlockFromTile(tile:PaletteTile):Void
+	{
+		if (tile == null || tile.data == null)
+			return;
+
+		addBlock(tile.data);
+	}
+
+	/** Dragging a tile creates the real block under the pointer and hands over to the block drag. */
+	function startPaletteDrag(tile:PaletteTile, px:Float, py:Float):Void
+	{
+		tileDragStarted = true;
+		tilePress = null;
+
+		if (tile == null || tile.data == null || blockContainer == null)
+			return;
+
+		var block:Block = createBlockAt(tile.data, px, py);
+		if (block == null)
+			return;
+
+		FlxTween.cancelTweensOf(block.scale);
+		var z:Float = (camEditor != null) ? camEditor.zoom : 1;
+		block.scale.set(z, z);
+		block.alpha = 1;
+
+		startDrag(block, px, py);
+		setStatus('Dragging ' + tile.data.label + ' - drop it on the canvas');
+	}
+
 	// ============================================================================================
 	// Timeline and markers
 	// ============================================================================================
 
-	function createTimeline():Void
+	/**
+	 * Creates or re-creates the timeline at the current rect. `BlockTimeline` has no resize API, so
+	 * a viewport change rebuilds it and re-adds the markers it carried.
+	 */
+	function placeTimeline():Void
 	{
-		var x:Float = SIDEBAR_WIDTH;
-		var width:Float = Math.max(160, (FlxG.width - 90) - x);
-		var height:Float = TIMELINE_HEIGHT;
-		var y:Float = FlxG.height - STATUS_HEIGHT - height;
+		if (camHUD == null)
+			return;
 
-		timeline = new BlockTimeline(x, y, width, height, camHUD);
+		if (timeline != null && !rectChanged(timelinePlaced, timelineRect))
+			return;
+
+		var markers:Array<TimelineMarker> = [];
+		var selected:String = '';
+
+		if (timeline != null)
+		{
+			markers = timeline.markers.copy();
+			selected = timeline.selectedId;
+			remove(timeline, true);
+			FlxDestroyUtil.destroy(timeline);
+			timeline = null;
+		}
+
+		songInfoReady = false;
+		mappedSong = null;
+
+		timeline = new BlockTimeline(timelineRect.x, timelineRect.y, timelineRect.w, timelineRect.h, camHUD);
 		timeline.onSeek = onTimelineSeek;
 		timeline.onMarkerSelected = onMarkerSelected;
 		timeline.onMarkerMoved = onMarkerMoved;
 		timeline.onMarkerRemove = onMarkerRemove;
 		add(timeline);
+
+		for (marker in markers)
+		{
+			if (marker != null)
+				timeline.addMarker(marker);
+		}
+
+		if (selected != null && selected.length > 0)
+			timeline.selectMarker(selected);
+
+		timelinePlaced = {
+			x: timelineRect.x,
+			y: timelineRect.y,
+			w: timelineRect.w,
+			h: timelineRect.h
+		};
+		refreshTimelineSongInfo();
 	}
 
-	function createMarkerButton():Void
+	function layoutMarkerButton():Void
 	{
-		markerButton = makeButton('+ marker', function()
+		if (markerButton == null)
+			return;
+
+		var w:Float = Math.max(BlockLayout.touchSize(), BlockLayout.buttonWidth('+ marker'));
+
+		if (BlockLayout.portrait)
 		{
-			addMarkerAtCurrentStep();
-		}, COLOR_BUTTON_ACTIVE);
-		markerButton.setPosition(FlxG.width
-			- TIMELINE_RIGHT_MARGIN
-			- markerButton.width,
-			FlxG.height
-			- STATUS_HEIGHT
-			- TIMELINE_HEIGHT
-			- markerButton.height
-			- 4);
+			var size:Float = Math.max(BlockLayout.touchSize() * 1.15, 46 * BlockLayout.scale);
+			fitButton(markerButton, w, size);
+			centerButtonLabelIn(markerButton, size);
+			markerButton.setPosition(wsRect.x + wsRect.w - inset - trashSize - gap - w, wsRect.y + inset + (trashSize - size) * 0.5);
+		}
+		else
+		{
+			fitButton(markerButton, w, buttonHeight);
+			centerButtonLabelIn(markerButton, buttonHeight);
+			markerButton.setPosition(BlockLayout.width - inset - w, timelineRect.y - buttonHeight - gap);
+		}
+
 		markerButton.visible = true;
 	}
 
@@ -1169,30 +3047,39 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	// Panels
 	// ============================================================================================
 
-	function createPanels():Void
+	/**
+	 * Builds the overlay widgets. They bake the viewport into their own layout, so a viewport change
+	 * throws them away and rebuilds them; doing it here also keeps them above every other HUD layer.
+	 */
+	function placePanels():Void
 	{
+		if (camHUD == null)
+			return;
+
+		destroyPanels();
+
 		// These panels bring their own camera along and add it to `FlxG.cameras` while they are open,
 		// so they end up above `camHUD` and must keep their `cameras` untouched.
-		savePanel = new BlockSavePanel(FlxG.width);
+		savePanel = new BlockSavePanel(BlockLayout.width);
 		savePanel.codeProvider = currentLua;
 		savePanel.onSaved = onPanelSaved;
 		savePanel.onClosed = onPanelClosed;
 		add(savePanel);
 
 		// This one keeps a camera the caller assigned, so the editor's own HUD camera is used.
-		codePanel = new BlockCodePanel(FlxG.width, FlxG.height);
+		codePanel = new BlockCodePanel(BlockLayout.width, BlockLayout.height);
 		codePanel.cameras = [camHUD];
 		add(codePanel);
 
-		fileBrowser = new BlockFileBrowser(FlxG.width, FlxG.height);
+		fileBrowser = new BlockFileBrowser(BlockLayout.width, BlockLayout.height);
 		add(fileBrowser);
 
-		helpOverlay = new BlockHelpOverlay(FlxG.width, FlxG.height);
+		helpOverlay = new BlockHelpOverlay(BlockLayout.width, BlockLayout.height);
 		helpOverlay.cameras = [camHUD];
 		add(helpOverlay);
 
-		contextMenuWidth = 220 * mobileScale;
-		contextMenuHeight = 300 * mobileScale;
+		contextMenuWidth = 220 * BlockLayout.scale;
+		contextMenuHeight = 300 * BlockLayout.scale;
 		contextMenu = new BlockContextMenu(contextMenuWidth, contextMenuHeight);
 		contextMenu.cameras = [camHUD];
 		add(contextMenu);
@@ -1202,9 +3089,48 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		virtualKeyboard.onClose = onVirtualKeyboardClosed;
 		add(virtualKeyboard);
 
-		prompt = new PromptBox(mobileScale);
+		prompt = new PromptBox(BlockLayout.scale);
 		prompt.cameras = [camHUD];
 		add(prompt);
+
+		panelsBuilt = true;
+	}
+
+	function destroyPanels():Void
+	{
+		if (!panelsBuilt && savePanel == null && codePanel == null && fileBrowser == null && helpOverlay == null && contextMenu == null
+			&& virtualKeyboard == null && prompt == null)
+			return;
+
+		closeFieldEditor();
+		panelOpen = false;
+		contextBlock = null;
+
+		destroyPanelWidget(savePanel);
+		savePanel = null;
+		destroyPanelWidget(codePanel);
+		codePanel = null;
+		destroyPanelWidget(fileBrowser);
+		fileBrowser = null;
+		destroyPanelWidget(helpOverlay);
+		helpOverlay = null;
+		destroyPanelWidget(contextMenu);
+		contextMenu = null;
+		destroyPanelWidget(virtualKeyboard);
+		virtualKeyboard = null;
+		destroyPanelWidget(prompt);
+		prompt = null;
+
+		panelsBuilt = false;
+	}
+
+	function destroyPanelWidget(widget:FlxBasic):Void
+	{
+		if (widget == null)
+			return;
+
+		remove(widget, true);
+		widget.destroy();
 	}
 
 	function openSavePanel():Void
@@ -1351,6 +3277,103 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	}
 
 	// ============================================================================================
+	// Live code preview
+	// ============================================================================================
+
+	function placePreview():Void
+	{
+		if (camHUD == null)
+			return;
+
+		var rect:Rect = previewRect;
+
+		if (preview == null)
+		{
+			preview = new BlockCodePreview(rect.x, rect.y, rect.w, rect.h, camHUD);
+			preview.onExpand = function():Void
+			{
+				openCodePanel();
+			};
+			preview.onClose = function():Void
+			{
+				setPreviewVisible(false);
+			};
+			add(preview);
+		}
+		else
+		{
+			preview.resize(rect.x, rect.y, rect.w, rect.h);
+		}
+
+		syncPreview();
+	}
+
+	function togglePreview():Void
+	{
+		setPreviewVisible(!previewWanted);
+	}
+
+	function setPreviewVisible(visible:Bool):Void
+	{
+		previewWanted = visible;
+		previewToggled = true;
+		syncPreview();
+		updatePreviewButton();
+		playSound(visible ? 'confirmMenu' : 'cancelMenu');
+		setStatus(visible ? 'Live code preview on' : 'Live code preview off');
+	}
+
+	function syncPreview():Void
+	{
+		if (preview == null)
+			return;
+
+		if (previewWanted)
+		{
+			if (!preview.isOpen())
+				preview.open();
+
+			preview.resize(previewRect.x, previewRect.y, previewRect.w, previewRect.h);
+			preview.setStatus(statusMessage);
+			preview.setCurrentStep(currentStep());
+			previewCodeDirty = true;
+			previewCodeTimer = 0;
+			updatePreviewCode();
+		}
+		else if (preview.isOpen())
+		{
+			preview.close();
+		}
+	}
+
+	function updatePreview(elapsed:Float):Void
+	{
+		if (preview == null || !preview.isOpen())
+			return;
+
+		preview.setCurrentStep(currentStep());
+
+		if (!previewCodeDirty)
+			return;
+
+		previewCodeTimer -= elapsed;
+		if (previewCodeTimer > 0)
+			return;
+
+		updatePreviewCode();
+	}
+
+	function updatePreviewCode():Void
+	{
+		if (preview == null || !preview.isOpen())
+			return;
+
+		previewCodeDirty = false;
+		previewCodeTimer = PREVIEW_CODE_INTERVAL;
+		preview.setCode(currentLua());
+	}
+
+	// ============================================================================================
 	// Persistence: cache, undo/redo, project building
 	// ============================================================================================
 
@@ -1471,6 +3494,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	{
 		dirty = true;
 		autosaveTimer = 0;
+		previewCodeDirty = true;
 	}
 
 	function updateAutosave(elapsed:Float):Void
@@ -1511,6 +3535,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		var project:BlockProject = undoStack.pop();
 		restoreProject(project);
 		dirty = true;
+		previewCodeDirty = true;
 		refreshHistoryButtons();
 		setStatus('Undo (' + undoStack.length + ' left)');
 		playSound('scrollMenu');
@@ -1531,6 +3556,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		var project:BlockProject = redoStack.pop();
 		restoreProject(project);
 		dirty = true;
+		previewCodeDirty = true;
 		refreshHistoryButtons();
 		setStatus('Redo (' + redoStack.length + ' left)');
 		playSound('scrollMenu');
@@ -1576,6 +3602,9 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	function workspaceBlocks(workspaceId:String):Array<Block>
 	{
 		var out:Array<Block> = [];
+		if (blockContainer == null)
+			return out;
+
 		for (block in blockContainer.members)
 		{
 			if (block == null || workspaceOf(block) != workspaceId)
@@ -1590,6 +3619,9 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	function workspaceRoots(workspaceId:String):Array<Block>
 	{
 		var out:Array<Block> = [];
+		if (blockContainer == null)
+			return out;
+
 		for (block in blockContainer.members)
 		{
 			if (block == null || block.prevBlock != null || block.parentInput != null)
@@ -1609,6 +3641,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		refreshBlockCount();
 		refreshMarkerTabs();
 		refreshHistoryButtons();
+		previewCodeDirty = true;
 	}
 
 	function updateWorkspaceVisibility():Void
@@ -1699,31 +3732,39 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		setButtonText(markerTabButton, label);
 		setButtonColor(globalTabButton, showingGlobals ? COLOR_BUTTON_ACTIVE : COLOR_BUTTON);
 		setButtonColor(markerTabButton, (!showingGlobals && marker != null) ? COLOR_BUTTON_ACTIVE : COLOR_BUTTON);
-		layoutTopBar();
+
+		// The button keeps its width, so the bar only has to be walked again.
+		wrapTopBar(true);
 	}
 
 	// ============================================================================================
 	// Blocks
 	// ============================================================================================
 
-	function addBlock(data:BlockData):Void
+	/** Spawns a block in the middle of the visible workspace, cascading a little for repeats. */
+	function addBlock(data:BlockData):Block
 	{
 		if (data == null || blockContainer == null)
-			return;
+			return null;
 
 		pushUndo();
 
-		var spawnX:Float = camEditor.scroll.x + 380 + lastSpawnPos.x;
-		var spawnY:Float = camEditor.scroll.y + 220 + lastSpawnPos.y;
-		if (spawnY < barHeight + 20)
-			spawnY = barHeight + 20;
-
-		var workspace:String = activeWorkspaceId();
-		var block:Block = new Block(spawnX, spawnY, data);
+		var block:Block = new Block(0, 0, data);
 		block.cameras = [camEditor];
 		block.scrollFactor.set(1, 1);
 		blockContainer.add(block);
-		assignWorkspace(block, workspace);
+		assignWorkspace(block, activeWorkspaceId());
+
+		FlxTween.cancelTweensOf(block.scale);
+		block.scale.set(1, 1);
+		block.alpha = 1;
+
+		var z:Float = (camEditor != null) ? camEditor.zoom : 1;
+		var centreX:Float = wsRect.x + wsRect.w * 0.5;
+		var centreY:Float = wsRect.y + wsRect.h * 0.5;
+
+		block.x = camEditor.scroll.x + centreX / z - block.width * 0.5 + lastSpawnPos.x;
+		block.y = camEditor.scroll.y + centreY / z - block.height * 0.5 + lastSpawnPos.y;
 
 		lastSpawnPos.x = (lastSpawnPos.x + 30) % 120;
 		lastSpawnPos.y = (lastSpawnPos.y + 20) % 120;
@@ -1733,6 +3774,33 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		refreshBlockCount();
 		setStatus('Added ' + data.label);
 		playSound('scrollMenu');
+
+		return block;
+	}
+
+	/** Creates a block whose middle sits at the given screen position (used when dragging a tile). */
+	function createBlockAt(data:BlockData, screenX:Float, screenY:Float):Block
+	{
+		if (data == null || blockContainer == null)
+			return null;
+
+		pushUndo();
+
+		var block:Block = new Block(0, 0, data);
+		block.cameras = [camEditor];
+		block.scrollFactor.set(1, 1);
+		blockContainer.add(block);
+		assignWorkspace(block, activeWorkspaceId());
+
+		var z:Float = (camEditor != null) ? camEditor.zoom : 1;
+		block.x = camEditor.scroll.x + screenX / z - block.width * z * 0.5;
+		block.y = camEditor.scroll.y + screenY / z - block.height * z * 0.5;
+
+		markDirty();
+		updateWorkspaceVisibility();
+		refreshBlockCount();
+
+		return block;
 	}
 
 	function duplicateBlock(block:Block):Void
@@ -1982,6 +4050,9 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	{
 		super.update(elapsed);
 
+		if (ready)
+			ensureLayout();
+
 		// A press outside an open context menu dismisses it and is swallowed.
 		if (isContextMenuOpen() && isPointerJustPressed() && !isPointerOverContextMenu())
 		{
@@ -1994,7 +4065,9 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		updateTimeline(elapsed);
 		updateAutosave(elapsed);
 		updateStatusText(elapsed);
-		updateSidebarScroll(elapsed);
+		updateSearchField(elapsed);
+		updatePaletteScroll(elapsed);
+		updatePreview(elapsed);
 
 		if (!pointerLocked)
 		{
@@ -2022,7 +4095,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 			markerMoveSnapshot = false;
 	}
 
-	/** True while another layer owns the pointer: prompt, panel, keyboard, context menu. */
+	/** True while another layer owns the pointer: prompt, panel, keyboard, context menu, preview. */
 	function pointerBlocked():Bool
 	{
 		if (pointerSwallowed)
@@ -2111,14 +4184,14 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	{
 		var touch:FlxTouch = getPrimaryTouch();
 		if (touch != null)
-			return new FlxPoint(cam.scroll.x + touch.screenX / cam.zoom, cam.scroll.y + touch.screenY / cam.zoom);
+			return new FlxPoint(cam.scroll.x + (touch.screenX - cam.x) / cam.zoom, cam.scroll.y + (touch.screenY - cam.y) / cam.zoom);
 
 		return FlxG.mouse.getWorldPosition(cam);
 	}
 
 	function isPointerOverScreenSprite(sprite:FlxSprite):Bool
 	{
-		if (sprite == null)
+		if (sprite == null || !sprite.visible)
 			return false;
 
 		var x:Float = getPointerScreenX();
@@ -2133,13 +4206,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 	function isPointerOverTimeline():Bool
 	{
-		if (timeline == null)
-			return false;
-
-		var x:Float = getPointerScreenX();
-		var y:Float = getPointerScreenY();
-		var top:Float = FlxG.height - STATUS_HEIGHT - TIMELINE_HEIGHT;
-		return (x >= SIDEBAR_WIDTH && x <= FlxG.width - TIMELINE_RIGHT_MARGIN && y >= top && y <= FlxG.height - STATUS_HEIGHT);
+		return pointInRect(getPointerScreenX(), getPointerScreenY(), timelineRect);
 	}
 
 	function isPointerOverMarkerButton():Bool
@@ -2154,7 +4221,20 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 	function isPointerOverStatusBar():Bool
 	{
-		return getPointerScreenY() >= FlxG.height - STATUS_HEIGHT;
+		return getPointerScreenY() >= BlockLayout.height - BlockLayout.statusHeight();
+	}
+
+	function isPointerOverPalette():Bool
+	{
+		return pointInRect(getPointerScreenX(), getPointerScreenY(), paletteBand);
+	}
+
+	function isPointerOverPreview():Bool
+	{
+		if (preview == null || !preview.isOpen())
+			return false;
+
+		return pointInRect(getPointerScreenX(), getPointerScreenY(), previewRect);
 	}
 
 	function isPointerOverContextMenu():Bool
@@ -2171,12 +4251,15 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	{
 		if (isPointerOverTopBar() || isPointerOverStatusBar() || isPointerOverTimeline())
 			return false;
+		if (isPointerOverPalette() || isPointerOverPreview())
+			return false;
 		if (isPointerOverMarkerButton())
 			return false;
 		if (isPointerOverScreenSprite(trashCan))
 			return false;
 
-		return getPointerScreenX() >= SIDEBAR_WIDTH;
+		var y:Float = getPointerScreenY();
+		return (y >= wsRect.y && y <= wsRect.y + wsRect.h);
 	}
 
 	// ============================================================================================
@@ -2262,7 +4345,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 			var screenX:Float = getPointerScreenX();
 			var screenY:Float = getPointerScreenY();
 
-			if (isPointerJustPressed() && screenX >= SIDEBAR_WIDTH && !isPointerOverTopBar() && !isPointerOverTimeline())
+			if (isPointerJustPressed() && isPointerOverWorkspace())
 			{
 				isPanning = true;
 				panStart.set(screenX, screenY);
@@ -2282,8 +4365,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 		if (touch != null)
 		{
-			if (touch.justPressed && !isDragging && !pendingPan && touch.screenX >= SIDEBAR_WIDTH && !isPointerOverTimeline() && !isPointerOverTopBar()
-				&& !isPointerOverMarkerButton())
+			if (touch.justPressed && !isDragging && !pendingPan && isPointerOverWorkspace() && !isPointerOverMarkerButton())
 			{
 				var worldPos:FlxPoint = getPointerWorldPosition(camEditor);
 				if (!isPointerOverBlock(worldPos))
@@ -2322,6 +4404,10 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	{
 		if (editingField != null && editingField.isFocused)
 			return true;
+		if (searchField != null && searchField.isFocused)
+			return true;
+		if (blockContainer == null)
+			return false;
 
 		for (block in blockContainer.members)
 		{
@@ -2340,6 +4426,11 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 	function unfocusAllFields():Void
 	{
+		if (searchField != null)
+			searchField.unfocus();
+		if (blockContainer == null)
+			return;
+
 		for (block in blockContainer.members)
 		{
 			if (block == null || block.inputFields == null)
@@ -2383,65 +4474,75 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 			return;
 		}
 
-		if (justPressed)
+		if (justPressed && searchField != null && searchField.isFocused && !pointInRect(pointerX, pointerY, searchRect))
+			searchField.unfocus();
+
+		var paletteConsumed:Bool = false;
+		if (!isDragging)
+			paletteConsumed = handlePalettePress(justPressed, justReleased, pressed, pointerX, pointerY);
+
+		if (!isDragging && !paletteConsumed)
 		{
-			pressStartX = pointerX;
-			pressStartY = pointerY;
-			pressHeldTime = 0;
-			pressConsumed = false;
-
-			if (isPointerOverWorkspace())
+			if (justPressed)
 			{
-				var input:InputField = findInputAt(worldPos.x, worldPos.y);
-				if (input != null)
-				{
-					// The field itself owns the tap; the canvas only clears the other fields.
-					unfocusFieldsOutside(worldPos);
-					return;
-				}
+				pressStartX = pointerX;
+				pressStartY = pointerY;
+				pressHeldTime = 0;
+				pressConsumed = false;
 
-				var block:Block = findBlockAt(worldPos.x, worldPos.y);
-				if (block == null)
-					unfocusAllFields();
-				else if (touch != null)
-					pendingDragBlock = block; // touch: the long press has to win before the drag starts
+				if (isPointerOverWorkspace())
+				{
+					var input:InputField = findInputAt(worldPos.x, worldPos.y);
+					if (input != null)
+					{
+						// The field itself owns the tap; the canvas only clears the other fields.
+						unfocusFieldsOutside(worldPos);
+						return;
+					}
+
+					var block:Block = findBlockAt(worldPos.x, worldPos.y);
+					if (block == null)
+						unfocusAllFields();
+					else if (touch != null)
+						pendingDragBlock = block; // touch: the long press has to win before the drag starts
+					else
+						startDrag(block, pointerX, pointerY);
+				}
 				else
-					startDrag(block, pointerX, pointerY);
-			}
-			else
-			{
-				unfocusFieldsOutside(worldPos);
-			}
-		}
-		else if (pressed && !pressConsumed)
-		{
-			if (Math.abs(pointerX - pressStartX) + Math.abs(pointerY - pressStartY) > 6)
-			{
-				pressConsumed = true;
-				if (pendingDragBlock != null)
 				{
-					var pending:Block = pendingDragBlock;
-					pendingDragBlock = null;
-					startDrag(pending, pointerX, pointerY);
+					unfocusFieldsOutside(worldPos);
 				}
 			}
-			else if (!isDragging && touch != null && isPointerOverWorkspace())
+			else if (pressed && !pressConsumed)
 			{
-				pressHeldTime += elapsed;
-				if (pressHeldTime >= LONG_PRESS_TIME)
+				if (Math.abs(pointerX - pressStartX) + Math.abs(pointerY - pressStartY) > 6)
 				{
 					pressConsumed = true;
-					pendingDragBlock = null;
-					openContextMenuAtPointer();
-					return;
+					if (pendingDragBlock != null)
+					{
+						var pending:Block = pendingDragBlock;
+						pendingDragBlock = null;
+						startDrag(pending, pointerX, pointerY);
+					}
+				}
+				else if (!isDragging && touch != null && isPointerOverWorkspace())
+				{
+					pressHeldTime += elapsed;
+					if (pressHeldTime >= LONG_PRESS_TIME)
+					{
+						pressConsumed = true;
+						pendingDragBlock = null;
+						openContextMenuAtPointer();
+						return;
+					}
 				}
 			}
-		}
-		else if (!pressed && !justReleased)
-		{
-			pressHeldTime = 0;
-			pressConsumed = false;
-			pendingDragBlock = null;
+			else if (!pressed && !justReleased)
+			{
+				pressHeldTime = 0;
+				pressConsumed = false;
+				pendingDragBlock = null;
+			}
 		}
 
 		if (isDragging && draggingBlock != null)
@@ -2545,13 +4646,9 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		else
 			applySnapping(dropped);
 
-		var screenPos:FlxPoint = dropped.getScreenPosition(null, camEditor);
-		var overSidebar:Bool = screenPos.x < SIDEBAR_WIDTH;
-		screenPos.put();
-
-		if (overSidebar)
+		if (isPointerOverPalette())
 		{
-			// Dropped over the sidebar: shrink away like in the standalone editor.
+			// Dropped over the palette: shrink away like in the standalone editor.
 			pushUndo();
 			FlxTween.tween(dropped.scale, {x: 0, y: 0}, 0.2, {
 				ease: FlxEase.backIn,
@@ -2639,6 +4736,13 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		isDragging = false;
 		draggingBlock = null;
 		isPanning = false;
+		tilePress = null;
+		tileDragStarted = false;
+		railPress = null;
+		chipPress = null;
+		chipsDragging = false;
+		sheetDragging = false;
+		isDraggingScroll = false;
 
 		if (trashCan != null)
 			trashCan.scale.set(1.0, 1.0);
@@ -2784,84 +4888,8 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	}
 
 	// ============================================================================================
-	// Sidebar scrolling and tooltips
+	// Tooltips
 	// ============================================================================================
-
-	function updateSidebarScroll(elapsed:Float):Void
-	{
-		if (blockButtons == null || camSidebar == null)
-			return;
-
-		var maxHeight:Float = totalSidebarHeight - FlxG.height;
-		if (maxHeight < 0)
-			maxHeight = 0;
-
-		var pointerX:Float = getPointerScreenX();
-		var pointerY:Float = getPointerScreenY();
-		var justPressed:Bool = isPointerJustPressed();
-		var justReleased:Bool = isPointerJustReleased();
-		var pressed:Bool = isPointerPressed();
-		var blocked:Bool = pointerBlocked();
-
-		if (justPressed && !blocked)
-		{
-			if (isPointerOverScreenSprite(scrollThumb))
-			{
-				isDraggingScroll = true;
-				scrollDragOffset = pointerY - scrollThumb.y;
-				sidebarDragLastY = pointerY;
-			}
-			else if (pointerX < SIDEBAR_WIDTH)
-			{
-				sidebarDragLastY = pointerY;
-			}
-		}
-
-		if (justReleased)
-			isDraggingScroll = false;
-
-		if (isDraggingScroll && maxHeight > 0 && pressed)
-		{
-			var trackHeight:Float = FlxG.height - scrollThumb.height;
-			var percent:Float = (trackHeight <= 0) ? 0 : (pointerY - scrollDragOffset) / trackHeight;
-			camSidebar.scroll.y = FlxMath.bound(percent, 0, 1) * maxHeight;
-		}
-		else if (pointerX < SIDEBAR_WIDTH && !blocked)
-		{
-			if (FlxG.mouse.wheel != 0)
-			{
-				camSidebar.scroll.y -= FlxG.mouse.wheel * 40;
-				camSidebar.scroll.y = FlxMath.bound(camSidebar.scroll.y, 0, maxHeight);
-			}
-
-			var touch:FlxTouch = getPrimaryTouch();
-			if (touch != null && touch.pressed)
-			{
-				camSidebar.scroll.y += sidebarDragLastY - pointerY;
-				camSidebar.scroll.y = FlxMath.bound(camSidebar.scroll.y, 0, maxHeight);
-				sidebarDragLastY = pointerY;
-			}
-		}
-		else if (!blocked && FlxG.mouse.wheel != 0 && !isPointerOverTimeline())
-		{
-			if (FlxG.keys.pressed.CONTROL)
-			{
-				zoomLevel += FlxG.mouse.wheel * 0.1;
-				zoomLevel = FlxMath.bound(zoomLevel, MIN_ZOOM, MAX_ZOOM);
-				camEditor.zoom = zoomLevel;
-				setStatus('Zoom: ' + Math.round(zoomLevel * 100) + '%');
-			}
-			else
-			{
-				camEditor.scroll.y -= (FlxG.mouse.wheel * 40) / zoomLevel;
-			}
-		}
-
-		if (maxHeight > 0)
-			scrollThumb.y = (camSidebar.scroll.y / maxHeight) * (FlxG.height - scrollThumb.height);
-		else
-			scrollThumb.y = 0;
-	}
 
 	function handleTooltips(elapsed:Float):Void
 	{
@@ -2880,23 +4908,13 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 		var description:String = '';
 
-		if (FlxG.mouse.screenX < SIDEBAR_WIDTH)
+		if (isPointerOverPalette())
 		{
-			for (button in blockButtons)
-			{
-				if (button == null)
-					continue;
-
-				if (button.status == FlxButtonState.HIGHLIGHT)
-				{
-					var data:BlockData = blockButtonMap.get(button);
-					if (data != null && data.description != null)
-						description = data.description;
-					break;
-				}
-			}
+			var tile:PaletteTile = tileAt(getPointerScreenX(), getPointerScreenY());
+			if (tile != null && tile.data != null && tile.data.description != null)
+				description = tile.data.description;
 		}
-		else
+		else if (isPointerOverWorkspace())
 		{
 			var worldPos:FlxPoint = FlxG.mouse.getWorldPosition(camEditor);
 			var block:Block = findBlockAt(worldPos.x, worldPos.y);
@@ -2905,30 +4923,6 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		}
 
 		showTooltip(description);
-	}
-
-	function showTooltip(text:String):Void
-	{
-		if (text == null || text.length == 0)
-		{
-			tooltipBox.visible = false;
-			tooltipText.visible = false;
-			return;
-		}
-
-		tooltipBox.visible = true;
-		tooltipText.visible = true;
-		tooltipText.text = text;
-
-		var x:Float = FlxG.mouse.screenX + 15;
-		var y:Float = FlxG.mouse.screenY + 15;
-		if (x + 300 > FlxG.width)
-			x = FlxG.width - 310;
-		if (y + 50 > FlxG.height)
-			y = FlxG.height - 60;
-
-		tooltipBox.setPosition(x, y);
-		tooltipText.setPosition(x + 5, y + 5);
 	}
 
 	// ============================================================================================
@@ -2955,12 +4949,12 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		var worldPos:FlxPoint = getPointerWorldPosition(camEditor);
 		var block:Block = isPointerOverWorkspace() ? findBlockAt(worldPos.x, worldPos.y) : null;
 		contextBlock = block;
-		contextMenuX = FlxMath.bound(getPointerScreenX(), 8, Math.max(8, FlxG.width - contextMenuWidth - 8));
+		contextMenuX = FlxMath.bound(getPointerScreenX(), inset, Math.max(inset, BlockLayout.width - contextMenuWidth - inset));
 		contextMenuY = getPointerScreenY();
-		if (contextMenuY + contextMenuHeight > FlxG.height - STATUS_HEIGHT)
-			contextMenuY = FlxG.height - STATUS_HEIGHT - contextMenuHeight;
-		if (contextMenuY < barHeight + 4)
-			contextMenuY = barHeight + 4;
+		if (contextMenuY + contextMenuHeight > BlockLayout.height - BlockLayout.statusHeight())
+			contextMenuY = BlockLayout.height - BlockLayout.statusHeight() - contextMenuHeight;
+		if (contextMenuY < barHeight + gap)
+			contextMenuY = barHeight + gap;
 
 		pointerSwallowed = true;
 		contextMenu.openAt(contextMenuX, contextMenuY, block, onContextAction);
@@ -3099,6 +5093,7 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 			return;
 		}
 
+		prompt.uiScale = BlockLayout.scale;
 		prompt.ask(title, body, options, callback);
 	}
 
@@ -3115,6 +5110,18 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 
 	function onBlockValueChanged():Void
 	{
+		if (searchField != null && searchField.isFocused)
+		{
+			// Typing in the search box filters the palette; it does not change the project.
+			var current:String = (searchField.value == null) ? '' : Std.string(searchField.value);
+			if (current != searchText)
+			{
+				searchText = current;
+				refreshPaletteVisibility();
+			}
+			return;
+		}
+
 		markDirty();
 	}
 
@@ -3256,8 +5263,8 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 		if (field.bg != null && field.bg.cameras != null && field.bg.cameras.length > 0 && field.bg.cameras[0] != null)
 			camera = field.bg.cameras[0];
 
-		var x:Float = field.bg.x - camera.scroll.x;
-		var y:Float = field.bg.y - camera.scroll.y;
+		var x:Float = field.bg.x - camera.scroll.x + camera.x;
+		var y:Float = field.bg.y - camera.scroll.y + camera.y;
 		return new Rectangle(x, y, Math.max(field.width, 48), Math.max(field.height, 32));
 	}
 
@@ -3577,11 +5584,281 @@ class BlockCodeEditorSubstate extends MusicBeatSubstate
 	 */
 	function setupEditorTouchPad():Void
 	{
+		if (editorTouchPad != null)
+		{
+			remove(editorTouchPad, true);
+			editorTouchPad.destroy();
+			editorTouchPad = null;
+		}
+
 		editorTouchPad = new FlxTouchPad('FULL', 'A_B_X_Y');
 		add(editorTouchPad);
 		editorTouchPad.cameras = [camHUD];
 	}
 	#end
+}
+
+/** One palette section: the category, its header row and every block tile under it. */
+private class PaletteSection
+{
+	public var category:BlockCategory;
+	public var header:FlxText;
+	public var line:FlxSprite;
+	public var tiles:Array<PaletteTile> = [];
+	public var headerY:Float = 0;
+	public var headerHeight:Float = 0;
+	public var contentTop:Float = 0;
+	public var contentBottom:Float = 0;
+
+	public function new(category:BlockCategory, cam:FlxCamera, headerSize:Int)
+	{
+		this.category = category;
+
+		header = new FlxText(0, 0, 100, (category == null) ? '' : category.name, headerSize);
+		header.setFormat(Paths.font('vcr.ttf'), headerSize, (category == null) ? FlxColor.WHITE : category.color, LEFT);
+		header.scrollFactor.set(0, 0);
+		header.cameras = [cam];
+
+		line = new FlxSprite().makeGraphic(1, 1, (category == null) ? FlxColor.WHITE : category.color);
+		line.alpha = 0.55;
+		line.scrollFactor.set(0, 0);
+		line.cameras = [cam];
+	}
+
+	public function setHeaderVisible(visible:Bool):Void
+	{
+		header.visible = visible;
+		line.visible = visible;
+	}
+
+	public function destroy():Void
+	{
+		FlxDestroyUtil.destroy(header);
+		FlxDestroyUtil.destroy(line);
+		header = null;
+		line = null;
+		tiles = [];
+	}
+}
+
+/**
+ * One block tile of the palette: drawn like the block it spawns (a rounded body in the category
+ * colour, a darker outline and a three dot grip on the left) with its name left aligned.
+ */
+private class PaletteTile
+{
+	public var data:BlockData;
+	public var category:BlockCategory;
+	public var bg:FlxSprite;
+	public var label:FlxText;
+	public var x:Float = 0;
+	public var y:Float = 0;
+	public var w:Float = 0;
+	public var h:Float = 0;
+
+	var tint:Int = 0xFF24283B;
+	var gripDots:Bool = true;
+	var compactMode:Bool = false;
+
+	public function new(data:BlockData, category:BlockCategory, w:Float, h:Float, cam:FlxCamera, compact:Bool)
+	{
+		this.data = data;
+		this.category = category;
+		this.w = Math.max(1, w);
+		this.h = Math.max(1, h);
+		compactMode = compact;
+		gripDots = !compact;
+		tint = (data == null) ? 0xFF24283B : data.color;
+
+		var text:String = compact ? categoryIcon(category) : ((data == null) ? '' : data.label);
+		var fontSize:Int = BlockLayout.font('body');
+
+		bg = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
+		bg.scrollFactor.set(0, 0);
+		bg.cameras = [cam];
+		BlockCodeEditorSubstate.paintRounded(bg, this.w, this.h, tint, gripDots);
+
+		label = new FlxText(0, 0, this.w, text, fontSize);
+		label.setFormat(Paths.font('vcr.ttf'), fontSize, FlxColor.WHITE, compact ? CENTER : LEFT, FlxTextBorderStyle.OUTLINE, 0x66000000);
+		label.borderSize = 1.5;
+		label.scrollFactor.set(0, 0);
+		label.cameras = [cam];
+		label.wordWrap = false;
+		label.updateHitbox();
+
+		place(0, 0, this.w, this.h);
+	}
+
+	static function categoryIcon(category:BlockCategory):String
+	{
+		if (category == null || category.icon == null)
+			return '?';
+
+		return category.icon;
+	}
+
+	/** Moves (and when needed resizes) the tile inside the palette list. */
+	public function place(x:Float, y:Float, w:Float, h:Float):Void
+	{
+		this.x = x;
+		this.y = y;
+
+		var wantedW:Float = Math.max(1, w);
+		var wantedH:Float = Math.max(1, h);
+
+		if (this.w != wantedW || this.h != wantedH)
+		{
+			this.w = wantedW;
+			this.h = wantedH;
+			BlockCodeEditorSubstate.paintRounded(bg, this.w, this.h, tint, gripDots);
+		}
+
+		bg.setPosition(x, y);
+
+		var offset:Float = compactMode ? 0 : Math.max(18, Math.round(this.h * 0.95));
+		var padRight:Float = Math.max(6, this.h * 0.2);
+
+		label.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('body'), FlxColor.WHITE, compactMode ? CENTER : LEFT, FlxTextBorderStyle.OUTLINE, 0x66000000);
+		label.fieldWidth = Std.int(Math.max(20, this.w - offset - padRight));
+		label.wordWrap = false; // a tile is one row tall: the name has to stay on one line
+		label.x = x + offset;
+		label.y = y + Math.max(0, (this.h - label.height) * 0.5);
+	}
+
+	public function setVisible(visible:Bool):Void
+	{
+		bg.visible = visible;
+		label.visible = visible;
+	}
+
+	public function isShown():Bool
+	{
+		return bg != null && bg.visible && label != null && label.visible;
+	}
+
+	public function destroy():Void
+	{
+		FlxDestroyUtil.destroy(bg);
+		FlxDestroyUtil.destroy(label);
+		bg = null;
+		label = null;
+	}
+}
+
+/**
+ * A category control of the palette: the square icon button of the landscape rail or a wide chip
+ * of the portrait chip row. The body is painted once as a white rounded rect and tinted, so
+ * activating it is a colour change and not a new bitmap.
+ */
+private class CategoryButton
+{
+	public var category:BlockCategory;
+	public var bg:FlxSprite;
+	public var label:FlxText;
+	public var rect:Rect;
+	public var width:Float = 0;
+	public var height:Float = 0;
+
+	var baseX:Float = 0;
+	var baseY:Float = 0;
+	var textSize:Int = 13;
+	var active:Bool = false;
+	var dimmed:Bool = false;
+
+	public function new(category:BlockCategory, x:Float, y:Float, w:Float, h:Float, cam:FlxCamera, text:String, textSize:Int)
+	{
+		this.category = category;
+		this.textSize = textSize;
+		width = Math.max(1, w);
+		height = Math.max(1, h);
+
+		bg = new FlxSprite().makeGraphic(1, 1, FlxColor.WHITE);
+		bg.scrollFactor.set(0, 0);
+		bg.cameras = [cam];
+		BlockCodeEditorSubstate.paintRounded(bg, width, height, BlockCodeEditorSubstate.COLOR_BUTTON, false);
+
+		label = new FlxText(0, 0, width, (text == null) ? '' : text, textSize);
+		label.setFormat(Paths.font('vcr.ttf'), textSize, FlxColor.WHITE, CENTER);
+		label.scrollFactor.set(0, 0);
+		label.cameras = [cam];
+		label.wordWrap = false;
+		label.updateHitbox();
+
+		rect = {
+			x: x,
+			y: y,
+			w: width,
+			h: height
+		};
+		apply();
+	}
+
+	function colour():Int
+	{
+		return (category == null) ? BlockCodeEditorSubstate.COLOR_BUTTON : category.color;
+	}
+
+	public function moveTo(x:Float, y:Float):Void
+	{
+		baseX = x;
+		baseY = y;
+		rect.x = x;
+		rect.y = y;
+		apply();
+	}
+
+	/** Shifts the control inside its row (used by the horizontal chip scroll). */
+	public function setOffset(dx:Float):Void
+	{
+		rect.x = baseX + dx;
+		rect.y = baseY;
+		apply();
+	}
+
+	function apply():Void
+	{
+		bg.setPosition(rect.x, rect.y);
+		label.fieldWidth = Std.int(width);
+		label.wordWrap = false;
+		label.x = rect.x;
+		label.y = rect.y + Math.max(0, (height - label.height) * 0.5);
+	}
+
+	public function setActive(value:Bool):Void
+	{
+		active = value;
+		refreshColours();
+	}
+
+	public function setDimmed(value:Bool):Void
+	{
+		dimmed = value;
+		refreshColours();
+	}
+
+	function refreshColours():Void
+	{
+		if (bg == null || label == null)
+			return;
+
+		var tint:Int = active ? colour() : BlockCodeEditorSubstate.COLOR_BUTTON;
+		if (dimmed)
+			tint = FlxColor.interpolate(tint, BlockCodeEditorSubstate.COLOR_SIDEBAR_BG, 0.6);
+
+		bg.color = tint;
+		label.setFormat(Paths.font('vcr.ttf'), textSize, active ? FlxColor.WHITE : colour(), CENTER);
+		label.alpha = dimmed ? 0.5 : 1;
+		label.updateHitbox();
+		apply();
+	}
+
+	public function destroy():Void
+	{
+		FlxDestroyUtil.destroy(bg);
+		FlxDestroyUtil.destroy(label);
+		bg = null;
+		label = null;
+	}
 }
 
 /**
@@ -3603,7 +5880,9 @@ private class PromptBox extends FlxSpriteGroup
 	var choices:Array<FlxButton> = [];
 	var choiceCallback:Int->Void = null;
 	var choiceCount:Int = 0;
-	var uiScale:Float = 1;
+
+	public var uiScale:Float = 1;
+
 	var showing:Bool = false;
 
 	public function new(scale:Float)
@@ -3641,13 +5920,16 @@ private class PromptBox extends FlxSpriteGroup
 		bodyText.text = (body == null) ? '' : body;
 
 		var list:Array<String> = (options == null) ? [] : options;
-		var rowHeight:Float = 48 * uiScale;
+		var rowHeight:Float = Math.max(48 * uiScale, 40);
 		var width:Float = Math.min(FlxG.width - 60 * uiScale, 520 * uiScale);
 		var height:Float = HEADER_HEIGHT * uiScale + (list.length + 1) * rowHeight;
 		var boxX:Float = (FlxG.width - width) * 0.5;
 		var boxY:Float = (FlxG.height - height) * 0.5;
 		if (boxY < 0)
 			boxY = 0;
+
+		titleText.setFormat(Paths.font('vcr.ttf'), Std.int(18 * uiScale), COLOR_TITLE, LEFT);
+		bodyText.setFormat(Paths.font('vcr.ttf'), Std.int(14 * uiScale), COLOR_BODY, LEFT);
 
 		panel.makeGraphic(Std.int(width), Std.int(height), COLOR_PANEL);
 		panel.setPosition(boxX, boxY);

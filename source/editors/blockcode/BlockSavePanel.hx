@@ -10,6 +10,15 @@ import flixel.math.FlxPoint;
 import flixel.input.touch.FlxTouch;
 #end
 import openfl.geom.Rectangle;
+import openfl.text.TextField;
+import openfl.text.TextFormat;
+
+/** One wrapped line of a multi-line block: the text plus the colour it is drawn in. */
+private typedef SaveLine =
+{
+	var text:String;
+	var color:Int;
+}
 
 /**
  * Save / export settings sheet of the block-code editor substate.
@@ -20,17 +29,33 @@ import openfl.geom.Rectangle;
  * `codeProvider` once - the callback that generates the Lua of the current blocks - and reacts to
  * `onSaved` / `onClosed`; layout, hit testing, scrolling, status and log stay inside this group.
  *
+ * Everything is sized from `BlockLayout`, so the sheet survives a 60px desktop banner, a phone in
+ * landscape, a phone held upright and a tablet: `BlockLayout.panelSize()` bounds the sheet, rows are
+ * at least `BlockLayout.touchSize()` tall, fonts come from `BlockLayout.font()` and the padding from
+ * `BlockLayout.scale`. Each setting sits on its own row with a plain-language label on the left and
+ * its control on the right; sections are titled and separated, and the body is split into two
+ * columns when the viewport is wide and upright screens get one scrollable column instead. The save
+ * buttons are pinned in the footer band, outside the scroll area, so a thumb always reaches them.
+ *
  * Self contained on purpose: the panel creates its own full screen `FlxCamera`, appends it to
  * `FlxG.cameras` (last, i.e. on top) on `open()` and removes it again on `close()`, so the rows
- * stay aligned with the screen whatever the editor does to its own cameras. Every member is drawn
+ * stay aligned with the screen whatever the editor does to its own cameras. Every sprite is drawn
  * through that camera with `scrollFactor == 0`, which also makes screen coordinates and panel
  * coordinates identical - `FlxPointer.getScreenPosition(cam)` is the hit test point, and the panel
  * camera is never scrolled or zoomed.
  *
+ * `draw()` paints three layers: the sheet background (`underChrome`), the scrolling content (the
+ * group members) and the fixed chrome (`overChrome` - header and footer bands, the pinned buttons,
+ * the scroll bar, the panel edges). Because the bands are painted last, a block that scrolls behind
+ * them is covered by them instead of being drawn over them, so only the tall block rows are allowed
+ * to be half visible (`shouldShow`) while rows and tags always need to fit (`fitsInside`); the two
+ * inline fields are drawn by hand as well and therefore also need to fit completely.
+ *
  * Pointers are read from `FlxG.touches` first (only the first touch inside the sheet drives it) and
  * from `FlxG.mouse` as the desktop fallback. A row fires on release over the same row; a finger
- * that slides further than `DRAG_CANCEL` cancels the press and scrolls the content instead. Every
- * control is `CONTROL_HEIGHT` (44) tall inside a `ROW_HEIGHT` (48) tall row.
+ * that slides further than `DRAG_CANCEL` cancels the press and scrolls the content instead. The
+ * footer buttons are hit tested before the scrolling rows, since they never move, and a row that a
+ * band covers is not clickable there.
  *
  * The script name and the custom path reuse `Block`'s inline `InputField`, so both follow the same
  * edit path as block parameters: tapping a field calls `Block.requestTextEdit`. When nobody
@@ -66,40 +91,58 @@ class BlockSavePanel extends FlxGroup
 	public static inline var COLOR_CAPTION:Int = 0xFF565F89;
 	public static inline var COLOR_SEPARATOR:Int = 0xFF414868;
 
+	/** Track of a switch that is off. */
+	public static inline var COLOR_SWITCH_OFF:Int = 0xFF313244;
+
+	/** Track of a switch that is on. */
+	public static inline var COLOR_SWITCH_ON:Int = 0xFF9ECE6A;
+
 	// --- Metrics ---
-	static inline var DEFAULT_WIDTH:Float = 660;
-	static inline var MARGIN:Float = 8;
-	static inline var PAD:Float = 12;
 
-	/** Every row of the sheet is at least this tall. */
-	static inline var ROW_HEIGHT:Float = 48;
+	/** Padding between the sheet border and its content, times `BlockLayout.scale`. */
+	static inline var PAD_FACTOR:Float = 12;
 
-	/** Hit area of one control - one finger. */
-	static inline var CONTROL_HEIGHT:Float = 44;
+	/** A row is at least this tall (times scale), and never shorter than a touch target. */
+	static inline var ROW_FACTOR:Float = 46;
 
-	static inline var CAPTION_HEIGHT:Float = 20;
-	static inline var HEADER_HEIGHT:Float = 48;
-	static inline var FOOTER_HEIGHT:Float = 54;
-	static inline var GAP:Float = 6;
-	static inline var SIDE_WIDTH:Float = 104;
-	static inline var TARGET_LINE_HEIGHT:Float = 17;
-	static inline var LOG_LINES:Int = 3;
-	static inline var LOG_LINE_HEIGHT:Float = 15;
+	/** The sheet never grows wider than this (times scale), even on a very wide viewport. */
+	static inline var MAX_PANEL_WIDTH:Float = 1100;
 
-	/** Shortest item the header/footer bands can cover; taller ones need full visibility. */
-	static inline var MAX_PARTIAL_HEIGHT:Float = 46;
+	static inline var MIN_PANEL_WIDTH:Float = 280;
+	static inline var MIN_PANEL_HEIGHT:Float = 240;
+	static inline var EDGE_HEIGHT:Int = 2;
 
-	static inline var WHEEL_STEP:Float = 34;
-	static inline var ROW_STEP:Float = ROW_HEIGHT + GAP;
+	/** Width of the section separator lines. */
+	static inline var SEPARATOR_FACTOR:Float = 1.5;
 
-	/** How far a finger may slide before a press turns into a scroll drag. */
-	static inline var DRAG_CANCEL:Float = 14;
+	/** Two columns need at least this much usable width. */
+	static inline var TWO_COLUMN_MIN:Float = 520;
+
+	/** Rough share of one character width in the UI font, only used when measuring is impossible. */
+	static inline var CHAR_WIDTH_FALLBACK:Float = 0.64;
+
+	static inline var PREVIEW_LINES:Int = 10;
+	static inline var TARGET_LINES:Int = 14;
+	static inline var LOG_LINES:Int = 6;
+	static inline var ERROR_LINES:Int = 5;
+	static inline var MESSAGE_MAX_LINES:Int = 2;
 
 	static inline var MAX_LOG_ENTRIES:Int = 60;
-	static inline var SCROLLBAR_WIDTH:Float = 4;
+	static inline var DRAG_CANCEL:Float = 14;
+	static inline var WHEEL_STEP:Float = 34;
 	static inline var SCROLLBAR_MIN_HEIGHT:Float = 32;
+	static inline var SCROLLBAR_FACTOR:Float = 5;
 	static inline var ELLIPSIS:String = '...';
-	static inline var FIELD_LABEL_WIDTH:Float = 0.6;
+
+	static var MODE_LABELS:Array<String> = ['Song script', 'Global script', 'Custom folder'];
+	static var SHORT_MODE_LABELS:Array<String> = ['Song', 'Global', 'Custom'];
+	static var MODE_NAMES:Array<String> = ['song', 'global', 'custom'];
+
+	static var MODE_HELP:Array<String> = [
+		'Song script - written into this song\'s data folder and loaded together with the song.',
+		'Global script - written into the mod\'s scripts folder and loaded in every song.',
+		'Custom folder - written to a folder you type yourself, anywhere on the disk.'
+	];
 
 	// --- Public API ---
 
@@ -120,7 +163,9 @@ class BlockSavePanel extends FlxGroup
 	{
 		super();
 
-		_requestedWidth = (width > 0) ? width : DEFAULT_WIDTH;
+		_requestedWidth = (width > 0) ? width : BlockLayout.BASE_WIDTH;
+		BlockLayout.ensure();
+
 		cam = createCamera();
 		cameras = [cam];
 
@@ -137,11 +182,15 @@ class BlockSavePanel extends FlxGroup
 	 */
 	public function open(settings:BlockCodeEditorSettings, songName:String):Void
 	{
+		BlockLayout.ensure();
+
 		_settings = (settings != null) ? settings : BlockTypes.defaultSettings();
 		_songName = (songName != null) ? songName : '';
 
 		readSettings();
-		computeGeometry();
+		refreshConfig();
+		refreshPreviewCode();
+		refreshInfo();
 
 		_isOpen = true;
 		visible = true;
@@ -152,16 +201,14 @@ class BlockSavePanel extends FlxGroup
 		_pressedCell = null;
 		_dragging = false;
 		scrollY = 0;
-		logLines = [];
 
+		computeGeometry();
 		layoutRows();
 		applyScroll();
-		refreshInfo();
-		refreshConfigLine();
 		refreshSaveLabels(true);
 
 		addLog('save panel opened for "' + ((_songName.length > 0) ? _songName : 'no song') + '"');
-		setStatus('target: ' + shortTarget(), true);
+		setStatus('target: ' + currentTarget(), true);
 	}
 
 	/** Hides the sheet, drops the camera and fires `onClosed`. A second call does nothing. */
@@ -216,23 +263,51 @@ class BlockSavePanel extends FlxGroup
 			return;
 
 		ensureCamera();
+		syncViewport();
 		pollPointer();
 		handlePointer();
 		updateScrollInput();
 		updateFields(elapsed);
 		refreshSaveLabels(false);
 
-		if (scrollY != _appliedScrollY)
+		if (_needsLayout)
+		{
+			_needsLayout = false;
+			layoutRows();
 			applyScroll();
+		}
+		else if (scrollY != _appliedScrollY)
+		{
+			applyScroll();
+		}
 	}
 
 	override public function draw():Void
 	{
+		if (!visible)
+			return;
+
+		drawChrome(underChrome);
 		super.draw();
+		drawChrome(overChrome);
 
 		// InputFields are not FlxBasic and cannot be group members; their parts carry `cam`.
 		drawField(nameField);
 		drawField(pathField);
+	}
+
+	function drawChrome(list:Array<FlxSprite>):Void
+	{
+		if (list == null)
+			return;
+
+		for (sprite in list)
+		{
+			if (sprite == null || !sprite.visible || !sprite.exists)
+				continue;
+
+			sprite.draw();
+		}
 	}
 
 	override public function destroy():Void
@@ -242,6 +317,16 @@ class BlockSavePanel extends FlxGroup
 		{
 			cam.destroy();
 			cam = null;
+		}
+
+		// The chrome is drawn by hand rather than being a group member, so it is destroyed here.
+		for (list in [underChrome, overChrome])
+		{
+			if (list == null)
+				continue;
+
+			for (sprite in list)
+				FlxDestroyUtil.destroy(sprite);
 		}
 
 		if (_ownsSoftKeyboard && BlockSoftKeyboard.isOpen())
@@ -256,17 +341,27 @@ class BlockSavePanel extends FlxGroup
 		pathField = null;
 
 		cells = null;
+		pinnedCells = null;
 		modeCells = null;
-		targetLines = null;
 		plains = null;
-		logLines = null;
+		underChrome = null;
+		overChrome = null;
+		targetPool = null;
+		codePool = null;
+		errorPool = null;
+		logPool = null;
+		labelPool = null;
+		hintPool = null;
+		seps = null;
+		_configErrors = null;
+		_previewLines = null;
 
 		super.destroy();
 	}
 
 	// --- State ---
 	var _isOpen:Bool = false;
-	var _requestedWidth:Float = DEFAULT_WIDTH;
+	var _requestedWidth:Float = BlockLayout.BASE_WIDTH;
 	var _settings:BlockCodeEditorSettings = null;
 	var _songName:String = '';
 
@@ -279,19 +374,28 @@ class BlockSavePanel extends FlxGroup
 	// Geometry.
 	var panelX:Float = 0;
 	var panelY:Float = 0;
-	var panelW:Float = DEFAULT_WIDTH;
-	var panelH:Float = 600;
+	var panelW:Float = 0;
+	var panelH:Float = 0;
+	var headerH:Float = 0;
+	var footerH:Float = 0;
 	var contentTop:Float = 0;
 	var contentBottom:Float = 0;
 	var contentHeight:Float = 0;
 	var scrollY:Float = 0;
 	var maxScroll:Float = 0;
 	var _appliedScrollY:Float = -1;
-	var _camW:Int = 0;
-	var _camH:Int = 0;
+	var _layoutWidth:Float = -1;
+	var _layoutHeight:Float = -1;
+	var headerHintW:Float = 0;
+	var _twoColumn:Bool = false;
+	var colA:BlockSaveColumn = null;
+	var colB:BlockSaveColumn = null;
 
-	// Camera and chrome.
+	// Camera and chrome. The two lists are drawn by hand around the scrolling content: `underChrome`
+	// first (scrim, sheet background), `overChrome` last (header/footer bands, pinned buttons, bar).
 	var cam:FlxCamera = null;
+	var underChrome:Array<FlxSprite> = [];
+	var overChrome:Array<FlxSprite> = [];
 	var scrim:FlxSprite = null;
 	var panelBg:FlxSprite = null;
 	var panelEdgeTop:FlxSprite = null;
@@ -304,9 +408,21 @@ class BlockSavePanel extends FlxGroup
 	var configText:FlxText = null;
 	var scrollTrack:FlxSprite = null;
 	var scrollThumb:FlxSprite = null;
+	var codeBg:FlxSprite = null;
+	var logBg:FlxSprite = null;
 
-	// Scrolling content: hittable cells plus plain captions/labels/log.
+	// Section captions.
+	var capFile:FlxText = null;
+	var capTarget:FlxText = null;
+	var capMode:FlxText = null;
+	var capOptions:FlxText = null;
+	var capConfig:FlxText = null;
+	var capCode:FlxText = null;
+	var capLog:FlxText = null;
+
+	// Scrolling content: hittable cells plus plain captions/labels/blocks.
 	var cells:Array<BlockSaveCell> = [];
+	var pinnedCells:Array<BlockSaveCell> = [];
 	var plains:Array<
 		{
 			sprite:FlxSprite,
@@ -314,29 +430,35 @@ class BlockSavePanel extends FlxGroup
 			height:Float
 		}> = [];
 
-	// Content widgets.
-	var capScriptName:FlxText = null;
-	var capTargets:FlxText = null;
-	var capSaveLocation:FlxText = null;
-	var capLog:FlxText = null;
-	var targetLines:Array<FlxText> = [];
-	var logBg:FlxSprite = null;
-	var logText:FlxText = null;
-	var logTextW:Float = 0;
+	// Text pools: reused labels so a relayout never leaks a sprite.
+	var labelPool:SaveLinePool = new SaveLinePool();
+	var targetPool:SaveLinePool = new SaveLinePool();
+	var codePool:SaveLinePool = new SaveLinePool();
+	var errorPool:SaveLinePool = new SaveLinePool();
+	var logPool:SaveLinePool = new SaveLinePool();
+
+	/** Dim hint lines under the rows; `hintLines()` draws from this one. */
+	var hintPool:SaveLinePool = new SaveLinePool();
+
+	var seps:Array<FlxSprite> = [];
+	var _sepUsed:Int = 0;
 
 	// Rows.
 	var nameField:InputField = null;
 	var pathField:InputField = null;
 	var renameCell:BlockSaveCell = null;
 	var applyPathCell:BlockSaveCell = null;
+	var copyTargetCell:BlockSaveCell = null;
+	var copyFolderCell:BlockSaveCell = null;
+	var targetBgCell:BlockSaveCell = null;
+	var errorBgCell:BlockSaveCell = null;
 	var modeCells:Array<BlockSaveCell> = [];
 	var autoReloadCell:BlockSaveCell = null;
 	var forceKeyboardCell:BlockSaveCell = null;
+	var reloadCell:BlockSaveCell = null;
 	var saveCell:BlockSaveCell = null;
 	var saveRenameCell:BlockSaveCell = null;
-	var reloadCell:BlockSaveCell = null;
 	var closeCell:BlockSaveCell = null;
-	var copyCell:BlockSaveCell = null;
 
 	// Field placement, kept so the fields can follow the scroll offset.
 	var nameFieldX:Float = 0;
@@ -347,9 +469,17 @@ class BlockSavePanel extends FlxGroup
 	var pathFieldBaseY:Float = 0;
 	var nameFieldShown:Bool = false;
 	var pathFieldShown:Bool = false;
+	var _fieldControlH:Float = -1;
 
-	// Log.
+	// Log, preview and config state.
 	var logLines:Array<String> = [];
+	var _previewLines:Array<String> = [];
+	var _previewTotal:Int = 0;
+	var _configSummary:String = '';
+	var _configErrors:Array<String> = [];
+	var _statusMessage:String = '';
+	var _statusOk:Bool = true;
+	var _needsLayout:Bool = false;
 
 	// Pointer.
 	var _ptrPoint:FlxPoint = new FlxPoint(0, 0);
@@ -376,78 +506,72 @@ class BlockSavePanel extends FlxGroup
 
 	function buildWidgets():Void
 	{
-		scrim = addVisual(new FlxSprite(0, 0));
+		// Chrome is drawn by hand around the scrolling content, so the bands always cover a row that
+		// scrolls behind them instead of the row being drawn over the bands.
+		scrim = addChrome(underChrome, new FlxSprite(0, 0));
 		scrim.makeGraphic(1, 1, FlxColor.WHITE);
 		scrim.color = 0xFF000000;
 		scrim.alpha = 0.45;
 
-		panelBg = addVisual(new FlxSprite(0, 0));
-		panelBg.makeGraphic(1, 1, FlxColor.WHITE);
-		panelBg.color = COLOR_PANEL;
+		panelBg = addChrome(underChrome, makeSolid(COLOR_PANEL));
 
-		capScriptName = addVisual(makeText('SCRIPT NAME', 14, COLOR_CAPTION));
-		capTargets = addVisual(makeText('WHERE EACH MODE WRITES (default name blockcode.lua)', 14, COLOR_CAPTION));
-		capSaveLocation = addVisual(makeText('SAVE LOCATION', 14, COLOR_CAPTION));
-		capLog = addVisual(makeText('LOG', 14, COLOR_CAPTION));
+		headerBg = addChrome(overChrome, makeSolid(COLOR_ROW));
+		headerText = addChrome(overChrome, makeText('SAVE / EXPORT', BlockLayout.font('title'), COLOR_TEXT));
+		headerHint = addChrome(overChrome, makeText('', BlockLayout.font('small'), COLOR_DIM));
 
-		for (i in 0...3)
-			targetLines.push(addVisual(makeText('', 14, COLOR_DIM)));
+		footerBg = addChrome(overChrome, makeSolid(COLOR_ROW));
+		statusText = addChrome(overChrome, makeText('', BlockLayout.font('body'), COLOR_TEXT));
+		configText = addChrome(overChrome, makeText('', BlockLayout.font('small'), COLOR_DIM));
 
-		logBg = addVisual(new FlxSprite(0, 0));
-		logBg.makeGraphic(1, 1, FlxColor.WHITE);
-		logBg.color = COLOR_BG;
-		logText = addVisual(makeText('', 13, COLOR_TEXT));
+		panelEdgeTop = addChrome(overChrome, makeSolid(COLOR_SEPARATOR));
+		panelEdgeBottom = addChrome(overChrome, makeSolid(COLOR_SEPARATOR));
 
-		renameCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, 'Rename', COLOR_ROW, COLOR_TEXT, 15));
-		applyPathCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, 'Apply', COLOR_ROW, COLOR_TEXT, 15));
+		codeBg = addVisual(makeSolid(COLOR_BG));
+		logBg = addVisual(makeSolid(COLOR_BG));
 
-		var segmentLabels:Array<String> = ['Song', 'Global', 'Custom'];
-		var segmentNames:Array<String> = ['song', 'global', 'custom'];
-		for (i in 0...segmentLabels.length)
+		capFile = addVisual(makeCaption('FILE'));
+		capTarget = addVisual(makeCaption('WHERE THE FILE GOES'));
+		capMode = addVisual(makeCaption('WHERE IT RUNS'));
+		capOptions = addVisual(makeCaption('OPTIONS'));
+		capConfig = addVisual(makeCaption('EXTERNAL BLOCKS'));
+		capCode = addVisual(makeCaption('CODE THAT WILL BE WRITTEN'));
+		capLog = addVisual(makeCaption('MESSAGES'));
+
+		// Dark blocks the wrapped lines are drawn on; tapping the target one copies the target path.
+		targetBgCell = addCell(new BlockSaveCell(0, 0, 10, 10, '', COLOR_BG, COLOR_TEXT, BlockLayout.font('small')));
+		errorBgCell = addCell(new BlockSaveCell(0, 0, 10, 10, '', COLOR_BG, COLOR_TEXT, BlockLayout.font('small')));
+
+		renameCell = addCell(new BlockSaveCell(0, 0, 10, 10, 'Rename', COLOR_ROW, COLOR_TEXT, BlockLayout.font('body')));
+		applyPathCell = addCell(new BlockSaveCell(0, 0, 10, 10, 'Use path', COLOR_ROW, COLOR_TEXT, BlockLayout.font('body')));
+		copyTargetCell = addCell(new BlockSaveCell(0, 0, 10, 10, 'Copy target path', COLOR_ROW, COLOR_TEXT, BlockLayout.font('body')));
+		copyFolderCell = addCell(new BlockSaveCell(0, 0, 10, 10, 'Copy folder path', COLOR_ROW, COLOR_TEXT, BlockLayout.font('body')));
+		reloadCell = addCell(new BlockSaveCell(0, 0, 10, 10, 'Reload block config', COLOR_ROW, COLOR_TEXT, BlockLayout.font('body')));
+
+		// The selected segment is painted in the accent colour, the choices around it stay flat.
+		for (i in 0...MODE_LABELS.length)
 		{
-			var cell:BlockSaveCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, segmentLabels[i], COLOR_ROW, COLOR_TEXT, 15));
-			cell.modeName = segmentNames[i];
+			var cell:BlockSaveCell = addCell(new BlockSaveCell(0, 0, 10, 10, MODE_LABELS[i], COLOR_ROW, COLOR_TEXT, BlockLayout.font('body')));
+			cell.modeName = MODE_NAMES[i];
+			cell.setColors(COLOR_ROW, COLOR_ACCENT);
 			modeCells.push(cell);
 		}
 
-		autoReloadCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, '', COLOR_ROW_ON, COLOR_TEXT, 15));
-		forceKeyboardCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, '', COLOR_ROW_ON, COLOR_TEXT, 15));
-		saveCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, 'Save Lua', COLOR_OK, COLOR_DARK_TEXT, 15));
-		saveRenameCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, 'Save + Rename', COLOR_ACCENT, COLOR_TEXT, 15));
-		reloadCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, 'Reload block config', COLOR_ROW, COLOR_TEXT, 15));
-		closeCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, 'Close', COLOR_WARN, COLOR_DARK_TEXT, 15));
-		copyCell = addCell(new BlockSaveCell(0, 0, 10, CONTROL_HEIGHT, 'Folder: -  (tap to copy)', COLOR_ROW, COLOR_TEXT, 15));
+		autoReloadCell = addCell(new BlockSaveCell(0, 0, 10, 10, 'Reload the script after saving', COLOR_ROW, COLOR_TEXT, BlockLayout.font('body'), true));
+		autoReloadCell.setColors(COLOR_ROW, COLOR_ROW_ON);
+		forceKeyboardCell = addCell(new BlockSaveCell(0, 0, 10, 10, 'Use the in-game touch keyboard', COLOR_ROW, COLOR_TEXT, BlockLayout.font('body'), true));
+		forceKeyboardCell.setColors(COLOR_ROW, COLOR_ROW_ON);
 
-		scrollTrack = addVisual(new FlxSprite(0, 0));
-		scrollTrack.makeGraphic(Std.int(SCROLLBAR_WIDTH), 1, FlxColor.WHITE);
-		scrollTrack.color = COLOR_ROW;
+		saveCell = addPinned(new BlockSaveCell(0, 0, 10, 10, 'Save Lua', COLOR_OK, COLOR_DARK_TEXT, BlockLayout.font('body')));
+		saveRenameCell = addPinned(new BlockSaveCell(0, 0, 10, 10, 'Save + Rename', COLOR_ACCENT, COLOR_TEXT, BlockLayout.font('body')));
+		closeCell = addPinned(new BlockSaveCell(0, 0, 10, 10, 'Close', COLOR_WARN, COLOR_DARK_TEXT, BlockLayout.font('body')));
+
+		scrollTrack = addChrome(overChrome, makeSolid(COLOR_ROW));
 		scrollTrack.alpha = 0.5;
-		scrollThumb = addVisual(new FlxSprite(0, 0));
-		scrollThumb.makeGraphic(Std.int(SCROLLBAR_WIDTH), Std.int(SCROLLBAR_MIN_HEIGHT), FlxColor.WHITE);
-		scrollThumb.color = COLOR_DIM;
-
-		headerBg = addVisual(new FlxSprite(0, 0));
-		headerBg.makeGraphic(1, 1, FlxColor.WHITE);
-		headerBg.color = COLOR_ACCENT;
-		headerText = addVisual(makeText('SAVE / EXPORT', 20, COLOR_TEXT));
-		headerHint = addVisual(makeText('', 14, COLOR_TEXT));
-		headerHint.alignment = RIGHT;
-
-		footerBg = addVisual(new FlxSprite(0, 0));
-		footerBg.makeGraphic(1, 1, FlxColor.WHITE);
-		footerBg.color = COLOR_BG;
-		statusText = addVisual(makeText('', 15, COLOR_TEXT));
-		configText = addVisual(makeText('', 13, COLOR_DIM));
-
-		panelEdgeTop = addVisual(new FlxSprite(0, 0));
-		panelEdgeTop.makeGraphic(1, 2, FlxColor.WHITE);
-		panelEdgeTop.color = COLOR_SEPARATOR;
-		panelEdgeBottom = addVisual(new FlxSprite(0, 0));
-		panelEdgeBottom.makeGraphic(1, 2, FlxColor.WHITE);
-		panelEdgeBottom.color = COLOR_SEPARATOR;
+		scrollThumb = addChrome(overChrome, makeSolid(COLOR_DIM));
 
 		nameField = makeField('blockcode');
 		pathField = makeField('absolute path or folder');
+		_fieldControlH = controlHeight();
 
 		wireActions();
 	}
@@ -459,11 +583,35 @@ class BlockSavePanel extends FlxGroup
 		return visual;
 	}
 
+	/** A sprite of the fixed chrome: never a group member, drawn by `draw()` around the content. */
+	function addChrome<T:FlxSprite>(list:Array<FlxSprite>, visual:T):T
+	{
+		visual.scrollFactor.set(0, 0);
+		visual.cameras = [cam];
+		list.push(visual);
+		return visual;
+	}
+
 	function addCell(cell:BlockSaveCell):BlockSaveCell
 	{
 		cells.push(cell);
 		addVisual(cell);
 		return cell;
+	}
+
+	function addPinned(cell:BlockSaveCell):BlockSaveCell
+	{
+		pinnedCells.push(cell);
+		addChrome(overChrome, cell);
+		return cell;
+	}
+
+	static function makeSolid(color:Int):FlxSprite
+	{
+		var sprite:FlxSprite = new FlxSprite(0, 0);
+		sprite.makeGraphic(1, 1, FlxColor.WHITE);
+		sprite.color = color;
+		return sprite;
 	}
 
 	function makeText(text:String, size:Int, color:Int):FlxText
@@ -474,9 +622,14 @@ class BlockSavePanel extends FlxGroup
 		return label;
 	}
 
+	function makeCaption(text:String):FlxText
+	{
+		return makeText(text, BlockLayout.font('small'), COLOR_TEXT);
+	}
+
 	function makeField(placeholder:String):InputField
 	{
-		var field:InputField = new InputField(0, 0, 200, CONTROL_HEIGHT, '', ParamType.STRING, placeholder);
+		var field:InputField = new InputField(0, 0, 200, controlHeight(), '', ParamType.STRING, placeholder);
 		assignFieldCamera(field);
 		return field;
 	}
@@ -485,6 +638,18 @@ class BlockSavePanel extends FlxGroup
 	{
 		renameCell.action = doRename;
 		applyPathCell.action = applyCustomPath;
+		copyTargetCell.action = function():Void
+		{
+			copyText(currentTarget(), 'target path');
+		};
+		copyFolderCell.action = function():Void
+		{
+			copyText(currentDir(), 'folder path');
+		};
+		targetBgCell.action = function():Void
+		{
+			copyText(currentTarget(), 'target path');
+		};
 		saveCell.action = function():Void
 		{
 			saveWithRename(false);
@@ -495,14 +660,13 @@ class BlockSavePanel extends FlxGroup
 		};
 		reloadCell.action = reloadBlockConfig;
 		closeCell.action = close;
-		copyCell.action = copyFolderPath;
 
 		autoReloadCell.action = function():Void
 		{
 			_autoReload = !_autoReload;
 			refreshInfo();
 			playSound('scrollMenu');
-			setStatus('auto-reload after save: ' + onOff(_autoReload), true);
+			setStatus('reload the script after every save: ' + onOff(_autoReload), true);
 		};
 
 		forceKeyboardCell.action = function():Void
@@ -510,7 +674,7 @@ class BlockSavePanel extends FlxGroup
 			_forceVirtualKeyboard = !_forceVirtualKeyboard;
 			refreshInfo();
 			playSound('scrollMenu');
-			setStatus('force in-game touch keyboard: ' + onOff(_forceVirtualKeyboard), true);
+			setStatus('always use the in-game touch keyboard: ' + onOff(_forceVirtualKeyboard), true);
 		};
 
 		for (i in 0...modeCells.length)
@@ -523,17 +687,70 @@ class BlockSavePanel extends FlxGroup
 		}
 	}
 
-	// =========================== geometry and layout ===========================
+	// =========================== metrics ===========================
+
+	static function innerPad():Float
+	{
+		return PAD_FACTOR * BlockLayout.scale;
+	}
+
+	static function rowGap():Float
+	{
+		return BlockLayout.spacing('tight');
+	}
+
+	function rowHeight():Float
+	{
+		return Math.max(BlockLayout.touchSize(), ROW_FACTOR * BlockLayout.scale);
+	}
+
+	function controlHeight():Float
+	{
+		return Math.max(BlockLayout.touchSize(), rowHeight() - rowGap());
+	}
+
+	/** Line box of a font size: what one line of a wrapped block covers. */
+	public static function lineHeight(fontSize:Int):Float
+	{
+		return Math.round(fontSize * 1.35);
+	}
+
+	function headerHeight():Float
+	{
+		var byButton:Float = BlockLayout.buttonHeight() + BlockLayout.spacing('tight');
+		var byTitle:Float = BlockLayout.font('title') + BlockLayout.spacing('normal') * 1.6;
+
+		return Math.max(byButton, byTitle) + innerPad() * 0.5;
+	}
+
+	/** Footer buttons in one row when there is room for three legible labels, else in two. */
+	function footerButtonRows():Int
+	{
+		var needed:Float = Math.max(88, 96 * BlockLayout.scale) * 3 + BlockLayout.spacing('tight') * 2;
+
+		return (panelW - innerPad() * 2 >= needed) ? 1 : 2;
+	}
+
+	function footerHeight():Float
+	{
+		var rows:Int = footerButtonRows();
+		var statusBand:Float = MESSAGE_MAX_LINES * lineHeight(BlockLayout.font('body'));
+		var configBand:Float = lineHeight(BlockLayout.font('small'));
+
+		return innerPad() + statusBand + configBand + rowGap() + rows * controlHeight() + (rows - 1) * rowGap() + innerPad();
+	}
 
 	static function screenWidth():Int
 	{
-		return (FlxG.width > 0) ? Std.int(FlxG.width) : 1280;
+		return (FlxG.width > 0) ? Std.int(FlxG.width) : Std.int(BlockLayout.BASE_WIDTH);
 	}
 
 	static function screenHeight():Int
 	{
-		return (FlxG.height > 0) ? Std.int(FlxG.height) : 720;
+		return (FlxG.height > 0) ? Std.int(FlxG.height) : Std.int(BlockLayout.BASE_HEIGHT);
 	}
+
+	// =========================== geometry ===========================
 
 	function createCamera():FlxCamera
 	{
@@ -546,152 +763,122 @@ class BlockSavePanel extends FlxGroup
 
 	function computeGeometry():Void
 	{
-		var width:Float = screenWidth();
-		var height:Float = screenHeight();
+		BlockLayout.ensure();
 
-		panelW = Math.min(Math.max(_requestedWidth, 320), Math.max(320, width - MARGIN * 2));
-		panelX = Math.floor((width - panelW) * 0.5);
-		panelY = MARGIN;
-		panelH = Math.max(240, height - MARGIN * 2);
+		var screenW:Float = screenWidth();
+		var screenH:Float = screenHeight();
+		var inset:Float = BlockLayout.inset();
+		var size = BlockLayout.panelSize();
 
-		contentTop = panelY + HEADER_HEIGHT;
-		contentBottom = panelY + panelH - FOOTER_HEIGHT;
+		var wanted:Float = (_requestedWidth > 0) ? _requestedWidth : size.w;
+		var cap:Float = Math.max(MIN_PANEL_WIDTH, MAX_PANEL_WIDTH * BlockLayout.scale);
+		var roomW:Float = Math.max(MIN_PANEL_WIDTH, screenW - inset * 2);
+		var roomH:Float = Math.max(MIN_PANEL_HEIGHT, screenH - inset * 2);
 
-		var w:Int = Std.int(panelW);
-		var h:Int = Std.int(panelH);
-		if (_camW != w || _camH != h || cam.width != screenWidth() || cam.height != screenHeight())
+		panelW = Math.min(Math.min(Math.max(wanted, MIN_PANEL_WIDTH), roomW), Math.min(Math.max(MIN_PANEL_WIDTH, size.w), cap));
+		panelH = Math.max(MIN_PANEL_HEIGHT, Math.min(size.h, roomH));
+		panelX = Math.floor((screenW - panelW) * 0.5);
+		panelY = Math.floor((screenH - panelH) * 0.5);
+
+		headerH = headerHeight();
+		footerH = footerHeight();
+
+		contentTop = panelY + headerH + rowGap();
+		contentBottom = panelY + panelH - footerH - rowGap();
+
+		_layoutWidth = BlockLayout.width;
+		_layoutHeight = BlockLayout.height;
+
+		if (cam != null)
 		{
-			_camW = w;
-			_camH = h;
-			cam.width = screenWidth();
-			cam.height = screenHeight();
+			if (cam.width != screenWidth())
+				cam.width = screenWidth();
+			if (cam.height != screenHeight())
+				cam.height = screenHeight();
 		}
 
 		scrim.setPosition(0, 0);
 		resizeSprite(scrim, screenWidth(), screenHeight());
+
 		panelBg.setPosition(panelX, panelY);
-		resizeSprite(panelBg, w, h);
+		resizeSprite(panelBg, Std.int(panelW), Std.int(panelH));
 
 		panelEdgeTop.setPosition(panelX, panelY);
-		resizeSprite(panelEdgeTop, w, 2);
-		panelEdgeBottom.setPosition(panelX, panelY + panelH - 2);
-		resizeSprite(panelEdgeBottom, w, 2);
+		resizeSprite(panelEdgeTop, Std.int(panelW), EDGE_HEIGHT);
+		panelEdgeBottom.setPosition(panelX, panelY + panelH - EDGE_HEIGHT);
+		resizeSprite(panelEdgeBottom, Std.int(panelW), EDGE_HEIGHT);
+
+		layoutHeader();
+		layoutFooter();
+		layoutScrollBar();
+	}
+
+	function layoutHeader():Void
+	{
+		var pad:Float = innerPad();
+		var titleSize:Int = BlockLayout.font('title');
+		var hintSize:Int = BlockLayout.font('small');
 
 		headerBg.setPosition(panelX, panelY);
-		resizeSprite(headerBg, w, Std.int(HEADER_HEIGHT));
-		headerText.setPosition(panelX + PAD, panelY + 12);
-		headerText.fieldWidth = Std.int(panelW * 0.45);
-		headerHint.setPosition(panelX + panelW * 0.45, panelY + 16);
-		headerHint.fieldWidth = Std.int(panelW * 0.55 - PAD);
+		resizeSprite(headerBg, Std.int(panelW), Std.int(panelH > 0 ? headerH : 1));
 
-		footerBg.setPosition(panelX, panelY + panelH - FOOTER_HEIGHT);
-		resizeSprite(footerBg, w, Std.int(FOOTER_HEIGHT));
-		statusText.setPosition(panelX + PAD, panelY + panelH - FOOTER_HEIGHT + 8);
-		statusText.fieldWidth = Std.int(panelW - PAD * 2);
-		configText.setPosition(panelX + PAD, panelY + panelH - FOOTER_HEIGHT + 30);
-		configText.fieldWidth = Std.int(panelW - PAD * 2);
+		headerText.setPosition(panelX + pad, panelY + (headerH - lineHeight(titleSize)) * 0.5);
+		headerText.setFormat(Paths.font("vcr.ttf"), titleSize, COLOR_TEXT, LEFT);
 
-		scrollTrack.setPosition(panelX + panelW - SCROLLBAR_WIDTH - 4, contentTop);
-		resizeSprite(scrollTrack, Std.int(SCROLLBAR_WIDTH), Std.int(Math.max(1, contentBottom - contentTop)));
-		scrollThumb.setPosition(panelX + panelW - SCROLLBAR_WIDTH - 4, contentTop);
+		var titleRoom:Float = Math.max(40, panelW * 0.46 - pad);
+		headerText.text = clipMiddle('SAVE / EXPORT', titleRoom, titleSize);
+
+		headerHintW = Math.max(0, panelW - panelW * 0.46 - pad * 2);
+		headerHint.setFormat(Paths.font("vcr.ttf"), hintSize, COLOR_DIM, RIGHT);
+		headerHint.setPosition(panelX + panelW * 0.46, panelY + (headerH - lineHeight(hintSize)) * 0.5);
+		headerHint.visible = (headerHintW > 90);
 	}
 
-	function layoutRows():Void
+	/** Pins the three action buttons plus the status and config lines to the bottom of the sheet. */
+	function layoutFooter():Void
 	{
-		if (_settings == null)
-			return;
+		var pad:Float = innerPad();
+		var gap:Float = rowGap();
+		var rows:Int = footerButtonRows();
+		var buttonH:Float = controlHeight();
+		var footerTop:Float = panelY + panelH - footerH;
+		var avail:Float = panelW - pad * 2;
 
-		plains = [];
+		footerBg.setPosition(panelX, footerTop);
+		resizeSprite(footerBg, Std.int(panelW), Std.int(footerH));
 
-		var avail:Float = panelW - PAD * 2;
-		var x0:Float = panelX + PAD;
-		var fieldW:Float = Math.max(120, avail - SIDE_WIDTH - GAP);
-		var halfW:Float = (avail - GAP) * 0.5;
-		var customShown:Bool = (_mode == 'custom');
-		var cursor:Float = 0;
+		var statusSize:Int = BlockLayout.font('body');
+		var configSize:Int = BlockLayout.font('small');
+		statusText.setPosition(panelX + pad, footerTop + pad);
+		configText.setPosition(panelX + pad, footerTop + pad + MESSAGE_MAX_LINES * lineHeight(statusSize) + gap * 0.5);
 
-		// Script name row.
-		cursor = placePlain(capScriptName, x0, cursor, CAPTION_HEIGHT);
-		nameFieldX = x0;
-		nameFieldW = fieldW;
-		nameFieldBaseY = contentTop + cursor + (ROW_HEIGHT - CONTROL_HEIGHT) * 0.5;
-		nameField.width = nameFieldW;
-		placeCell(renameCell, x0 + avail - SIDE_WIDTH, cursor, SIDE_WIDTH);
-		cursor += ROW_HEIGHT + GAP;
+		var buttonTop:Float = footerTop + footerH - pad - rows * buttonH - (rows - 1) * gap;
 
-		// Where every mode would write.
-		cursor = placePlain(capTargets, x0, cursor, CAPTION_HEIGHT);
-		for (line in targetLines)
-			cursor = placePlain(line, x0, cursor, TARGET_LINE_HEIGHT);
-		cursor += GAP;
-
-		// Save location: the three exec modes plus the custom path row.
-		cursor = placePlain(capSaveLocation, x0, cursor, CAPTION_HEIGHT);
-		var segmentW:Float = (avail - GAP * 2) / 3;
-		for (i in 0...modeCells.length)
-			placeCell(modeCells[i], x0 + i * (segmentW + GAP), cursor, segmentW);
-		cursor += ROW_HEIGHT + GAP;
-
-		pathFieldX = x0;
-		pathFieldW = fieldW;
-		pathFieldBaseY = contentTop + cursor + (ROW_HEIGHT - CONTROL_HEIGHT) * 0.5;
-		pathField.width = pathFieldW;
-		placeCell(applyPathCell, x0 + avail - SIDE_WIDTH, cursor, SIDE_WIDTH);
-		applyPathCell.shown = customShown;
-		if (customShown)
-			cursor += ROW_HEIGHT + GAP;
-
-		// Options.
-		placeCell(autoReloadCell, x0, cursor, avail);
-		cursor += ROW_HEIGHT + GAP;
-		placeCell(forceKeyboardCell, x0, cursor, avail);
-		cursor += ROW_HEIGHT + GAP * 2;
-
-		// Actions.
-		placeCell(saveCell, x0, cursor, halfW);
-		placeCell(saveRenameCell, x0 + halfW + GAP, cursor, halfW);
-		cursor += ROW_HEIGHT + GAP;
-		placeCell(reloadCell, x0, cursor, halfW);
-		placeCell(closeCell, x0 + halfW + GAP, cursor, halfW);
-		cursor += ROW_HEIGHT + GAP;
-		placeCell(copyCell, x0, cursor, avail);
-		cursor += ROW_HEIGHT + GAP * 2;
-
-		// Log.
-		cursor = placePlain(capLog, x0, cursor, CAPTION_HEIGHT);
-		var logH:Float = 8 + LOG_LINES * (LOG_LINE_HEIGHT + 2) + 6;
-		logTextW = avail - 16;
-		placePlain(logBg, x0, cursor, logH);
-		placePlain(logText, x0 + 8, cursor + 6, logH - 10);
-		cursor += logH;
-
-		contentHeight = cursor;
-		maxScroll = Math.max(0, contentHeight - Math.max(1, contentBottom - contentTop));
-		if (scrollY > maxScroll)
-			scrollY = maxScroll;
-
-		refreshLog();
-		_appliedScrollY = -1;
+		if (rows == 1)
+		{
+			var buttonW:Float = (avail - gap * 2) / 3;
+			saveCell.setRect(panelX + pad, buttonTop, buttonW, buttonH);
+			saveRenameCell.setRect(panelX + pad + buttonW + gap, buttonTop, buttonW, buttonH);
+			closeCell.setRect(panelX + pad + (buttonW + gap) * 2, buttonTop, buttonW, buttonH);
+		}
+		else
+		{
+			var half:Float = (avail - gap) * 0.5;
+			saveCell.setRect(panelX + pad, buttonTop, half, buttonH);
+			saveRenameCell.setRect(panelX + pad + half + gap, buttonTop, half, buttonH);
+			closeCell.setRect(panelX + pad, buttonTop + buttonH + gap, avail, buttonH);
+		}
 	}
 
-	function placeCell(cell:BlockSaveCell, x:Float, cursor:Float, w:Float):Void
+	function layoutScrollBar():Void
 	{
-		var y:Float = contentTop + cursor + (ROW_HEIGHT - CONTROL_HEIGHT) * 0.5;
-		cell.baseY = y;
-		cell.setRect(x, y, w, CONTROL_HEIGHT);
-	}
+		var barW:Float = Math.max(3, SCROLLBAR_FACTOR * BlockLayout.scale);
+		var barX:Float = panelX + panelW - innerPad() * 0.5 - barW * 0.5;
 
-	function placePlain(sprite:FlxSprite, x:Float, cursor:Float, height:Float):Float
-	{
-		plains.push({
-			sprite: sprite,
-			baseY: contentTop + cursor,
-			height: height
-		});
-		sprite.x = x;
-		sprite.y = contentTop + cursor;
-
-		return cursor + height;
+		scrollTrack.setPosition(barX, contentTop);
+		resizeSprite(scrollTrack, Std.int(barW), Std.int(Math.max(1, contentBottom - contentTop)));
+		scrollThumb.setPosition(barX, contentTop);
+		resizeSprite(scrollThumb, Std.int(barW), Std.int(SCROLLBAR_MIN_HEIGHT));
 	}
 
 	static function resizeSprite(sprite:FlxSprite, w:Int, h:Int):Void
@@ -709,15 +896,550 @@ class BlockSavePanel extends FlxGroup
 	}
 
 	/**
-	 * Items no taller than the header/footer bands may overlap them - those two are drawn on top,
-	 * which looks like clipping. Taller ones are only shown while they fit completely.
+	 * Items longer than the band they scroll through may overlap the header/footer bands - those two
+	 * are drawn over the content (see `draw()`), which looks like clipping. Short items are only
+	 * shown while they fit completely, so no label is ever cut in half.
 	 */
-	static function shouldShow(y:Float, height:Float, top:Float, bottom:Float):Bool
+	function shouldShow(y:Float, height:Float, top:Float, bottom:Float):Bool
 	{
-		if (height > MAX_PARTIAL_HEIGHT)
-			return (y >= top - 0.5) && (y + height <= bottom + 0.5);
+		if (height > maxPartialHeight())
+			return (y + height > top) && (y < bottom);
 
-		return (y + height > top) && (y < bottom);
+		return (y >= top - 0.5) && (y + height <= bottom + 0.5);
+	}
+
+	/** Objects drawn by hand (the fields) must fit completely: nothing may cover them. */
+	static function fitsInside(y:Float, height:Float, top:Float, bottom:Float):Bool
+	{
+		return (y >= top - 0.5) && (y + height <= bottom + 0.5);
+	}
+
+	/** Only blocks taller than a row are allowed to slide under the header and footer bands. */
+	function maxPartialHeight():Float
+	{
+		return rowHeight();
+	}
+
+	// =========================== layout ===========================
+
+	function layoutRows():Void
+	{
+		if (_settings == null)
+			return;
+
+		plains = [];
+		for (pool in allPools())
+			pool.used = 0;
+		_sepUsed = 0;
+
+		// Anything the sections do not place again this pass stays hidden.
+		for (cell in cells)
+			cell.shown = false;
+
+		var avail:Float = Math.max(160, panelW - innerPad() * 2);
+		var gutter:Float = BlockLayout.spacing('loose');
+		_twoColumn = !BlockLayout.narrow && !BlockLayout.portrait && (avail >= TWO_COLUMN_MIN * BlockLayout.scale);
+
+		var colW:Float = _twoColumn ? (avail - gutter) * 0.5 : avail;
+
+		colA = new BlockSaveColumn(panelX + innerPad(), colW);
+		colB = _twoColumn ? new BlockSaveColumn(panelX + innerPad() + colW + gutter, colW) : colA;
+
+		if (_twoColumn)
+		{
+			layoutFileSection(colA, true);
+			layoutTargetSection(colA, false);
+			layoutCodeSection(colA, false);
+
+			layoutModeSection(colB, true);
+			layoutOptionsSection(colB, false);
+			layoutConfigSection(colB, false);
+			layoutLogSection(colB, false);
+		}
+		else
+		{
+			layoutFileSection(colA, true);
+			layoutModeSection(colA, false);
+			layoutTargetSection(colA, false);
+			layoutOptionsSection(colA, false);
+			layoutConfigSection(colA, false);
+			layoutCodeSection(colA, false);
+			layoutLogSection(colA, false);
+		}
+
+		hideUnusedSprites();
+
+		contentHeight = Math.max(1, Math.max(colA.cursor, colB.cursor) - rowGap());
+		maxScroll = Math.max(0, contentHeight - Math.max(1, contentBottom - contentTop));
+		if (scrollY > maxScroll)
+			scrollY = maxScroll;
+
+		refreshHeader();
+		refreshFooter();
+
+		_appliedScrollY = -1;
+	}
+
+	function allPools():Array<SaveLinePool>
+	{
+		return [labelPool, targetPool, codePool, errorPool, logPool, hintPool];
+	}
+
+	function hideUnusedSprites():Void
+	{
+		for (pool in allPools())
+		{
+			for (i in pool.used...pool.lines.length)
+				pool.lines[i].visible = false;
+		}
+
+		for (i in _sepUsed...seps.length)
+			seps[i].visible = false;
+	}
+
+	/** Section title with generous space above it and a separator line when it is not the first. */
+	function sectionHeader(col:BlockSaveColumn, caption:FlxText, title:String, first:Bool):Void
+	{
+		var size:Int = BlockLayout.font('small');
+		var height:Float = lineHeight(size);
+
+		if (!first)
+		{
+			col.cursor += BlockLayout.spacing('loose');
+			var sep:FlxSprite = takeSeparator();
+			if (sep != null)
+			{
+				var sepH:Int = Std.int(Math.max(1, Math.round(SEPARATOR_FACTOR * BlockLayout.scale)));
+				resizeSprite(sep, Std.int(Math.max(col.w, 1)), sepH);
+				putPlain(sep, col.x, contentTop + col.cursor, sep.height);
+				col.cursor += sep.height + BlockLayout.spacing('loose') * 0.6;
+			}
+		}
+
+		var y:Float = nextRow(col, height + rowGap());
+		caption.setFormat(Paths.font("vcr.ttf"), size, COLOR_CAPTION, LEFT);
+		caption.text = clipMiddle(title, col.w, size);
+		putPlain(caption, col.x, y, height + rowGap());
+	}
+
+	function takeSeparator():FlxSprite
+	{
+		if (_sepUsed < seps.length)
+			return seps[_sepUsed++];
+
+		var sep:FlxSprite = makeSolid(COLOR_SEPARATOR);
+		addVisual(sep);
+		seps.push(sep);
+		_sepUsed++;
+		return sep;
+	}
+
+	/** Advances the column cursor past one row and returns the absolute y of its top edge. */
+	function nextRow(col:BlockSaveColumn, height:Float):Float
+	{
+		var y:Float = contentTop + col.cursor;
+		col.cursor += height + rowGap();
+
+		return y;
+	}
+
+	function placeCell(cell:BlockSaveCell, x:Float, y:Float, w:Float, h:Float):Void
+	{
+		cell.shown = true;
+		cell.baseY = y;
+		cell.setRect(x, y, w, h);
+	}
+
+	function putPlain(sprite:FlxSprite, x:Float, y:Float, height:Float):Void
+	{
+		if (sprite == null)
+			return;
+
+		plains.push({
+			sprite: sprite,
+			baseY: y,
+			height: height
+		});
+
+		sprite.x = x;
+		sprite.y = y;
+		sprite.visible = true;
+	}
+
+	/** One reusable left-aligned line; the caller has already wrapped or clipped its text. */
+	function lineFrom(pool:SaveLinePool, size:Int, color:Int):FlxText
+	{
+		while (pool.lines.length <= pool.used)
+		{
+			var label:FlxText = new FlxText(0, 0, 0, '', size);
+			label.scrollFactor.set(0, 0);
+			add(label);
+			pool.lines.push(label);
+		}
+
+		var label:FlxText = pool.lines[pool.used++];
+		label.setFormat(Paths.font("vcr.ttf"), size, color, LEFT);
+		return label;
+	}
+
+	/** Stacks wrapped lines of one colour from `top` and returns nothing; height is the caller's. */
+	function putLines(pool:SaveLinePool, lines:Array<SaveLine>, x:Float, top:Float, width:Float, size:Int):Void
+	{
+		var lh:Float = lineHeight(size);
+
+		for (i in 0...lines.length)
+		{
+			var label:FlxText = lineFrom(pool, size, lines[i].color);
+			label.text = lines[i].text;
+			putPlain(label, x, top + i * lh, lh);
+		}
+	}
+
+	/** A left-hand label of a two-part row, clipped so it can never run into its control. */
+	function rowLabel(col:BlockSaveColumn, text:String, x:Float, y:Float, w:Float, h:Float, color:Int):FlxText
+	{
+		var size:Int = BlockLayout.font('body');
+		var label:FlxText = lineFrom(labelPool, size, color);
+		label.text = clipMiddle(text, Math.max(40, w - rowGap()), size);
+		putPlain(label, col.x + x, y + (h - lineHeight(size)) * 0.5, lineHeight(size));
+
+		return label;
+	}
+
+	/** One or more dim hint lines under a row, using the pool the section already draws from. */
+	function hintLines(pool:SaveLinePool, col:BlockSaveColumn, text:String, color:Int):Void
+	{
+		var size:Int = BlockLayout.font('small');
+		var lines:Array<String> = wrapLines(text, col.w, size, MESSAGE_MAX_LINES);
+		if (lines.length < 1)
+			return;
+
+		var lh:Float = lineHeight(size);
+		var top:Float = nextRow(col, lines.length * lh);
+
+		for (i in 0...lines.length)
+		{
+			var label:FlxText = lineFrom(pool, size, color);
+			label.text = lines[i];
+			putPlain(label, col.x, top + i * lh, lh);
+		}
+	}
+
+	// --- sections ---
+
+	function layoutFileSection(col:BlockSaveColumn, first:Bool):Void
+	{
+		sectionHeader(col, capFile, 'FILE', first);
+
+		var row:Float = rowHeight();
+		var ctrl:Float = controlHeight();
+		var gap:Float = rowGap();
+		var size:Int = BlockLayout.font('body');
+		var renameW:Float = Math.max(BlockLayout.buttonWidth('Rename'), 92 * BlockLayout.scale);
+		var labelW:Float = labelRoom(col.w, renameW);
+		var y:Float = nextRow(col, row);
+
+		nameFieldX = col.x + labelW + gap;
+		nameFieldW = Math.max(72, col.w - labelW - gap - renameW - gap);
+		nameFieldBaseY = y + (row - ctrl) * 0.5;
+		assignNameFieldWidth();
+
+		renameCell.setFontSize(size);
+		placeCell(renameCell, col.x + col.w - renameW, nameFieldBaseY, renameW, ctrl);
+		rowLabel(col, 'Script file name', 0, y, labelW, row, COLOR_TEXT);
+
+		hintLines(hintPool, col, 'Written as ' + BlockFileIO.sanitizeName(currentName()) + '.lua. Rename also moves a file that is already there.', COLOR_DIM);
+
+		var half:Float = (col.w - gap) * 0.5;
+		y = nextRow(col, ctrl);
+		copyTargetCell.setFontSize(size);
+		copyFolderCell.setFontSize(size);
+		placeCell(copyTargetCell, col.x, y, half, ctrl);
+		placeCell(copyFolderCell, col.x + half + gap, y, half, ctrl);
+	}
+
+	function layoutTargetSection(col:BlockSaveColumn, first:Bool):Void
+	{
+		sectionHeader(col, capTarget, 'WHERE THE FILE GOES', first);
+
+		var size:Int = BlockLayout.font('small');
+		var pad:Float = BlockLayout.spacing('normal');
+		var textW:Float = Math.max(64, col.w - pad * 2);
+		var lh:Float = lineHeight(size);
+		var lines:Array<SaveLine> = wrapColored(targetItems(), textW, size, TARGET_LINES);
+		var blockH:Float = pad * 2 + Math.max(1, lines.length) * lh;
+		var top:Float = nextRow(col, blockH);
+
+		placeCell(targetBgCell, col.x, top, col.w, blockH);
+		putLines(targetPool, lines, col.x + pad, top + pad, textW, size);
+
+		hintLines(hintPool, col, 'Tap the block to copy the target path. Every mode is listed with the default file name.', COLOR_DIM);
+	}
+
+	function layoutModeSection(col:BlockSaveColumn, first:Bool):Void
+	{
+		sectionHeader(col, capMode, 'WHERE IT RUNS', first);
+
+		var ctrl:Float = controlHeight();
+		var gap:Float = rowGap();
+		var size:Int = BlockLayout.font('body');
+		var segW:Float = Math.max(48, (col.w - gap * 2) / 3);
+		var short:Bool = (segW < 132 * BlockLayout.scale);
+		var y:Float = nextRow(col, ctrl);
+
+		for (i in 0...modeCells.length)
+		{
+			var cell:BlockSaveCell = modeCells[i];
+			var text:String = short ? SHORT_MODE_LABELS[i] : MODE_LABELS[i];
+			cell.setFontSize(size);
+			cell.setText(clipMiddle(text, segW - 12, size));
+			placeCell(cell, col.x + i * (segW + gap), y, segW, ctrl);
+		}
+
+		hintLines(hintPool, col, modeHelpOf(_mode), COLOR_DIM);
+
+		if (_mode != 'custom')
+		{
+			applyPathCell.shown = false;
+			pathFieldShown = false;
+			return;
+		}
+
+		var row:Float = rowHeight();
+		var applyW:Float = Math.max(BlockLayout.buttonWidth('Use path'), 92 * BlockLayout.scale);
+		var labelW:Float = labelRoom(col.w, applyW);
+		y = nextRow(col, row);
+
+		pathFieldX = col.x + labelW + gap;
+		pathFieldW = Math.max(72, col.w - labelW - gap - applyW - gap);
+		pathFieldBaseY = y + (row - ctrl) * 0.5;
+		assignPathFieldWidth();
+
+		applyPathCell.setFontSize(size);
+		placeCell(applyPathCell, col.x + col.w - applyW, pathFieldBaseY, applyW, ctrl);
+		rowLabel(col, 'Custom folder', 0, y, labelW, row, COLOR_TEXT);
+
+		hintLines(hintPool, col, 'Example: D:/my-scripts or mods/my-mod/scripts', COLOR_DIM);
+	}
+
+	function layoutOptionsSection(col:BlockSaveColumn, first:Bool):Void
+	{
+		sectionHeader(col, capOptions, 'OPTIONS', first);
+
+		var ctrl:Float = controlHeight();
+		var size:Int = BlockLayout.font('body');
+		var y:Float = nextRow(col, ctrl);
+
+		autoReloadCell.setFontSize(size);
+		autoReloadCell.setAlignLeft(true);
+		placeCell(autoReloadCell, col.x, y, col.w, ctrl);
+		autoReloadCell.setText(clipMiddle('Reload the script after saving', toggleLabelWidth(col.w), size));
+
+		hintLines(hintPool, col, 'The running song picks the new script up right after a save.', COLOR_DIM);
+
+		y = nextRow(col, ctrl);
+		forceKeyboardCell.setFontSize(size);
+		forceKeyboardCell.setAlignLeft(true);
+		placeCell(forceKeyboardCell, col.x, y, col.w, ctrl);
+		forceKeyboardCell.setText(clipMiddle('Use the in-game touch keyboard', toggleLabelWidth(col.w), size));
+
+		hintLines(hintPool, col, 'Even when the device brings its own keyboard.', COLOR_DIM);
+	}
+
+	function layoutConfigSection(col:BlockSaveColumn, first:Bool):Void
+	{
+		sectionHeader(col, capConfig, 'EXTERNAL BLOCKS', first);
+
+		var ctrl:Float = controlHeight();
+		var y:Float = nextRow(col, ctrl);
+
+		reloadCell.setFontSize(BlockLayout.font('body'));
+		placeCell(reloadCell, col.x, y, col.w, ctrl);
+
+		hintLines(hintPool, col,
+			'Blocks come from blockcode/blocks.json or blockcode/blocks.lua inside a mod folder. Reload rescans them without restarting.', COLOR_DIM);
+
+		if (_configErrors.length > 0)
+		{
+			var size:Int = BlockLayout.font('small');
+			var pad:Float = BlockLayout.spacing('normal');
+			var textW:Float = Math.max(64, col.w - pad * 2);
+			var lh:Float = lineHeight(size);
+			var lines:Array<SaveLine> = wrapColored(blockConfigErrorLines(), textW, size, ERROR_LINES + 1);
+			var blockH:Float = pad * 2 + Math.max(1, lines.length) * lh;
+			var top:Float = nextRow(col, blockH);
+
+			placeCell(errorBgCell, col.x, top, col.w, blockH);
+			putLines(errorPool, lines, col.x + pad, top + pad, textW, size);
+		}
+	}
+
+	function layoutCodeSection(col:BlockSaveColumn, first:Bool):Void
+	{
+		sectionHeader(col, capCode, 'CODE THAT WILL BE WRITTEN', first);
+
+		var size:Int = BlockLayout.font('small');
+		var pad:Float = BlockLayout.spacing('normal');
+		var textW:Float = Math.max(64, col.w - pad * 2);
+		var lines:Array<SaveLine> = codePreviewLines(textW, size);
+		var lh:Float = lineHeight(size);
+		var blockH:Float = pad * 2 + lines.length * lh;
+		var top:Float = nextRow(col, blockH);
+
+		blitPlain(codeBg, col.x, top, col.w, blockH);
+		putLines(codePool, lines, col.x + pad, top + pad, textW, size);
+
+		hintLines(hintPool, col, codePreviewHint(), COLOR_DIM);
+	}
+
+	function layoutLogSection(col:BlockSaveColumn, first:Bool):Void
+	{
+		sectionHeader(col, capLog, 'MESSAGES', first);
+
+		var size:Int = BlockLayout.font('small');
+		var pad:Float = BlockLayout.spacing('normal');
+		var textW:Float = Math.max(64, col.w - pad * 2);
+		var lh:Float = lineHeight(size);
+		var items:Array<SaveLine> = [];
+		var start:Int = Std.int(Math.max(0, logLines.length - LOG_LINES));
+		var newest:Int = logLines.length - 1;
+
+		for (i in start...logLines.length)
+		{
+			items.push({
+				text: ((i == newest) ? '> ' : '  ') + logLines[i],
+				color: (i == newest) ? COLOR_TEXT : COLOR_DIM
+			});
+		}
+
+		if (items.length < 1)
+			items.push({text: 'nothing logged yet', color: COLOR_DIM});
+
+		var lines:Array<SaveLine> = wrapColored(items, textW, size, LOG_LINES * 2);
+		var blockH:Float = pad * 2 + lines.length * lh;
+		var top:Float = nextRow(col, blockH);
+
+		blitPlain(logBg, col.x, top, col.w, blockH);
+		putLines(logPool, lines, col.x + pad, top + pad, textW, size);
+	}
+
+	/** A fixed background block of the scrolling content (not a button). */
+	function blitPlain(sprite:FlxSprite, x:Float, y:Float, w:Float, h:Float):Void
+	{
+		if (sprite == null)
+			return;
+
+		resizeSprite(sprite, Std.int(Math.max(w, 1)), Std.int(Math.max(h, 1)));
+		putPlain(sprite, x, y, h);
+	}
+
+	// --- section content ---
+
+	function targetItems():Array<SaveLine>
+	{
+		var items:Array<SaveLine> = [];
+		if (_settings == null)
+			return items;
+
+		items.push({text: 'Current setting:  ' + BlockFileIO.describe(_settings, _songName), color: COLOR_TEXT});
+		items.push({text: 'Every mode, with the default file name:', color: COLOR_DIM});
+
+		var targets:Array<String> = BlockFileIO.execTargetsFor(_songName);
+		for (i in 0...MODE_NAMES.length)
+		{
+			var path:String = (i < targets.length) ? targets[i] : '';
+			var state:String = ((path.length > 0) && BlockFileIO.exists(path)) ? '  [exists]' : '  [new file]';
+			var active:Bool = (MODE_NAMES[i] == _mode);
+
+			items.push({
+				text: (active ? '> ' : '  ') + MODE_LABELS[i] + ':  ' + path + state,
+				color: active ? COLOR_OK : COLOR_DIM
+			});
+		}
+
+		return items;
+	}
+
+	function codePreviewLines(textW:Float, size:Int):Array<SaveLine>
+	{
+		var lines:Array<SaveLine> = [];
+
+		if (codeProvider == null)
+		{
+			lines.push({text: 'No code yet - the editor has not handed its blocks over.', color: COLOR_DIM});
+			return lines;
+		}
+
+		if (_previewTotal < 1 || (_previewLines.length == 1 && _previewLines[0].length < 1))
+		{
+			lines.push({text: '(the script is empty)', color: COLOR_DIM});
+			return lines;
+		}
+
+		var count:Int = Std.int(Math.min(_previewLines.length, PREVIEW_LINES));
+		for (i in 0...count)
+			lines.push({text: clipEnd(_previewLines[i], textW, size), color: COLOR_TEXT});
+
+		if (count < _previewLines.length)
+			lines.push({text: '...', color: COLOR_DIM});
+
+		return lines;
+	}
+
+	function codePreviewHint():String
+	{
+		if (codeProvider == null)
+			return 'Waiting for the editor to hand over its code.';
+
+		if (_previewTotal > PREVIEW_LINES)
+			return 'First ' + PREVIEW_LINES + ' of ' + _previewTotal + ' lines.';
+
+		return _previewTotal + ((_previewTotal == 1) ? ' line.' : ' lines.');
+	}
+
+	function blockConfigErrorLines():Array<SaveLine>
+	{
+		var lines:Array<SaveLine> = [];
+		var shown:Int = Std.int(Math.min(_configErrors.length, ERROR_LINES + 1));
+
+		for (i in 0...shown)
+			lines.push({text: '! ' + _configErrors[i], color: COLOR_WARN});
+
+		if (_configErrors.length > shown)
+			lines.push({text: '! ... and ' + (_configErrors.length - shown) + ' more (see the messages below)', color: COLOR_WARN});
+
+		return lines;
+	}
+
+	// --- header / footer text ---
+
+	function refreshHeader():Void
+	{
+		if (headerHint == null)
+			return;
+
+		if (!headerHint.visible)
+		{
+			headerHint.text = '';
+			return;
+		}
+
+		var size:Int = BlockLayout.font('small');
+		headerHint.text = clipMiddle(currentTarget(), headerHintW, size);
+	}
+
+	function refreshFooter():Void
+	{
+		var bodySize:Int = BlockLayout.font('body');
+		var smallSize:Int = BlockLayout.font('small');
+		var room:Float = Math.max(80, panelW - innerPad() * 2);
+
+		statusText.color = _statusOk ? COLOR_OK : COLOR_WARN;
+		statusText.setFormat(Paths.font("vcr.ttf"), bodySize, statusText.color, LEFT);
+		statusText.text = wrapLines(_statusMessage, room, bodySize, MESSAGE_MAX_LINES).join('\n');
+
+		configText.setFormat(Paths.font("vcr.ttf"), smallSize, COLOR_DIM, LEFT);
+		configText.text = clipMiddle(_configSummary, room, smallSize);
 	}
 
 	// =========================== scrolling ===========================
@@ -795,7 +1517,7 @@ class BlockSavePanel extends FlxGroup
 		else
 		{
 			if (FlxG.mouse != null && FlxG.mouse.wheel != 0)
-				setScroll(scrollY - FlxG.mouse.wheel * WHEEL_STEP);
+				setScroll(scrollY - FlxG.mouse.wheel * WHEEL_STEP * BlockLayout.scale);
 
 			if (_dragging)
 			{
@@ -815,11 +1537,31 @@ class BlockSavePanel extends FlxGroup
 		if (!nameField.isFocused && !pathField.isFocused)
 		{
 			if (FlxG.keys.justPressed.PAGEUP)
-				setScroll(scrollY - ROW_STEP * 2);
+				setScroll(scrollY - rowHeight() * 2);
 			else if (FlxG.keys.justPressed.PAGEDOWN)
-				setScroll(scrollY + ROW_STEP * 2);
+				setScroll(scrollY + rowHeight() * 2);
 		}
 		#end
+	}
+
+	// =========================== viewport ===========================
+
+	/** Rebuilds the sheet when the window (or the device orientation) changed size. */
+	function syncViewport():Void
+	{
+		BlockLayout.ensure();
+
+		var sameViewport:Bool = (BlockLayout.width == _layoutWidth) && (BlockLayout.height == _layoutHeight);
+		var sameCamera:Bool = (cam != null) && (cam.width == screenWidth()) && (cam.height == screenHeight());
+		if (sameViewport && sameCamera)
+			return;
+
+		_layoutWidth = BlockLayout.width;
+		_layoutHeight = BlockLayout.height;
+
+		computeGeometry();
+		layoutRows();
+		applyScroll();
 	}
 
 	// =========================== pointers ===========================
@@ -927,7 +1669,7 @@ class BlockSavePanel extends FlxGroup
 		if (ptrPressed && _pressedCell != null)
 		{
 			// A finger that slides off the row (or far enough) cancels the press and scrolls instead.
-			if (!_pressedCell.containsPoint(ptrX, ptrY) || Math.abs(ptrY - _pressY) > DRAG_CANCEL)
+			if (!_pressedCell.containsPoint(ptrX, ptrY) || Math.abs(ptrY - _pressY) > DRAG_CANCEL * BlockLayout.touchScale())
 			{
 				_pressedCell.setPressed(false);
 				_pressedCell = null;
@@ -955,9 +1697,24 @@ class BlockSavePanel extends FlxGroup
 
 	function cellAt(x:Float, y:Float):BlockSaveCell
 	{
-		for (cell in cells)
+		// The pinned footer never scrolls, so it is hit tested first.
+		for (cell in pinnedCells)
 		{
 			if (cell.visible && cell.shown && cell.containsPoint(x, y))
+				return cell;
+		}
+
+		for (cell in cells)
+		{
+			if (!cell.visible || !cell.shown)
+				continue;
+
+			// A block that slides under a band is only drawn there, so it is not clickable there.
+			var y:Float = cell.baseY - scrollY;
+			if (!fitsInside(y, cell.hitH, contentTop, contentBottom))
+				continue;
+
+			if (cell.containsPoint(x, y))
 				return cell;
 		}
 
@@ -1021,14 +1778,28 @@ class BlockSavePanel extends FlxGroup
 		field.placeholderText = null;
 	}
 
+	function assignNameFieldWidth():Void
+	{
+		if (nameField != null)
+			nameField.width = nameFieldW;
+	}
+
+	function assignPathFieldWidth():Void
+	{
+		if (pathField != null)
+			pathField.width = pathFieldW;
+	}
+
 	/** Places the inline fields in the scrolled content and hides them when they leave the view. */
 	function syncFields():Void
 	{
 		if (nameField == null || pathField == null)
 			return;
 
+		var ctrl:Float = controlHeight();
+
 		var nameY:Float = nameFieldBaseY - scrollY;
-		nameFieldShown = shouldShow(nameY, CONTROL_HEIGHT, contentTop, contentBottom);
+		nameFieldShown = fitsInside(nameY, ctrl, contentTop, contentBottom);
 		if (nameFieldShown)
 			nameField.updatePosition(nameFieldX, nameY);
 		setFieldVisible(nameField, nameFieldShown);
@@ -1036,7 +1807,7 @@ class BlockSavePanel extends FlxGroup
 			nameField.unfocus();
 
 		var pathY:Float = pathFieldBaseY - scrollY;
-		pathFieldShown = (_mode == 'custom') && shouldShow(pathY, CONTROL_HEIGHT, contentTop, contentBottom);
+		pathFieldShown = (_mode == 'custom') && fitsInside(pathY, ctrl, contentTop, contentBottom);
 		if (pathFieldShown)
 			pathField.updatePosition(pathFieldX, pathY);
 		setFieldVisible(pathField, pathFieldShown);
@@ -1046,6 +1817,8 @@ class BlockSavePanel extends FlxGroup
 
 	function updateFields(elapsed:Float):Void
 	{
+		resizeFieldsIfNeeded();
+
 		// While the OpenFL input field is up it owns the keys; the inline fields would duplicate them.
 		var typing:Bool = _ownsSoftKeyboard && BlockSoftKeyboard.isOpen();
 		if (!typing)
@@ -1071,6 +1844,43 @@ class BlockSavePanel extends FlxGroup
 		}
 
 		handleFallbackKeyboard();
+	}
+
+	/**
+	 * `InputField` fixes its own height while it is built, so a viewport change that moves the row
+	 * height means the fields are rebuilt with the new metrics - only while neither of them is
+	 * being edited, so no caret and no soft keyboard session is lost.
+	 */
+	function resizeFieldsIfNeeded():Void
+	{
+		var ctrl:Float = controlHeight();
+		if (_fieldControlH < 0)
+		{
+			_fieldControlH = ctrl;
+			return;
+		}
+
+		if (Math.abs(_fieldControlH - ctrl) < 2)
+			return;
+
+		if (nameField == null || pathField == null)
+			return;
+		if (nameField.isFocused || pathField.isFocused || _ownsSoftKeyboard)
+			return;
+
+		var nameValue:String = Std.string(nameField.value);
+		var pathValue:String = Std.string(pathField.value);
+
+		destroyField(nameField);
+		destroyField(pathField);
+
+		nameField = new InputField(0, 0, Math.max(80, nameFieldW), ctrl, nameValue, ParamType.STRING, 'blockcode');
+		pathField = new InputField(0, 0, Math.max(80, pathFieldW), ctrl, pathValue, ParamType.STRING, 'absolute path or folder');
+		assignFieldCamera(nameField);
+		assignFieldCamera(pathField);
+
+		_fieldControlH = ctrl;
+		_needsLayout = true;
 	}
 
 	/**
@@ -1119,7 +1929,7 @@ class BlockSavePanel extends FlxGroup
 		_softField = field;
 		_ownsSoftKeyboard = true;
 
-		BlockSoftKeyboard.targetRect = new Rectangle(x, baseY - scrollY, Math.max(w, 80), CONTROL_HEIGHT);
+		BlockSoftKeyboard.targetRect = new Rectangle(x, baseY - scrollY, Math.max(w, 80), controlHeight());
 		BlockSoftKeyboard.open(Std.string(field.value), false, function(text:String):Void
 		{
 			applySoftKeyboardText(text);
@@ -1170,9 +1980,10 @@ class BlockSavePanel extends FlxGroup
 		{
 			_customPath = Std.string(field.value).trim();
 			_settings.customExecPath = _customPath;
-			setStatus('custom path: ' + ((_customPath.length > 0) ? _customPath : '(empty - the default folder is used)'), true);
+			setStatus('custom folder: ' + ((_customPath.length > 0) ? _customPath : '(empty - the default folder is used)'), true);
 		}
 
+		_needsLayout = true;
 		refreshInfo();
 	}
 
@@ -1181,7 +1992,7 @@ class BlockSavePanel extends FlxGroup
 	function readSettings():Void
 	{
 		_mode = (_settings.execMode != null) ? _settings.execMode : 'song';
-		if (_mode != 'song' && _mode != 'global' && _mode != 'custom')
+		if (modeIndex(_mode) < 0)
 			_mode = 'song';
 
 		_autoReload = _settings.autoReload;
@@ -1200,6 +2011,90 @@ class BlockSavePanel extends FlxGroup
 		return Std.string(nameField.value);
 	}
 
+	/** The settings as the panel has them right now, without touching the ones handed to `open()`. */
+	function snapshot():BlockCodeEditorSettings
+	{
+		var copy:BlockCodeEditorSettings = BlockTypes.defaultSettings();
+
+		copy.scriptName = BlockFileIO.sanitizeName(currentName());
+		copy.execMode = _mode;
+		copy.customExecPath = _customPath;
+		copy.autoReload = _autoReload;
+		copy.forceVirtualKeyboard = _forceVirtualKeyboard;
+
+		if (_settings != null)
+		{
+			copy.savePath = _settings.savePath;
+			copy.zoom = _settings.zoom;
+		}
+
+		return copy;
+	}
+
+	function currentTarget():String
+	{
+		if (_settings == null)
+			return '';
+
+		return BlockFileIO.describe(snapshot(), _songName);
+	}
+
+	function currentDir():String
+	{
+		if (_settings == null)
+			return '';
+
+		return BlockFileIO.resolveDir(snapshot(), _songName);
+	}
+
+	static function modeIndex(mode:String):Int
+	{
+		if (mode == null)
+			return 0;
+
+		for (i in 0...MODE_NAMES.length)
+		{
+			if (MODE_NAMES[i] == mode)
+				return i;
+		}
+
+		return -1;
+	}
+
+	static function modeLabelOf(mode:String):String
+	{
+		var index:Int = modeIndex(mode);
+
+		return (index >= 0) ? MODE_LABELS[index] : MODE_LABELS[0];
+	}
+
+	static function modeHelpOf(mode:String):String
+	{
+		var index:Int = modeIndex(mode);
+
+		return (index >= 0) ? MODE_HELP[index] : MODE_HELP[0];
+	}
+
+	/** Room a toggle row leaves for its text once the switch on its right has its space. */
+	static function toggleLabelWidth(rowWidth:Float):Float
+	{
+		return Math.max(60, rowWidth - Math.max(56, 82 * BlockLayout.scale));
+	}
+
+	/**
+	 * Width of the left-hand label of a row that also carries a field and a button, so the three of
+	 * them always add up to `rowWidth` - a narrow sheet shortens the label before it lets a control
+	 * run into its neighbour.
+	 */
+	static function labelRoom(rowWidth:Float, buttonW:Float):Float
+	{
+		var gap:Float = rowGap();
+		var wanted:Float = Math.min(Math.max(110 * BlockLayout.scale, rowWidth * 0.32), rowWidth * 0.45);
+		var spare:Float = rowWidth - (gap + buttonW + gap + Math.max(72, rowWidth * 0.3));
+
+		return Math.max(48, Math.min(wanted, spare));
+	}
+
 	function setMode(mode:String):Void
 	{
 		if (mode == null || mode == _mode)
@@ -1207,15 +2102,14 @@ class BlockSavePanel extends FlxGroup
 
 		_mode = mode;
 		applyTo(_settings);
-		refreshInfo();
+		refreshPreviewCode();
 		playSound('scrollMenu');
 
 		if (_mode != 'custom')
 			pathField.unfocus();
 
-		layoutRows();
-		applyScroll();
-		setStatus('save location: ' + modeLabel(_mode), true);
+		_needsLayout = true;
+		setStatus('scripts are written as: ' + modeLabelOf(_mode), true);
 	}
 
 	function applyCustomPath():Void
@@ -1223,7 +2117,7 @@ class BlockSavePanel extends FlxGroup
 		if (pathFieldShown)
 			commitField(pathField);
 		else
-			setStatus('switch to the Custom mode to edit the path', false);
+			setStatus('switch to Custom folder to type a path of your own', false);
 	}
 
 	// =========================== operations ===========================
@@ -1247,7 +2141,7 @@ class BlockSavePanel extends FlxGroup
 			setStatus('nothing to save - the editor has not handed over its code yet', false);
 			addLog('save skipped: no code source attached');
 			playSound('cancelMenu');
-			refreshInfo();
+			_needsLayout = true;
 			return;
 		}
 
@@ -1256,7 +2150,8 @@ class BlockSavePanel extends FlxGroup
 			code = '';
 
 		var path:String = BlockFileIO.save(_settings, code, _songName);
-		refreshInfo();
+		refreshPreviewCode();
+		_needsLayout = true;
 
 		if (path.length < 1)
 		{
@@ -1285,18 +2180,27 @@ class BlockSavePanel extends FlxGroup
 		// Resolve the path the file lives at now, before the edited name is written into the settings.
 		var previous:String = BlockFileIO.resolveTarget(_settings, _songName);
 		var wanted:String = currentName();
+		var nameWasEdited:Bool = (wanted != _settings.scriptName);
 
 		applyTo(_settings);
 
 		var path:String = BlockFileIO.rename(_settings, wanted, _songName);
 		nameField.value = _settings.scriptName;
-		refreshInfo();
+		refreshPreviewCode();
+		_needsLayout = true;
 
 		if (path.length < 1)
 		{
 			setStatus('rename failed - no target path could be resolved', false);
 			addLog('rename failed for "' + wanted + '"');
 			playSound('cancelMenu');
+			return;
+		}
+
+		if (!nameWasEdited && previous == path)
+		{
+			setStatus('the file is already called ' + _settings.scriptName + '.lua', true);
+			addLog('rename skipped: ' + path + ' is unchanged');
 			return;
 		}
 
@@ -1311,45 +2215,41 @@ class BlockSavePanel extends FlxGroup
 	function reloadBlockConfig():Void
 	{
 		BlockLibrary.reload();
+		refreshConfig();
 
-		var errors:Array<String> = BlockConfigLoader.lastErrors();
 		var blockCount:Int = BlockLibrary.allBlocks().length;
 		var categoryCount:Int = BlockLibrary.categories.length;
 
-		refreshConfigLine();
-
-		if (errors == null || errors.length == 0)
+		if (_configErrors.length == 0)
 		{
-			setStatus('block config reloaded: ' + categoryCount + ' categories, ' + blockCount + ' blocks, no errors', true);
-			addLog('config reloaded: ' + categoryCount + ' categories / ' + blockCount + ' blocks');
+			setStatus('block config reloaded: ' + blockCount + ' blocks in ' + categoryCount + ' groups, no errors', true);
+			addLog('config reloaded: ' + blockCount + ' blocks / ' + categoryCount + ' groups');
 			playSound('confirmMenu');
 			return;
 		}
 
-		setStatus('block config reloaded with ' + errors.length + ' error(s) - see the log', false);
-		for (message in errors)
+		setStatus('block config reloaded with ' + _configErrors.length + ' problem(s) - see the list', false);
+		for (message in _configErrors)
 			addLog('config: ' + message);
 		playSound('cancelMenu');
 	}
 
-	function copyFolderPath():Void
+	/** Puts `text` on the clipboard and reports the outcome in the status line. */
+	function copyText(text:String, label:String):Void
 	{
-		if (_settings == null)
-			return;
-
-		var dir:String = BlockFileIO.resolveDir(_settings, _songName);
-		if (dir.length < 1)
+		var value:String = (text == null) ? '' : text.trim();
+		if (value.length < 1)
 		{
-			setStatus('no folder to copy for this mode', false);
+			setStatus('no ' + label + ' to copy in this mode', false);
 			playSound('cancelMenu');
 			return;
 		}
 
 		try
 		{
-			openfl.system.System.setClipboard(dir);
-			setStatus('folder path copied: ' + dir, true);
-			addLog('copied folder: ' + dir);
+			openfl.system.System.setClipboard(value);
+			setStatus(label + ' copied: ' + value, true);
+			addLog('copied ' + label + ': ' + value);
 			playSound('confirmMenu');
 		}
 		catch (e:Dynamic)
@@ -1366,41 +2266,27 @@ class BlockSavePanel extends FlxGroup
 		if (_settings == null)
 			return;
 
+		var size:Int = BlockLayout.font('body');
+
 		for (cell in modeCells)
-			cell.setActive(cell.modeName == _mode);
-
-		autoReloadCell.setText((_autoReload ? '[x]' : '[ ]') + '  Auto-reload script after save');
-		autoReloadCell.setActive(_autoReload);
-		forceKeyboardCell.setText((_forceVirtualKeyboard ? '[x]' : '[ ]') + '  Force in-game touch keyboard');
-		forceKeyboardCell.setActive(_forceVirtualKeyboard);
-
-		var avail:Float = panelW - PAD * 2;
-		var targets:Array<String> = BlockFileIO.execTargetsFor(_songName);
-		var modes:Array<String> = ['song', 'global', 'custom'];
-		for (i in 0...targetLines.length)
 		{
-			var line:FlxText = targetLines[i];
-			var path:String = (i < targets.length) ? targets[i] : '';
-			var exists:Bool = (path.length > 0) && BlockFileIO.exists(path);
-			var active:Bool = (modes[i] == _mode);
-
-			line.text = (active ? '> ' : '  ') + modes[i] + ': ' + fitWidth(path, avail - 90, 14) + (exists ? '  [exists]' : '  [new]');
-			line.color = active ? COLOR_TEXT : COLOR_DIM;
+			cell.setFontSize(size);
+			cell.setActive(cell.modeName == _mode);
 		}
 
-		headerHint.text = fitWidth(shortTarget(), panelW * 0.55 - PAD, 14);
-		copyCell.setText('Folder: ' + fitWidth(BlockFileIO.resolveDir(_settings, _songName), avail - 150, 15) + '  (tap to copy)');
+		autoReloadCell.setFontSize(size);
+		autoReloadCell.setActive(_autoReload);
+		autoReloadCell.setSwitch(_autoReload, true);
+
+		forceKeyboardCell.setFontSize(size);
+		forceKeyboardCell.setActive(_forceVirtualKeyboard);
+		forceKeyboardCell.setSwitch(_forceVirtualKeyboard, true);
+
+		_needsLayout = true;
 	}
 
-	function shortTarget():String
-	{
-		if (_settings == null)
-			return '';
-
-		return BlockFileIO.describe(_settings, _songName);
-	}
-
-	function refreshConfigLine():Void
+	/** Reads the block catalogue signature plus its error list once, not on every layout pass. */
+	function refreshConfig():Void
 	{
 		var signature:String = BlockConfigLoader.configSignature();
 		var files:Int = 0;
@@ -1423,27 +2309,61 @@ class BlockSavePanel extends FlxGroup
 
 			files++;
 			if (sample.length < 1)
-				sample = baseName(line);
+				sample = shortName(line.split('|')[0]);
 		}
 
-		var text:String = 'config files: ' + files;
+		_configSummary = files + ((files == 1) ? ' config file' : ' config files');
 		if (sample.length > 0)
-			text += ' (' + sample + ')';
-		text += '   runtime blocks: ' + runtime;
-		configText.text = fitWidth(text, panelW - PAD * 2, 13);
+			_configSummary += ' (' + sample + ')';
+		_configSummary += '  -  ' + BlockLibrary.allBlocks().length + ' blocks in ' + BlockLibrary.categories.length + ' groups';
+		if (runtime > 0)
+			_configSummary += '  -  ' + runtime + ' registered by scripts';
+
+		_configErrors = BlockConfigLoader.lastErrors();
+		if (_configErrors == null)
+			_configErrors = [];
+
+		_needsLayout = true;
 	}
 
-	static function baseName(part:String):String
+	/** Caches the head of the generated script, so the preview never regenerates Lua per frame. */
+	function refreshPreviewCode():Void
 	{
-		var file:String = part.split('|')[0];
+		_previewLines = [];
+		_previewTotal = 0;
+
+		if (codeProvider == null)
+			return;
+
+		var code:String = codeProvider();
+		if (code == null)
+			code = '';
+
+		var all:Array<String> = code.split('\n');
+		_previewTotal = all.length;
+
+		var count:Int = Std.int(Math.min(all.length, PREVIEW_LINES + 1));
+		for (i in 0...count)
+			_previewLines.push(all[i]);
+
+		_needsLayout = true;
+	}
+
+	static function shortName(path:String):String
+	{
+		var file:String = (path == null) ? '' : path;
 		var slash:Int = file.lastIndexOf('/');
+		if (slash < 0)
+			slash = file.lastIndexOf('\\');
+
 		return (slash >= 0) ? file.substr(slash + 1) : file;
 	}
 
 	function setStatus(message:String, ok:Bool):Void
 	{
-		statusText.color = ok ? COLOR_OK : COLOR_WARN;
-		statusText.text = fitWidth(message, panelW - PAD * 2, 15);
+		_statusMessage = (message == null) ? '' : message;
+		_statusOk = ok;
+		refreshFooter();
 	}
 
 	function addLog(message:String):Void
@@ -1455,20 +2375,7 @@ class BlockSavePanel extends FlxGroup
 		while (logLines.length > MAX_LOG_ENTRIES)
 			logLines.shift();
 
-		refreshLog();
-	}
-
-	function refreshLog():Void
-	{
-		if (logText == null)
-			return;
-
-		var shown:Array<String> = [];
-		var start:Int = Std.int(Math.max(0, logLines.length - LOG_LINES));
-		for (i in start...logLines.length)
-			shown.push(fitWidth(logLines[i], logTextW, 13));
-
-		logText.text = shown.join('\n');
+		_needsLayout = true;
 	}
 
 	function refreshSaveLabels(force:Bool):Void
@@ -1482,31 +2389,6 @@ class BlockSavePanel extends FlxGroup
 		saveRenameCell.setText(available ? 'Save + Rename' : 'Save + Rename (no code)');
 	}
 
-	/**
-	 * Shortens `text` so it fits `maxWidth` at `fontSize`. The font is not measured; the estimate
-	 * keeps the end of the string (the file name) visible, which is what a path row is for.
-	 */
-	static function fitWidth(text:String, maxWidth:Float, fontSize:Int):String
-	{
-		if (text == null)
-			return '';
-		if (maxWidth <= 0)
-			return text;
-
-		var maxChars:Int = Std.int(maxWidth / (fontSize * FIELD_LABEL_WIDTH));
-		if (maxChars < 8)
-			maxChars = 8;
-		if (text.length <= maxChars)
-			return text;
-
-		var tail:Int = Std.int((maxChars - ELLIPSIS.length) * 0.6);
-		var head:Int = maxChars - tail - ELLIPSIS.length;
-		if (head < 1)
-			head = 1;
-
-		return text.substr(0, head) + ELLIPSIS + text.substr(text.length - tail);
-	}
-
 	static function countLines(code:String):Int
 	{
 		if (code == null || code.length < 1)
@@ -1518,16 +2400,6 @@ class BlockSavePanel extends FlxGroup
 	static function onOff(value:Bool):String
 	{
 		return value ? 'on' : 'off';
-	}
-
-	static function modeLabel(mode:String):String
-	{
-		if (mode == 'global')
-			return 'global (mods scripts folder)';
-		if (mode == 'custom')
-			return 'custom path';
-
-		return 'song (current song script)';
 	}
 
 	function playSound(name:String):Void
@@ -1545,6 +2417,177 @@ class BlockSavePanel extends FlxGroup
 		}
 	}
 
+	// =========================== text measurement ===========================
+	static var _charWidths:Map<Int, Float> = new Map();
+
+	/**
+	 * Average advance width of one character of the UI font at `fontSize`, measured once per size
+	 * through the same `TextField`/`TextFormat` pair `FlxText` renders with. Falls back to a rough
+	 * estimate when the font cannot be measured (headless targets, font not registered yet).
+	 */
+	static function avgCharWidth(fontSize:Int):Float
+	{
+		var cached:Null<Float> = _charWidths.get(fontSize);
+		if (cached != null)
+			return cached;
+
+		var width:Float = fontSize * CHAR_WIDTH_FALLBACK;
+		var sample:String = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/._- ';
+
+		try
+		{
+			var field:TextField = new TextField();
+			field.defaultTextFormat = new TextFormat(Paths.font("vcr.ttf"), fontSize, 0xFFFFFF);
+			field.text = sample;
+
+			var measured:Float = field.textWidth;
+			if (measured > 0)
+				width = measured / sample.length;
+		}
+		catch (e:Dynamic)
+		{
+			// keep the estimate
+		}
+
+		if (width < 1)
+			width = fontSize * CHAR_WIDTH_FALLBACK;
+
+		_charWidths.set(fontSize, width);
+
+		return width;
+	}
+
+	static function maxCharsFor(width:Float, fontSize:Int):Int
+	{
+		var count:Int = Std.int(width / avgCharWidth(fontSize));
+
+		return (count < 8) ? 8 : count;
+	}
+
+	/**
+	 * Breaks `text` into lines that fit `maxWidth`, honouring the explicit newlines in it and
+	 * preferring to break after a path separator or a space. `maxLines` of 0 or less means "as many
+	 * as needed"; when the text has to be cut, the last line is marked with an ellipsis.
+	 */
+	static function wrapLines(text:String, maxWidth:Float, fontSize:Int, maxLines:Int):Array<String>
+	{
+		var lines:Array<String> = [];
+		if (text == null || text.length < 1)
+			return lines;
+
+		var source:String = (text.length > 4000) ? text.substr(0, 4000) : text;
+		var maxChars:Int = maxCharsFor(maxWidth, fontSize);
+
+		for (logical in source.split('\n'))
+		{
+			var rest:String = logical;
+			while (rest.length > maxChars)
+			{
+				var cut:Int = breakIndex(rest, maxChars);
+				lines.push(rest.substr(0, cut));
+				rest = rest.substr(cut);
+			}
+
+			lines.push(rest);
+		}
+
+		if (maxLines > 0 && lines.length > maxLines)
+		{
+			lines = lines.slice(0, maxLines);
+			var last:Int = maxLines - 1;
+			lines[last] = ellipsize(lines[last], maxChars);
+		}
+
+		return lines;
+	}
+
+	/** Wraps coloured items and clamps the total to `maxLines`, marking what was dropped. */
+	static function wrapColored(items:Array<SaveLine>, maxWidth:Float, fontSize:Int, maxLines:Int):Array<SaveLine>
+	{
+		var out:Array<SaveLine> = [];
+
+		for (item in items)
+		{
+			for (line in wrapLines(item.text, maxWidth, fontSize, 0))
+				out.push({text: line, color: item.color});
+		}
+
+		if (maxLines > 0 && out.length > maxLines)
+		{
+			out = out.slice(0, maxLines);
+			var last:Int = maxLines - 1;
+			out[last] = {
+				text: ellipsize(out[last].text, maxCharsFor(maxWidth, fontSize)),
+				color: out[last].color
+			};
+		}
+
+		return out;
+	}
+
+	/** Index (exclusive) to break a line at, so the separator stays on the first line. */
+	static function breakIndex(text:String, maxChars:Int):Int
+	{
+		var limit:Int = (maxChars < text.length) ? maxChars : text.length;
+		var i:Int = limit - 1;
+
+		while (i > 8)
+		{
+			var c:String = text.charAt(i);
+			if (c == '/' || c == '\\' || c == ' ' || c == '-' || c == ',' || c == ';')
+				return i + 1;
+			i--;
+		}
+
+		return (limit < 1) ? 1 : limit;
+	}
+
+	static function ellipsize(text:String, maxChars:Int):String
+	{
+		var room:Int = maxChars - ELLIPSIS.length;
+		if (room < 1)
+			return ELLIPSIS;
+
+		return (text.length > room) ? text.substr(0, room) + ELLIPSIS : text + ELLIPSIS;
+	}
+
+	/** Shortens `text` from the middle, which keeps the file name of a path readable. */
+	static function clipMiddle(text:String, maxWidth:Float, fontSize:Int):String
+	{
+		if (text == null)
+			return '';
+		if (maxWidth <= 0)
+			return text;
+
+		var maxChars:Int = maxCharsFor(maxWidth, fontSize);
+		if (text.length <= maxChars)
+			return text;
+
+		var tail:Int = Std.int((maxChars - ELLIPSIS.length) * 0.6);
+		var head:Int = maxChars - tail - ELLIPSIS.length;
+		if (head < 1)
+			head = 1;
+		if (tail < 1)
+			tail = 1;
+
+		return text.substr(0, head) + ELLIPSIS + text.substr(text.length - tail);
+	}
+
+	/** Shortens `text` at the end; used for code lines, which are read from the left. */
+	static function clipEnd(text:String, maxWidth:Float, fontSize:Int):String
+	{
+		if (text == null)
+			return '';
+		if (maxWidth <= 0)
+			return text;
+
+		var maxChars:Int = maxCharsFor(maxWidth, fontSize);
+		if (text.length <= maxChars)
+			return text;
+
+		return ellipsize(text.substr(0, maxChars), maxChars);
+	}
+
 	// =========================== camera plumbing ===========================
 
 	/** Keeps the panel's camera in `FlxG.cameras` (last, i.e. on top) while the panel is open. */
@@ -1559,8 +2602,8 @@ class BlockSavePanel extends FlxGroup
 			cameras = [cam];
 			assignFieldCamera(nameField);
 			assignFieldCamera(pathField);
-			_camW = 0;
-			_camH = 0;
+			_layoutWidth = -1;
+			_layoutHeight = -1;
 			computeGeometry();
 			layoutRows();
 			applyScroll();
@@ -1584,11 +2627,38 @@ class BlockSavePanel extends FlxGroup
 	}
 }
 
+/** Vertical write position of one column of the scrolling body. */
+private class BlockSaveColumn
+{
+	public var x:Float = 0;
+	public var w:Float = 0;
+	public var cursor:Float = 0;
+
+	public function new(x:Float, w:Float)
+	{
+		this.x = x;
+		this.w = w;
+	}
+}
+
+/** Reused labels for one block of the body, so a relayout never leaks a sprite. */
+private class SaveLinePool
+{
+	public var lines:Array<FlxText> = [];
+	public var used:Int = 0;
+
+	public function new()
+	{
+	}
+}
+
 /**
- * One touch target of `BlockSavePanel`: a flat rectangle, its label and the action it fires.
+ * One touch target of `BlockSavePanel`: a flat rectangle, its label, an optional switch and the
+ * action it fires.
  *
- * The label is drawn by `draw()` (the way `Block` draws its own label and icon) instead of being a
- * group member, so a row stays one object for hit testing, scrolling and colour state.
+ * The label and the switch are drawn by `draw()` (the way `Block` draws its own label and icon)
+ * instead of being group members, so a row stays one object for hit testing, scrolling and colour
+ * state.
  */
 private class BlockSaveCell extends FlxSprite
 {
@@ -1615,26 +2685,64 @@ private class BlockSaveCell extends FlxSprite
 
 	public var label:FlxText = null;
 
+	var textColor:Int = 0xFFC0CAF5;
 	var fontSize:Int = 15;
+	var alignLeft:Bool = false;
+	var labelPadX:Float = 8;
 	var labelOffsetY:Float = 0;
 	var isActive:Bool = false;
 	var isPressed:Bool = false;
 
-	public function new(x:Float, y:Float, w:Float, h:Float, text:String, color:Int, textColor:Int, size:Int = 15)
+	var switchOn:Bool = false;
+	var switchShown:Bool = false;
+	var switchTrack:FlxSprite = null;
+	var switchKnob:FlxSprite = null;
+
+	public function new(x:Float, y:Float, w:Float, h:Float, text:String, color:Int, textColor:Int, size:Int = 15, alignLeft:Bool = false)
 	{
 		super(x, y);
 
-		fontSize = size;
+		this.fontSize = size;
+		this.textColor = textColor;
+		this.alignLeft = alignLeft;
 		normalColor = color;
 		activeColor = color;
+		labelPadX = Math.max(6, 8 * BlockLayout.scale);
 
 		makeGraphic(Std.int(Math.max(w, 1)), Std.int(Math.max(h, 1)), FlxColor.WHITE);
 
-		label = new FlxText(x + 8, y, Std.int(Math.max(w - 16, 16)), text, size);
-		label.setFormat(Paths.font("vcr.ttf"), size, textColor, CENTER);
+		label = new FlxText(x + labelPadX, y, Std.int(Math.max(w - labelPadX * 2, 16)), text, size);
 		label.scrollFactor.set(0, 0);
+		applyFormat();
 
 		setRect(x, y, w, h);
+		refreshColor();
+	}
+
+	public function setFontSize(size:Int):Void
+	{
+		if (fontSize == size)
+			return;
+
+		fontSize = size;
+		applyFormat();
+		applyLabelRect();
+	}
+
+	public function setAlignLeft(value:Bool):Void
+	{
+		if (alignLeft == value)
+			return;
+
+		alignLeft = value;
+		applyFormat();
+	}
+
+	/** Background pair of the row: the one it has while off and the one it has while switched on. */
+	public function setColors(normal:Int, active:Int):Void
+	{
+		normalColor = normal;
+		activeColor = active;
 		refreshColor();
 	}
 
@@ -1662,6 +2770,28 @@ private class BlockSaveCell extends FlxSprite
 			label.text = text;
 	}
 
+	/** Switches the right-hand switch on or off; `shown` false keeps it out of the way. */
+	public function setSwitch(on:Bool, shown:Bool):Void
+	{
+		switchOn = on;
+
+		if (shown && switchTrack == null)
+			createSwitch();
+
+		var changed:Bool = (switchShown != shown);
+		switchShown = shown;
+
+		if (changed)
+		{
+			applyLabelRect();
+			layoutSwitch();
+			return;
+		}
+
+		if (shown)
+			layoutSwitch();
+	}
+
 	public function setRect(x:Float, y:Float, w:Float, h:Float):Void
 	{
 		hitW = Math.max(w, 1);
@@ -1676,21 +2806,19 @@ private class BlockSaveCell extends FlxSprite
 		this.x = x;
 		this.y = y;
 
-		if (label != null)
-		{
-			labelOffsetY = (hitH - fontSize) * 0.5 - 2;
-			label.fieldWidth = Std.int(Math.max(hitW - 16, 16));
-			label.x = x + 8;
-			label.y = y + labelOffsetY;
-		}
+		applyLabelRect();
+		layoutSwitch();
 	}
 
-	/** Follows the panel's scroll offset; the label moves with the cell. */
+	/** Follows the panel's scroll offset; the label and the switch move with the cell. */
 	public function moveTo(y:Float):Void
 	{
 		this.y = y;
+
 		if (label != null)
 			label.y = y + labelOffsetY;
+
+		layoutSwitch();
 	}
 
 	public function containsPoint(x:Float, y:Float):Bool
@@ -1701,6 +2829,17 @@ private class BlockSaveCell extends FlxSprite
 	override public function draw():Void
 	{
 		super.draw();
+
+		if (switchShown && switchTrack != null && switchKnob != null)
+		{
+			switchTrack.scrollFactor.copyFrom(scrollFactor);
+			switchTrack.cameras = cameras;
+			switchTrack.draw();
+
+			switchKnob.scrollFactor.copyFrom(scrollFactor);
+			switchKnob.cameras = cameras;
+			switchKnob.draw();
+		}
 
 		if (label == null || !label.visible)
 			return;
@@ -1714,7 +2853,90 @@ private class BlockSaveCell extends FlxSprite
 	{
 		FlxDestroyUtil.destroy(label);
 		label = null;
+		FlxDestroyUtil.destroy(switchTrack);
+		switchTrack = null;
+		FlxDestroyUtil.destroy(switchKnob);
+		switchKnob = null;
+
 		super.destroy();
+	}
+
+	function applyFormat():Void
+	{
+		if (label == null)
+			return;
+
+		label.setFormat(Paths.font("vcr.ttf"), fontSize, textColor, alignLeft ? LEFT : CENTER);
+	}
+
+	function applyLabelRect():Void
+	{
+		if (label == null)
+			return;
+
+		var room:Float = hitW - labelPadX * 2 - (switchShown ? switchSpace() + labelPadX : 0);
+		labelOffsetY = (hitH - BlockSavePanel.lineHeight(fontSize)) * 0.5;
+		label.fieldWidth = Std.int(Math.max(room, 16));
+		// The field width centers the text; wrapping it into a second line would break the row.
+		label.wordWrap = false;
+		label.x = this.x + labelPadX;
+		label.y = this.y + labelOffsetY;
+	}
+
+	function createSwitch():Void
+	{
+		switchTrack = new FlxSprite(0, 0);
+		switchTrack.scrollFactor.set(0, 0);
+		switchTrack.makeGraphic(1, 1, FlxColor.WHITE);
+
+		switchKnob = new FlxSprite(0, 0);
+		switchKnob.scrollFactor.set(0, 0);
+		switchKnob.makeGraphic(1, 1, FlxColor.WHITE);
+	}
+
+	function switchSpace():Float
+	{
+		return switchTrackHeight() * 1.9;
+	}
+
+	function switchTrackHeight():Float
+	{
+		var wanted:Float = hitH - 10 * BlockLayout.scale;
+
+		return Math.min(Math.max(wanted, 16), 30 * BlockLayout.scale);
+	}
+
+	function layoutSwitch():Void
+	{
+		if (!switchShown || switchTrack == null || switchKnob == null)
+			return;
+
+		var trackH:Float = switchTrackHeight();
+		var trackW:Float = trackH * 1.9;
+		var trackX:Float = this.x + hitW - labelPadX - trackW;
+		var trackY:Float = this.y + (hitH - trackH) * 0.5;
+
+		setGraphic(switchTrack, Std.int(trackW), Std.int(trackH));
+		switchTrack.setPosition(trackX, trackY);
+		switchTrack.color = switchOn ? BlockSavePanel.COLOR_SWITCH_ON : BlockSavePanel.COLOR_SWITCH_OFF;
+
+		var knob:Float = Math.max(8, trackH - 6);
+		setGraphic(switchKnob, Std.int(knob), Std.int(knob));
+		switchKnob.setPosition(switchOn ? (trackX + trackW - knob - 3) : (trackX + 3), trackY + (trackH - knob) * 0.5);
+		switchKnob.color = switchOn ? BlockSavePanel.COLOR_DARK_TEXT : BlockSavePanel.COLOR_TEXT;
+	}
+
+	static function setGraphic(sprite:FlxSprite, w:Int, h:Int):Void
+	{
+		if (sprite == null)
+			return;
+
+		var width:Int = Std.int(Math.max(w, 1));
+		var height:Int = Std.int(Math.max(h, 1));
+		if (Std.int(sprite.width) == width && Std.int(sprite.height) == height)
+			return;
+
+		sprite.makeGraphic(width, height, FlxColor.WHITE);
 	}
 
 	function refreshColor():Void

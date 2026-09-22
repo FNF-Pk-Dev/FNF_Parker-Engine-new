@@ -52,10 +52,16 @@ private class BrowserButton
 	/** Destructive action: drawn in the danger colour. */
 	public var danger:Bool = false;
 
-	/** Primary action: drawn in the accent colour. */
+	/** Primary action or active filter: drawn in the accent colour. */
 	public var accent:Bool = false;
 
 	public var held:Bool = false;
+
+	/** Mouse (never touch) is over the button: drawn one step lighter. */
+	public var hover:Bool = false;
+
+	/** True when the button lives on the list camera, i.e. its rect is list-local. */
+	public var listSpace:Bool = false;
 
 	/** Colour the background graphic was last built with, so it is only rebuilt when it changes. */
 	public var bgColor:Int = 0;
@@ -70,14 +76,20 @@ private class BrowserButton
 	}
 }
 
-/** One pooled list row: the background plus the three text fields of a script file. */
+/**
+ * One pooled list row: the row background plus the two lines of a script file - the name
+ * with the body font, the shortened path and the size with the small font - and the cache
+ * of which of the three looks (normal / hover / selected) the background currently has.
+ */
 private class BrowserRow
 {
 	public var bg:FlxSprite;
 	public var name:FlxText;
-	public var path:FlxText;
+	public var detail:FlxText;
 	public var size:FlxText;
-	public var selected:Bool = false;
+
+	/** 0 = normal, 1 = hover, 2 = selected or pressed. `-1` forces the first paint. */
+	public var visual:Int = -1;
 
 	public function new()
 	{
@@ -106,56 +118,40 @@ private class BrowserRow
  * });
  * ```
  *
- * Pointer input is touch first (`FlxG.touches`) and mouse second, every press target is at
- * least 44px tall, and all disk access goes through `BlockFileIO`, `#if sys` guarded and
- * inside `try/catch`.
+ * Layout comes entirely from `BlockLayout`, so the same panel reads well in a 1280x720
+ * window, on a phone in landscape and on an upright phone or tablet:
+ *
+ * - the panel is `BlockLayout.panelSize()` clamped to the requested size, and every row,
+ *   button and font is derived from `BlockLayout.touchSize()`, `font()` and `spacing()`;
+ * - a sticky header (title, result count, filter chips, search field) never scrolls;
+ * - rows are two lines tall - at least `touchSize() + 12` - with the file name on the
+ *   first line and the shortened path plus the size on the second;
+ * - the external block-config card is its own section with a one line summary, an
+ *   expandable, scrollable detail area and the Reload button;
+ * - an empty list explains where scripts are expected (`BlockFileIO.execTargetsFor`) and
+ *   a search without hits offers a way back to the full list.
+ *
+ * Pointer input is touch first (`FlxG.touches`) and mouse second; the list scrolls by
+ * touch drag, mouse wheel and a `BlockLayout`-sized scrollbar, and a long press on a row
+ * opens the destructive "move to `.bak`" confirmation.
  */
 class BlockFileBrowser extends FlxGroup
 {
 	// --- Theme -------------------------------------------------------------------------
 	public static inline var COLOR_BG:Int = 0xFF16161E;
 	public static inline var COLOR_ROW:Int = 0xFF1A1B26;
+	public static inline var COLOR_HOVER:Int = 0xFF24283B;
 	public static inline var COLOR_SELECTED:Int = 0xFF3D59A1;
 	public static inline var COLOR_TEXT:Int = 0xFFC0CAF5;
 	public static inline var COLOR_DIM:Int = 0xFF565F89;
 	public static inline var COLOR_BOX:Int = 0xFF24283B;
 	public static inline var COLOR_EDGE:Int = 0xFF414868;
+	public static inline var COLOR_OK:Int = 0xFF9ECE6A;
 	public static inline var COLOR_WARN:Int = 0xFFE0AF68;
 	public static inline var COLOR_DANGER:Int = 0xFFF7768E;
 	public static inline var COLOR_SCRIM:Int = 0xB3000000;
 
-	// --- Metrics -----------------------------------------------------------------------
-
-	/** One list row. Comfortably more than the 44px a finger needs. */
-	static inline var ROW_H:Float = 58;
-
-	static inline var TITLE_H:Float = 46;
-	static inline var STATUS_H:Float = 68;
-	static inline var CHIP_H:Float = 54;
-	static inline var SEARCH_H:Float = 56;
-	static inline var FOOTER_H:Float = 60;
-
-	/** Everything the panel reserves above and below the list. */
-	static inline var FIXED_H:Float = TITLE_H + STATUS_H + CHIP_H + SEARCH_H + FOOTER_H;
-
-	/** Shortest list the panel still gives to the rows. */
-	static inline var MIN_LIST_H:Float = 72;
-
-	static inline var MIN_PANEL_W:Float = 420;
-	static inline var PAD:Float = 14;
-	static inline var BUTTON_H:Float = 44;
-	static inline var GAP:Float = 8;
-	static inline var CHIP_GAP:Float = 6;
-	static inline var MAX_CHIPS:Int = 6;
-	static inline var CLOSE_W:Float = 44;
-	static inline var RELOAD_W:Float = 92;
-	static inline var SCROLLBAR_W:Float = 8;
-	static inline var ROW_TEXT_X:Float = 12;
-	static inline var SIZE_BOX_W:Float = 96;
-
-	static inline var FONT_SMALL:Int = 12;
-	static inline var FONT_BODY:Int = 14;
-	static inline var FONT_TITLE:Int = 18;
+	// --- Constants ---------------------------------------------------------------------
 
 	/** How long a press on a row lasts before the delete confirmation opens. */
 	static inline var LONG_PRESS:Float = 0.55;
@@ -170,6 +166,24 @@ class BlockFileBrowser extends FlxGroup
 
 	/** `vcr.ttf` is monospace, so the font size gives a usable estimate for clipping. */
 	static inline var CHAR_W:Float = 0.62;
+
+	/** Width of the coloured status stripe on the left edge of the block-config card. */
+	static inline var CARD_EDGE_W:Float = 3;
+
+	/** Smallest number of detail lines the config card can show at once. */
+	static inline var CARD_MIN_LINES:Int = 1;
+
+	/** Text lines the empty state can draw (a title plus these). */
+	static inline var EMPTY_LINE_POOL:Int = 12;
+
+	/** Text lines the config card can draw at once. */
+	static inline var CARD_LINE_POOL:Int = 6;
+
+	/** `vcr.ttf` has no U+00B7, so the summary uses the bullet the FPS counter already uses. */
+	static inline var SEPARATOR:String = ' • ';
+
+	/** Chips shown on top of the three fixed ones (this song / all mods / all). */
+	static inline var MAX_MOD_CHIPS:Int = 3;
 
 	// --- Callbacks ---------------------------------------------------------------------
 
@@ -199,62 +213,139 @@ class BlockFileBrowser extends FlxGroup
 
 	var _requestedH:Float = 0;
 
+	// --- Metrics (all of them from BlockLayout, filled in by `measure()`) --------------
+	var _pad:Float = 14;
+	var _gap:Float = 8;
+	var _gapTight:Float = 4;
+	var _ctlH:Float = 38;
+	var _rowH:Float = 58;
+	var _rowGap:Float = 8;
+	var _barW:Float = 12;
+	var _chipH:Float = 46;
+	var _lineH:Float = 17;
+	var _hintH:Float = 18;
+	var _fontBody:Int = 15;
+	var _fontSmall:Int = 13;
+	var _fontTitle:Int = 18;
+
+	/** `BlockLayout.describe()` of the last styling pass, so fonts are only re-applied on a real resize. */
+	var _styleStamp:String = '';
+
+	/** Detail lines the config card body shows at once, and the number it currently uses. */
+	var _cardVisibleLines:Int = 4;
+
+	var _cardLinesUsed:Int = CARD_MIN_LINES;
+
 	// --- Panel geometry ----------------------------------------------------------------
 	var _panelX:Float = 0;
 	var _panelY:Float = 0;
 	var _panelW:Float = 0;
 	var _panelH:Float = 0;
+	var _innerX:Float = 0;
+	var _innerW:Float = 0;
 	var _titleY:Float = 0;
-	var _statusY:Float = 0;
+	var _titleH:Float = 0;
 	var _chipY:Float = 0;
+	var _chipRows:Int = 0;
 	var _searchY:Float = 0;
+	var _cardY:Float = 0;
+	var _cardH:Float = 0;
 	var _listX:Float = 0;
 	var _listY:Float = 0;
 	var _listW:Float = 0;
 	var _listH:Float = 0;
-	var _footerY:Float = 0;
-	var _innerX:Float = 0;
-	var _innerW:Float = 0;
-	var _footerTextW:Float = 40;
+	var _buttonsY:Float = 0;
+	var _hintY:Float = 0;
+	var _hintVisible:Bool = true;
+
+	/** Widest text areas, derived once per layout pass. */
+	var _titleW:Float = 100;
+
+	var _countW:Float = 100;
+	var _searchTextW:Float = 100;
+	var _cardSummaryW:Float = 100;
+	var _cardToggleW:Float = 100;
+
+	// --- List geometry (list-local coordinates) ----------------------------------------
+	var _rowW:Float = 100;
+	var _rowTextX:Float = 8;
+	var _rowTextW:Float = 100;
+	var _rowPadY:Float = 8;
+	var _sizeBoxW:Float = 64;
+	var _barX:Float = 0;
+	var _thumbY:Float = 0;
+	var _thumbH:Float = 0;
+	var _emptyX:Float = 8;
+	var _emptyY:Float = 8;
+	var _emptyW:Float = 100;
+	var _emptyH:Float = 0;
 
 	// --- Chrome ------------------------------------------------------------------------
 	var _scrim:FlxSprite;
 	var _panel:FlxSprite;
-	var _titleEdge:FlxSprite;
+	var _edgeTop:FlxSprite;
+	var _edgeBottom:FlxSprite;
+	var _edgeLeft:FlxSprite;
+	var _edgeRight:FlxSprite;
+	var _headerEdge:FlxSprite;
 	var _footerEdge:FlxSprite;
+	var _cardBg:FlxSprite;
+	var _cardBodyBg:FlxSprite;
+	var _cardEdge:FlxSprite;
+
 	var _titleText:FlxText;
 	var _countText:FlxText;
-	var _statusLines:Array<FlxText> = [];
 	var _searchText:FlxText;
 	var _searchHint:FlxText;
-	var _footerText:FlxText;
+	var _hintText:FlxText;
+	var _cardSummary:FlxText;
+
+	/** One text per visible line of the block-config card body. */
+	var _cardTexts:Array<FlxText> = [];
+
+	var _cardBarBg:FlxSprite;
+	var _cardBarThumb:FlxSprite;
 
 	var _closeBtn:BrowserButton;
+	var _searchBtn:BrowserButton;
+	var _clearBtn:BrowserButton;
+	var _cardToggle:BrowserButton;
 	var _reloadBtn:BrowserButton;
 	var _loadBtn:BrowserButton;
 	var _deleteBtn:BrowserButton;
 	var _cancelBtn:BrowserButton;
-	var _clearBtn:BrowserButton;
-	var _searchBtn:BrowserButton;
 	var _yesBtn:BrowserButton;
 	var _noBtn:BrowserButton;
+	var _resetBtn:BrowserButton;
 
-	var _chips:Array<BrowserButton> = [];
-	var _chipTexts:Array<String> = [];
-	var _chipKinds:Array<String> = [];
-	var _chipMods:Array<String> = [];
+	/** Filter chips, grown on demand because the mod folders are only known at runtime. */
+	var _chipButtons:Array<BrowserButton> = [];
 
 	var _buttons:Array<BrowserButton> = [];
 
 	// --- List (drawn by the list camera, so these are list-local coordinates) -----------
 	var _rows:Array<BrowserRow> = [];
-	var _emptyText:FlxText;
+	var _emptyTitle:FlxText;
+	var _emptyLines:Array<FlxText> = [];
+	var _emptyContent:Array<String> = [];
+	var _emptyColors:Array<Int> = [];
 	var _scrollTrack:FlxSprite;
 	var _scrollThumb:FlxSprite;
-	var _confirmBg:FlxSprite;
+
+	var _confirmScrim:FlxSprite;
+	var _confirmCard:FlxSprite;
+	var _confirmEdge:FlxSprite;
 	var _confirmTitle:FlxText;
+	var _confirmName:FlxText;
 	var _confirmBody:FlxText;
 	var _confirmIndex:Int = -1;
+	var _confirmCardX:Float = 0;
+	var _confirmCardY:Float = 0;
+	var _confirmCardW:Float = 0;
+	var _confirmCardH:Float = 0;
+
+	/** Name the confirmation promises, resolved once when the confirmation opens. */
+	var _confirmBackup:String = '';
 
 	var _vkb:BlockVirtualKeyboard;
 
@@ -266,17 +357,49 @@ class BlockFileBrowser extends FlxGroup
 	var _filterMod:String = '';
 	var _search:String = '';
 
+	/** Labels, kinds and mod names of the chips currently on screen. */
+	var _chipLabels:Array<String> = [];
+
+	var _chipKinds:Array<String> = [];
+	var _chipMods:Array<String> = [];
+
 	/** `kind|mod|search` of the last filtering, used to drop the selection when it changes. */
 	var _filterKey:String = '';
+
+	/** Labels of the last chip strip, so a strip that needs another row triggers a layout. */
+	var _chipKey:String = '';
 
 	var _selected:Int = -1;
 	var _scroll:Float = 0;
 	var _contentH:Float = 0;
 	var _maxScroll:Float = 0;
+	var _hoverRow:Int = -1;
 
 	var _configFiles:Array<String> = [];
 	var _configErrors:Array<String> = [];
 	var _configRuntime:Int = 0;
+	var _cardContent:Array<String> = [];
+	var _cardColors:Array<Int> = [];
+	var _cardEdgeColor:Int = 0;
+
+	/** Whether the config card is unfolded, and whether the user decided that themselves. */
+	var _cardOpen:Bool = false;
+
+	var _cardUserToggled:Bool = false;
+
+	/** First visible line of the config card body and its scroll range, in lines. */
+	var _cardScroll:Float = 0;
+
+	var _cardScrollMax:Float = 0;
+
+	var _cardBodyVisible:Bool = false;
+	var _cardBodyX:Float = 0;
+	var _cardBodyY:Float = 0;
+	var _cardBodyW:Float = 0;
+	var _cardBodyH:Float = 0;
+	var _cardTextX:Float = 0;
+	var _cardTextW:Float = 100;
+	var _cardBarW:Float = 10;
 
 	var _message:String = '';
 	var _messageError:Bool = false;
@@ -292,20 +415,26 @@ class BlockFileBrowser extends FlxGroup
 	var _ptrJustReleased:Bool = false;
 	var _touchId:Int = -1;
 
-	var _gestureActive:Bool = false;
+	/** `''` / `'list'` / `'bar'` / `'card'`: what the current drag started on. */
+	var _gesture:String = '';
+
 	var _pressRow:Int = -1;
 	var _pressTime:Float = 0;
 	var _pressY:Float = 0;
 	var _pressScroll:Float = 0;
 	var _pressDragged:Bool = false;
 	var _pressButton:BrowserButton = null;
+	var _pressOutsideConfirm:Bool = false;
+	var _barGrab:Float = 0;
+
+	var _hoverButton:BrowserButton = null;
 
 	var _editingSearch:Bool = false;
 	var _nativeEditing:Bool = false;
 
 	/**
-	 * @param width  Width the panel should have in pixels; clamped to the screen.
-	 * @param height Height the panel should have in pixels; clamped to the screen.
+	 * @param width  Width the panel should have in pixels; `BlockLayout.panelSize()` clamps it to the screen.
+	 * @param height Height the panel should have in pixels; clamped the same way.
 	 */
 	public function new(width:Float, height:Float)
 	{
@@ -316,6 +445,8 @@ class BlockFileBrowser extends FlxGroup
 		_pointer = FlxPoint.get();
 		_auxPoint = FlxPoint.get();
 
+		BlockLayout.ensure();
+		measure();
 		buildCameras();
 		buildUI();
 		layout();
@@ -374,10 +505,20 @@ class BlockFileBrowser extends FlxGroup
 		closeConfirm();
 		_pressButton = null;
 		_pressRow = -1;
-		_gestureActive = false;
+		_gesture = '';
 		_pressDragged = false;
+		_pressOutsideConfirm = false;
 		_selected = -1;
 		_scroll = 0;
+		_hoverRow = -1;
+
+		if (_hoverButton != null)
+		{
+			_hoverButton.hover = false;
+			refreshButton(_hoverButton);
+			_hoverButton = null;
+		}
+
 		detachCameras();
 
 		if (_closed != null)
@@ -389,8 +530,8 @@ class BlockFileBrowser extends FlxGroup
 	}
 
 	/**
-	 * Song the SONG chip narrows to and the song folder `BlockFileIO` scans. An empty or
-	 * null name just leaves that chip out.
+	 * Song the "This song" chip narrows to and the song folder `BlockFileIO` scans. An
+	 * empty or null name just leaves that chip out.
 	 */
 	public function setSongFilter(songName:String):Void
 	{
@@ -416,8 +557,10 @@ class BlockFileBrowser extends FlxGroup
 			}
 		}
 
-		// A resize while the panel is up has to move the cameras with it.
-		if (FlxG.width != _screenW || FlxG.height != _screenH)
+		// A resize while the panel is up has to move the cameras with it, and the metrics
+		// every control is measured in come from the same viewport.
+		BlockLayout.ensure();
+		if (BlockLayout.width != _screenW || BlockLayout.height != _screenH)
 			layout();
 
 		// A text editor owns the pointer while it is up, and the tap that dismisses the
@@ -426,6 +569,7 @@ class BlockFileBrowser extends FlxGroup
 			return;
 
 		pollPointer();
+		updateHover();
 		handlePointer(elapsed);
 	}
 
@@ -439,6 +583,7 @@ class BlockFileBrowser extends FlxGroup
 
 		detachCameras();
 		_vkb = null;
+		_hoverButton = null;
 		_pointer = FlxDestroyUtil.put(_pointer);
 		_auxPoint = FlxDestroyUtil.put(_auxPoint);
 
@@ -551,55 +696,71 @@ class BlockFileBrowser extends FlxGroup
 	{
 		_scrim = overlay(new FlxSprite());
 		_panel = overlay(new FlxSprite());
-		_titleEdge = overlay(new FlxSprite());
+		_edgeTop = overlay(new FlxSprite());
+		_edgeBottom = overlay(new FlxSprite());
+		_edgeLeft = overlay(new FlxSprite());
+		_edgeRight = overlay(new FlxSprite());
+		_headerEdge = overlay(new FlxSprite());
 		_footerEdge = overlay(new FlxSprite());
+		_cardBg = overlay(new FlxSprite());
+		_cardBodyBg = overlay(new FlxSprite());
+		_cardEdge = overlay(new FlxSprite());
 
-		_titleText = overlay(makeText(FONT_TITLE, COLOR_TEXT));
+		_titleText = overlay(makeText());
 		_titleText.text = 'Load Lua Script';
 
-		_countText = overlay(makeText(FONT_SMALL, COLOR_DIM));
+		_countText = overlay(makeText());
 		_countText.alignment = FlxTextAlign.RIGHT;
 
-		for (i in 0...3)
-			_statusLines.push(overlay(makeText(FONT_SMALL, COLOR_DIM)));
+		_cardSummary = overlay(makeText());
 
-		_searchBtn = makeButton(false, false);
-		_searchText = overlay(makeText(FONT_BODY, COLOR_TEXT));
-		_searchHint = overlay(makeText(FONT_BODY, COLOR_DIM));
+		for (i in 0...CARD_LINE_POOL)
+			_cardTexts.push(overlay(makeText()));
+
+		_cardBarBg = overlay(new FlxSprite());
+		_cardBarThumb = overlay(new FlxSprite());
 
 		_closeBtn = makeButton(false, false);
+		_searchBtn = makeButton(false, false);
+		_searchText = overlay(makeText());
+		_searchHint = overlay(makeText());
+		_clearBtn = makeButton(false, false);
+		_cardToggle = makeButton(false, false);
 		_reloadBtn = makeButton(false, false);
+		_hintText = overlay(makeText());
+
 		_loadBtn = makeButton(false, true);
 		_deleteBtn = makeButton(true, false);
 		_cancelBtn = makeButton(false, false);
-		_clearBtn = makeButton(false, false);
-		_footerText = overlay(makeText(FONT_SMALL, COLOR_DIM));
-
-		for (i in 0...MAX_CHIPS)
-		{
-			_chips.push(makeButton(false, false));
-			_chipTexts.push('');
-			_chipKinds.push('');
-			_chipMods.push('');
-		}
+		_yesBtn = makeButton(true, false, true);
+		_noBtn = makeButton(false, false, true);
 
 		// The keyboard draws on its own camera, which is the last one added, so it is above
 		// the panel whatever the member order is.
 		buildKeyboard();
 
-		// List contents, in draw order. Everything here is clipped by the list camera, which
-		// is why the delete confirmation can simply cover the list.
+		// List contents, in draw order. The rows come first, then everything that has to
+		// draw above them (scrollbar, empty state, reset button, confirmation).
 		buildRows();
 		_scrollTrack = listChild(new FlxSprite());
 		_scrollThumb = listChild(new FlxSprite());
-		_emptyText = listChild(makeText(FONT_SMALL, COLOR_DIM));
-		_emptyText.wordWrap = true;
 
-		_confirmBg = listChild(new FlxSprite());
-		_confirmTitle = listChild(makeText(FONT_BODY, COLOR_TEXT));
-		_confirmBody = listChild(makeText(FONT_SMALL, COLOR_DIM));
-		_yesBtn = makeButton(true, false, true);
-		_noBtn = makeButton(false, false, true);
+		_emptyTitle = listChild(makeText());
+		for (i in 0...EMPTY_LINE_POOL)
+			_emptyLines.push(listChild(makeText()));
+		_resetBtn = makeButton(false, true, true);
+
+		_confirmScrim = listChild(new FlxSprite());
+		_confirmCard = listChild(new FlxSprite());
+		_confirmEdge = listChild(new FlxSprite());
+		_confirmTitle = listChild(makeText());
+		_confirmTitle.alignment = FlxTextAlign.CENTER;
+		_confirmName = listChild(makeText());
+		_confirmName.alignment = FlxTextAlign.CENTER;
+		_confirmBody = listChild(makeText());
+		_confirmBody.alignment = FlxTextAlign.CENTER;
+
+		applyStyles();
 	}
 
 	function buildRows():Void
@@ -607,7 +768,7 @@ class BlockFileBrowser extends FlxGroup
 		// One slot per row the tallest possible panel can show, plus the row cut off at the
 		// bottom. Built here so the scrollbar, the empty state and the confirmation are all
 		// added after the rows and therefore draw above them.
-		var slots:Int = Std.int(Math.ceil(_screenH / ROW_H)) + 2;
+		var slots:Int = Std.int(Math.ceil(_screenH / Math.max(1, _rowH + _rowGap))) + 2;
 		if (slots < 2)
 			slots = 2;
 
@@ -620,11 +781,10 @@ class BlockFileBrowser extends FlxGroup
 	{
 		var row:BrowserRow = new BrowserRow();
 		row.bg = insertRowSprite(new FlxSprite());
-		row.name = insertRowSprite(makeText(16, COLOR_TEXT));
-		row.path = insertRowSprite(makeText(FONT_SMALL, COLOR_DIM));
-		row.size = insertRowSprite(makeText(FONT_SMALL, COLOR_DIM));
+		row.name = insertRowSprite(makeText());
+		row.detail = insertRowSprite(makeText());
+		row.size = insertRowSprite(makeText());
 		row.size.alignment = FlxTextAlign.RIGHT;
-		row.size.fieldWidth = SIZE_BOX_W;
 		setRowVisible(row, false);
 		_rows.push(row);
 		return row;
@@ -633,7 +793,7 @@ class BlockFileBrowser extends FlxGroup
 	/** Adds one more slot when the panel got taller (a window resize while the browser is up). */
 	function ensureRowSlots():Void
 	{
-		var needed:Int = Std.int(Math.ceil(_listH / ROW_H)) + 2;
+		var needed:Int = Std.int(Math.ceil(_listH / Math.max(1, _rowH + _rowGap))) + 2;
 		while (_rows.length < needed)
 			addRow();
 	}
@@ -657,8 +817,9 @@ class BlockFileBrowser extends FlxGroup
 		var btn:BrowserButton = new BrowserButton();
 		btn.danger = danger;
 		btn.accent = accent;
+		btn.listSpace = onListCamera;
 		btn.bg = onListCamera ? listChild(new FlxSprite()) : overlay(new FlxSprite());
-		btn.label = onListCamera ? listChild(makeText(FONT_BODY, COLOR_TEXT)) : overlay(makeText(FONT_BODY, COLOR_TEXT));
+		btn.label = onListCamera ? listChild(makeText()) : overlay(makeText());
 		btn.label.alignment = FlxTextAlign.CENTER;
 		_buttons.push(btn);
 		return btn;
@@ -680,213 +841,373 @@ class BlockFileBrowser extends FlxGroup
 		return sprite;
 	}
 
-	function makeText(size:Int, color:Int):FlxText
+	function makeText():FlxText
 	{
-		var text:FlxText = new FlxText(0, 0, 0, '', size);
-		text.setFormat(Paths.font('vcr.ttf'), size, color);
+		var text:FlxText = new FlxText(0, 0, 0, '', 12);
+		text.setFormat(Paths.font('vcr.ttf'), 12, COLOR_TEXT);
 		return text;
+	}
+
+	function setStyle(text:FlxText, size:Int, color:Int):Void
+	{
+		if (text == null)
+			return;
+
+		text.setFormat(Paths.font('vcr.ttf'), size, color);
+	}
+
+	/**
+	 * Re-applies every font of the panel. Sizes come from `BlockLayout.font()`, so a resize
+	 * that changed `BlockLayout.scale` has to restyle everything; the stamp keeps this off
+	 * the per-frame path.
+	 */
+	function applyStyles():Void
+	{
+		var stamp:String = BlockLayout.describe();
+		if (stamp == _styleStamp)
+			return;
+
+		_styleStamp = stamp;
+
+		setStyle(_titleText, _fontTitle, COLOR_TEXT);
+		setStyle(_countText, _fontSmall, COLOR_DIM);
+		setStyle(_searchText, _fontBody, COLOR_TEXT);
+		setStyle(_searchHint, _fontBody, COLOR_DIM);
+		setStyle(_hintText, _fontSmall, COLOR_DIM);
+		setStyle(_cardSummary, _fontBody, COLOR_TEXT);
+
+		for (text in _cardTexts)
+			setStyle(text, _fontSmall, COLOR_DIM);
+
+		setStyle(_emptyTitle, _fontBody, COLOR_TEXT);
+		for (text in _emptyLines)
+			setStyle(text, _fontSmall, COLOR_DIM);
+
+		setStyle(_confirmTitle, _fontBody, COLOR_DANGER);
+		setStyle(_confirmName, _fontBody, COLOR_TEXT);
+		setStyle(_confirmBody, _fontSmall, COLOR_DIM);
+
+		for (row in _rows)
+		{
+			setStyle(row.name, _fontBody, COLOR_TEXT);
+			setStyle(row.detail, _fontSmall, COLOR_DIM);
+			setStyle(row.size, _fontSmall, COLOR_DIM);
+		}
+
+		for (btn in _buttons)
+			setStyle(btn.label, _fontBody, COLOR_TEXT);
 	}
 
 	// --- Layout ------------------------------------------------------------------------
 
+	/** Fills every metric from `BlockLayout`, so nothing below works with a hardcoded size. */
+	function measure():Void
+	{
+		_pad = Math.max(BlockLayout.inset(), BlockLayout.spacing('normal'));
+		_gap = BlockLayout.spacing('normal');
+		_gapTight = BlockLayout.spacing('tight');
+		_ctlH = Math.max(BlockLayout.touchSize(), BlockLayout.buttonHeight());
+		_rowGap = BlockLayout.spacing('normal');
+		_barW = Math.max(10, 12 * BlockLayout.scale);
+
+		_fontBody = BlockLayout.font('body');
+		_fontSmall = BlockLayout.font('small');
+		_fontTitle = BlockLayout.font('title');
+
+		// Two text lines with breathing room between and around them, and never under one
+		// finger-sized hit area (the task's floor is `touchSize() + 12`).
+		var stacked:Float = _fontBody * 1.25 + _fontSmall * 1.25 + _gapTight * 2;
+		_rowH = Math.max(BlockLayout.touchSize() + 14, Math.round(stacked + _gapTight * 2));
+		_chipH = Math.max(BlockLayout.touchSize(), Math.round(_fontBody * 1.9));
+		_lineH = Math.round(_fontSmall * 1.35);
+		_hintH = Math.round(_fontSmall * 1.4);
+		_cardVisibleLines = BlockLayout.compact ? 2 : (BlockLayout.narrow || BlockLayout.portrait ? 3 : 4);
+	}
+
 	function layout():Void
 	{
+		BlockLayout.ensure();
+		measure();
+		applyStyles();
 		syncCameras();
 
-		var availW:Float = Math.max(MIN_PANEL_W, _screenW - 16);
-		var availH:Float = Math.max(160, _screenH - 16);
-
-		_panelW = Math.min(Math.max(_requestedW, MIN_PANEL_W), availW);
-		var minPanelH:Float = FIXED_H + MIN_LIST_H;
-		_panelH = Math.min(Math.max(_requestedH, minPanelH), Math.max(minPanelH, availH));
+		var size = BlockLayout.panelSize(_requestedW, _requestedH);
+		_panelW = Math.round(size.w);
+		_panelH = Math.round(size.h);
 		_panelX = Math.round((_screenW - _panelW) / 2);
 		_panelY = Math.round((_screenH - _panelH) / 2);
+		_innerX = Math.round(_panelX + _pad);
+		_innerW = Math.round(_panelW - _pad * 2);
 
-		_innerX = _panelX + PAD;
-		_innerW = _panelW - PAD * 2;
+		// The chip strip wraps depending on how wide its labels are, and the strip height
+		// moves the list, so lay out twice whenever the wrap changed.
+		for (pass in 0...3)
+		{
+			var rows:Int = _chipRows;
+			layoutChrome();
+			layoutChips();
+			if (_chipRows == rows)
+				break;
+		}
 
-		_titleY = _panelY;
-		_statusY = _titleY + TITLE_H;
-		_chipY = _statusY + STATUS_H;
-		_searchY = _chipY + CHIP_H;
-		_listX = _panelX;
-		_listY = _searchY + SEARCH_H;
-		_listW = _panelW;
-		_footerY = _panelY + _panelH - FOOTER_H;
-		_listH = Math.max(MIN_LIST_H, _footerY - _listY);
-
-		paint(_scrim, 0, 0, _screenW, _screenH, COLOR_SCRIM);
-		paint(_panel, _panelX, _panelY, _panelW, _panelH, COLOR_BG);
-		paint(_titleEdge, _panelX, _titleY + TITLE_H - 1, _panelW, 1, COLOR_EDGE);
-		paint(_footerEdge, _panelX, _footerY, _panelW, 1, COLOR_EDGE);
-
-		place(_titleText, _innerX, _titleY + 12);
-		place(_countText, _panelX + _panelW - PAD - CLOSE_W - 8 - 120, _titleY + 16, 120);
+		layoutCard();
 
 		// The list camera has to be resized before anything is placed inside it.
 		ensureListCamera();
-
-		layoutStatus();
-		layoutChips();
-		layoutSearch();
-		layoutFooter();
-		layoutConfirm();
 		layoutList();
+
 		refreshSearchText();
+		refreshCount();
+		refreshEmptyState();
+		refreshRows();
+		refreshScrollbar();
+		refreshCardStatus();
+		refreshCardBody();
+		refreshCardScrollbar();
+		refreshConfirm();
+		refreshFooter();
 		refreshFooterText();
 	}
 
-	function layoutStatus():Void
+	/**
+	 * Everything the panel draws directly on the overlay camera: the frame, the sticky
+	 * header (title, count, chips, search field), the block-config card, the footer and the
+	 * list rect the list camera is clipped to. The list content itself is placed by
+	 * `layoutList()` and the `refresh*` methods.
+	 */
+	function layoutChrome():Void
 	{
-		paintButton(_closeBtn, _panelX + _panelW - PAD - CLOSE_W, _titleY + 1, CLOSE_W, CLOSE_W);
-		paintButtonLabel(_closeBtn, 'X');
+		_titleY = _panelY + _pad;
+		_titleH = _ctlH;
+		_chipY = _titleY + _titleH + _gap;
 
-		paintButton(_reloadBtn, _innerX + _innerW - RELOAD_W, _statusY + 12, RELOAD_W, BUTTON_H);
-		paintButtonLabel(_reloadBtn, 'RELOAD');
+		var stripH:Float = chipsStripHeight();
+		_searchY = _chipY + stripH;
+		_cardY = _searchY + _ctlH + _gap;
 
-		var textW:Float = _innerW - RELOAD_W - 10;
-		for (i in 0..._statusLines.length)
-			place(_statusLines[i], _innerX, _statusY + 8 + i * 17, textW);
-	}
+		var cardCollapsedH:Float = _ctlH;
+		var cardOpenH:Float = cardCollapsedH + _gapTight + _cardLinesUsed * _lineH + _gapTight * 2;
+		var cardH:Float = _cardOpen ? cardOpenH : cardCollapsedH;
 
-	function layoutChips():Void
-	{
-		var count:Int = 0;
-		for (i in 0..._chips.length)
+		_buttonsY = _panelY + _panelH - _pad - _ctlH;
+
+		// From the bottom up: buttons, hint line, list. On a short panel the card body and
+		// then the hint line give way before the list is squeezed below one row.
+		var showHint:Bool = true;
+		var listTop:Float = _cardY + cardH + _gap;
+		var listH:Float = 0;
+
+		for (attempt in 0...3)
 		{
-			if (_chipKinds[i].length > 0)
-				count++;
+			listTop = _cardY + cardH + _gap;
+			var bottom:Float = (showHint ? _buttonsY - _gapTight - _hintH : _buttonsY) - _gap;
+			listH = bottom - listTop;
+
+			if (listH >= _rowH)
+				break;
+			if (cardH > cardCollapsedH)
+			{
+				cardH = cardCollapsedH;
+				continue;
+			}
+			if (showHint)
+			{
+				showHint = false;
+				continue;
+			}
+			break;
 		}
 
-		if (count < 1)
-			return;
+		if (listH < _rowH)
+			listH = _rowH;
 
-		var chipW:Float = (_innerW - CHIP_GAP * (count - 1)) / count;
-		if (chipW > 170)
-			chipW = 170;
-		if (chipW < 48)
-			chipW = 48;
+		_cardH = Math.round(cardH);
+		_cardBodyVisible = _cardOpen && cardH > cardCollapsedH;
+		_hintVisible = showHint;
+		_hintY = _buttonsY - _gapTight - _hintH;
+		_listX = _panelX;
+		_listY = Math.round(listTop);
+		_listW = _panelW;
+		_listH = Math.round(listH);
 
-		var x:Float = _innerX;
-		for (i in 0..._chips.length)
+		// Frame.
+		paint(_scrim, 0, 0, _screenW, _screenH, COLOR_SCRIM);
+		paint(_panel, _panelX, _panelY, _panelW, _panelH, COLOR_BG);
+		paint(_edgeTop, _panelX, _panelY, _panelW, 1, COLOR_EDGE);
+		paint(_edgeBottom, _panelX, _panelY + _panelH - 1, _panelW, 1, COLOR_EDGE);
+		paint(_edgeLeft, _panelX, _panelY, 1, _panelH, COLOR_EDGE);
+		paint(_edgeRight, _panelX + _panelW - 1, _panelY, 1, _panelH, COLOR_EDGE);
+		paint(_headerEdge, _panelX, Math.round(_cardY - _gap * 0.5), _panelW, 1, COLOR_EDGE);
+		paint(_footerEdge, _panelX, Math.round((showHint ? _hintY : _buttonsY) - _gap * 0.5), _panelW, 1, COLOR_EDGE);
+
+		layoutHeader();
+		layoutFooterButtons();
+		placeText(_hintText, _innerX, _hintY, _innerW, FlxTextAlign.LEFT, _fontSmall);
+		_hintText.visible = showHint;
+	}
+
+	/** Title row and search row, the two parts of the sticky header that never scroll. */
+	function layoutHeader():Void
+	{
+		var closeW:Float = Math.round(Math.max(_ctlH, BlockLayout.touchSize()));
+		var countY:Float = _titleY + Math.round((_titleH - _fontSmall * 1.25) / 2);
+		var titleY:Float = _titleY + Math.round((_titleH - _fontTitle * 1.25) / 2);
+		var searchY:Float = _searchY + Math.round((_ctlH - _fontBody * 1.25) / 2);
+
+		paintButton(_closeBtn, _innerX + _innerW - closeW, _titleY + Math.round((_titleH - closeW) / 2), closeW, closeW);
+		paintButtonLabel(_closeBtn, 'X');
+
+		var titleAvail:Float = Math.max(40, _innerW - closeW - _gap * 2);
+		_countW = Math.min(titleAvail * 0.55, Math.max(110, 170 * BlockLayout.scale));
+		_titleW = Math.max(40, titleAvail - _countW - _gap);
+
+		placeText(_titleText, _innerX, titleY, _titleW, FlxTextAlign.LEFT, _fontTitle);
+		placeText(_countText, _innerX + titleAvail - _countW, countY, _countW, FlxTextAlign.RIGHT, _fontSmall);
+
+		// Search field with the clear "X" sitting inside its right end, so the field can use
+		// the full panel width; the text area keeps clear of the X either way.
+		paintButton(_searchBtn, _innerX, _searchY, _innerW, _ctlH);
+		paintButtonLabel(_searchBtn, '');
+
+		// The X keeps the full finger-sized height while still sitting inside the field.
+		var clearW:Float = Math.min(_ctlH, Math.max(BlockLayout.touchSize(), _ctlH - _gapTight * 2));
+		_searchTextW = Math.max(30, _innerW - _gap * 2 - clearW - _gapTight);
+		placeText(_searchText, _innerX + _gap, searchY, _searchTextW, FlxTextAlign.LEFT, _fontBody);
+		placeText(_searchHint, _innerX + _gap, searchY, _searchTextW, FlxTextAlign.LEFT, _fontBody);
+
+		paintButton(_clearBtn, _innerX + _innerW - clearW - _gapTight, _searchY + Math.round((_ctlH - clearW) / 2), clearW, clearW);
+		paintButtonLabel(_clearBtn, 'X');
+	}
+
+	/** The filter chips wrap into as many rows as the labels need. */
+	function layoutChips():Void
+	{
+		var drawn:Int = 0;
+		for (i in 0..._chipButtons.length)
 		{
-			var btn:BrowserButton = _chips[i];
-			if (_chipKinds[i].length < 1)
+			if (i < _chipLabels.length && _chipLabels[i].length > 0)
+				drawn++;
+		}
+
+		if (drawn < 1)
+		{
+			_chipRows = 0;
+			for (btn in _chipButtons)
+			{
+				btn.shown = false;
+				refreshButton(btn);
+			}
+			return;
+		}
+
+		var limit:Float = _innerX + _innerW;
+		var x:Float = _innerX;
+		var row:Int = 0;
+
+		for (i in 0..._chipButtons.length)
+		{
+			var btn:BrowserButton = _chipButtons[i];
+			if (i >= _chipLabels.length || _chipLabels[i].length < 1)
 			{
 				btn.shown = false;
 				refreshButton(btn);
 				continue;
 			}
 
-			paintButton(btn, x, _chipY + (CHIP_H - BUTTON_H) / 2, chipW, BUTTON_H);
-			paintButtonLabel(btn, _chipTexts[i]);
-			x += chipW + CHIP_GAP;
-		}
-	}
+			var w:Float = chipWidthFor(_chipLabels[i]);
+			if (x > _innerX && x + w > limit)
+			{
+				row++;
+				x = _innerX;
+			}
 
-	function layoutSearch():Void
-	{
-		var boxW:Float = _innerW - CLOSE_W - GAP;
-		var y:Float = _searchY + (SEARCH_H - BUTTON_H) / 2;
-
-		paintButton(_searchBtn, _innerX, y, boxW, BUTTON_H);
-		paintButtonLabel(_searchBtn, '');
-
-		place(_searchText, _innerX + 10, y + 13, boxW - 20);
-		place(_searchHint, _innerX + 10, y + 13, boxW - 20);
-
-		paintButton(_clearBtn, _innerX + boxW + GAP, y, CLOSE_W, BUTTON_H);
-		paintButtonLabel(_clearBtn, 'X');
-	}
-
-	function layoutFooter():Void
-	{
-		var slotW:Float = (_innerW - GAP * 2) / 3;
-		if (slotW > 132)
-			slotW = 132;
-
-		var deleteShown:Bool = supportsDelete() && _selected >= 0 && _confirmIndex < 0;
-
-		_loadBtn.shown = true;
-		_cancelBtn.shown = true;
-		_deleteBtn.shown = deleteShown;
-
-		var right:Float = _innerX + _innerW;
-		var y:Float = _footerY + (FOOTER_H - BUTTON_H) / 2;
-
-		paintButton(_loadBtn, right - slotW, y, slotW, BUTTON_H);
-		paintButtonLabel(_loadBtn, 'LOAD');
-		_loadBtn.enabled = _selected >= 0 && _selected < _filtered.length;
-		refreshButton(_loadBtn);
-
-		right -= slotW + GAP;
-		if (deleteShown)
-		{
-			paintButton(_deleteBtn, right - slotW, y, slotW, BUTTON_H);
-			paintButtonLabel(_deleteBtn, 'DELETE');
-			_deleteBtn.enabled = true;
-			refreshButton(_deleteBtn);
-			right -= slotW + GAP;
-		}
-		else
-		{
-			refreshButton(_deleteBtn);
+			btn.accent = isActiveChip(i);
+			paintButton(btn, x, _chipY + row * (_chipH + _gap), w, _chipH);
+			paintButtonLabel(btn, _chipLabels[i]);
+			x += w + _gap;
 		}
 
-		paintButton(_cancelBtn, right - slotW, y, slotW, BUTTON_H);
-		paintButtonLabel(_cancelBtn, 'CANCEL');
-		refreshButton(_cancelBtn);
-
-		_footerTextW = Math.max(20, right - slotW - GAP - _innerX);
-		place(_footerText, _innerX, y + 13, _footerTextW);
-		refreshFooterText();
+		_chipRows = row + 1;
 	}
 
-	function layoutConfirm():Void
+	function chipsStripHeight():Float
 	{
-		if (_confirmIndex < 0)
+		if (_chipRows < 1)
+			return 0;
+
+		return _chipRows * _chipH + _chipRows * _gap;
+	}
+
+	function chipWidthFor(label:String):Float
+	{
+		var wanted:Float = label.length * _fontBody * CHAR_W + _pad * 2;
+		var floor:Float = BlockLayout.touchSize() * 1.3;
+		return Math.round(Math.max(floor, Math.min(wanted, _innerW)));
+	}
+
+	/** The block-config card: a summary row that is a tap target, plus the detail section. */
+	function layoutCard():Void
+	{
+		if (_cardToggle == null)
+			return;
+
+		var reloadW:Float = Math.round(Math.max(Math.max(BlockLayout.buttonWidth('RELOAD'), _fontBody * CHAR_W * 6
+			+ _pad * 2), BlockLayout.touchSize() * 1.3));
+		_cardToggleW = Math.max(60, _innerW - reloadW - _gap * 2);
+		_cardSummaryW = Math.max(40, _cardToggleW - _gap * 2 - CARD_EDGE_W);
+
+		paint(_cardBg, _innerX, _cardY, _innerW, _cardH, COLOR_BOX);
+
+		paintButton(_cardToggle, _innerX + CARD_EDGE_W, _cardY, _cardToggleW, _ctlH);
+		paintButtonLabel(_cardToggle, '');
+
+		paintButton(_reloadBtn, _innerX + _innerW - reloadW, _cardY, reloadW, _ctlH);
+		paintButtonLabel(_reloadBtn, 'RELOAD');
+
+		placeText(_cardSummary, _innerX + CARD_EDGE_W + _gap, _cardY + Math.round((_ctlH - _fontBody * 1.25) / 2), _cardSummaryW, FlxTextAlign.LEFT, _fontBody);
+
+		if (!_cardBodyVisible)
 		{
-			_confirmBg.visible = false;
-			_confirmTitle.visible = false;
-			_confirmBody.visible = false;
-			_yesBtn.shown = false;
-			_noBtn.shown = false;
-			refreshButton(_yesBtn);
-			refreshButton(_noBtn);
+			_cardBodyBg.visible = false;
+			_cardBarBg.visible = false;
+			_cardBarThumb.visible = false;
+			for (text in _cardTexts)
+				text.visible = false;
 			return;
 		}
 
-		paint(_confirmBg, 0, 0, _listW, _listH, COLOR_BG);
-		_confirmBg.visible = true;
+		_cardBodyX = _innerX;
+		_cardBodyY = _cardY + _ctlH + _gapTight;
+		_cardBodyW = _innerW;
+		_cardBodyH = Math.max(_lineH, _cardH - _ctlH - _gapTight);
+		_cardBarW = _barW;
+		_cardTextX = _innerX + CARD_EDGE_W + _gap;
+		_cardTextW = Math.max(40, _innerW - CARD_EDGE_W - _gap * 2 - _cardBarW - _gapTight);
 
-		var pad:Float = 12;
-		var btnW:Float = Math.min(170, (_listW - pad * 3) / 2);
-		var btnY:Float = _listH - pad - BUTTON_H;
+		paint(_cardBodyBg, _cardBodyX, _cardBodyY, _cardBodyW, _cardBodyH, COLOR_ROW);
 
-		_confirmTitle.visible = true;
-		place(_confirmTitle, pad, pad, _listW - pad * 2);
-		_confirmBody.visible = true;
-		place(_confirmBody, pad, pad + 22, _listW - pad * 2);
-
-		_yesBtn.shown = true;
-		_noBtn.shown = true;
-		paintButton(_yesBtn, pad, btnY, btnW, BUTTON_H);
-		paintButtonLabel(_yesBtn, 'MOVE TO .BAK');
-		paintButton(_noBtn, pad * 2 + btnW, btnY, btnW, BUTTON_H);
-		paintButtonLabel(_noBtn, 'KEEP');
+		for (text in _cardTexts)
+			text.fieldWidth = _cardTextW;
 	}
 
+	/** Sizes and places the list-local content: rows are handled by `refreshRows()`. */
 	function layoutList():Void
 	{
-		paint(_scrollTrack, _listW - SCROLLBAR_W, 0, SCROLLBAR_W, _listH, COLOR_BG);
+		_rowW = Math.max(1, _listW - _barW - _gap);
+		_rowTextX = _gap;
+		_rowTextW = Math.max(20, _rowW - _rowTextX * 2);
+		_sizeBoxW = Math.round(Math.max(56, _fontSmall * CHAR_W * 9));
+
+		var stacked:Float = _fontBody * 1.25 + _fontSmall * 1.25;
+		_rowPadY = Math.max(2, Math.round((_rowH - stacked) / 2));
+
+		_barX = _listW - _barW;
+		paint(_scrollTrack, _barX, 0, _barW, _listH, COLOR_BOX);
 		_scrollTrack.visible = false;
 
-		place(_emptyText, 12, 12, _listW - 24 - SCROLLBAR_W);
-
-		confirmFileName();
-		clampScroll();
-		refreshRows();
-		refreshScrollbar();
+		_emptyX = _pad;
+		_emptyY = _pad;
+		_emptyW = Math.max(40, _listW - _barW - _gap - _pad * 2);
 	}
 
 	/** The list lives on its own camera, whose clip rect has to match the list rect exactly. */
@@ -903,11 +1224,13 @@ class BlockFileBrowser extends FlxGroup
 			attachCameras();
 	}
 
+	// --- Painting helpers --------------------------------------------------------------
+
 	/**
 	 * Sizes, positions and repaints a solid box. Every sprite passed here keeps the same
-	 * colour for its whole life (only buttons change colour, and they track it themselves),
-	 * so the graphic is rebuilt on the first call and when the size changed - not on every
-	 * scroll frame.
+	 * colour for its whole life (only buttons and the config stripe change colour, and they
+	 * track it themselves), so the graphic is rebuilt on the first call and when the size
+	 * changed - not on every scroll frame.
 	 */
 	function paint(sprite:FlxSprite, x:Float, y:Float, w:Float, h:Float, color:Int):Void
 	{
@@ -919,12 +1242,32 @@ class BlockFileBrowser extends FlxGroup
 		sprite.setPosition(Math.round(x), Math.round(y));
 	}
 
-	function place(text:FlxText, x:Float, y:Float, width:Float = 0):Void
+	/** `paint()` for a box whose colour may change (the config card stripe); returns the cache. */
+	function paintTint(sprite:FlxSprite, x:Float, y:Float, w:Float, h:Float, color:Int, current:Int):Int
 	{
+		var iw:Int = Std.int(Math.max(1, Math.round(w)));
+		var ih:Int = Std.int(Math.max(1, Math.round(h)));
+		if (sprite.graphic == null || sprite.width != iw || sprite.height != ih || current != color)
+			sprite.makeGraphic(iw, ih, color);
+
+		sprite.setPosition(Math.round(x), Math.round(y));
+		return color;
+	}
+
+	/** Positions and styles one line of text; `align` is left alone when it is null. */
+	function placeText(text:FlxText, x:Float, y:Float, width:Float, align:FlxTextAlign, size:Int):Void
+	{
+		if (text == null)
+			return;
+
 		text.x = Math.round(x);
 		text.y = Math.round(y);
 		if (text.fieldWidth != width)
 			text.fieldWidth = width;
+		if (align != null && text.alignment != align)
+			text.alignment = align;
+		if (text.size != size)
+			text.size = size;
 	}
 
 	function paintButton(btn:BrowserButton, x:Float, y:Float, w:Float, h:Float):Void
@@ -934,35 +1277,53 @@ class BlockFileBrowser extends FlxGroup
 		btn.w = Math.round(w);
 		btn.h = Math.round(h);
 
-		var color:Int = btn.danger ? COLOR_DANGER : (btn.accent ? COLOR_SELECTED : COLOR_BOX);
+		// Painting a button is what puts it on screen; the `refresh*` methods that run after
+		// the layout pass are the ones that can hide it again (thin X, DELETE, SHOW ALL).
+		btn.shown = true;
+		btn.bg.setPosition(btn.x, btn.y);
+		btn.label.x = btn.x;
+		btn.label.fieldWidth = btn.w;
+		paintButtonLabel(btn, btn.label.text);
+	}
+
+	function paintButtonLabel(btn:BrowserButton, text:String):Void
+	{
+		btn.label.text = clipText(text, btn.w - 8, _fontBody, false);
+		btn.label.y = Math.round(btn.y + (btn.h - btn.label.height) / 2);
+		refreshButton(btn);
+	}
+
+	/** Applies hover/press feedback, the enabled state and the colour without touching geometry. */
+	function refreshButton(btn:BrowserButton):Void
+	{
+		if (btn == null)
+			return;
+
+		btn.bg.visible = btn.shown;
+		btn.label.visible = btn.shown && btn.label.text.length > 0;
+
+		var color:Int = buttonColor(btn);
 		var iw:Int = Std.int(Math.max(1, btn.w));
 		var ih:Int = Std.int(Math.max(1, btn.h));
-		if (btn.bg.width != iw || btn.bg.height != ih || btn.bgColor != color)
+		if (btn.bg.graphic == null || btn.bg.width != iw || btn.bg.height != ih || btn.bgColor != color)
 		{
 			btn.bg.makeGraphic(iw, ih, color);
 			btn.bgColor = color;
 		}
 
 		btn.bg.setPosition(btn.x, btn.y);
-		btn.label.x = btn.x;
-		btn.label.fieldWidth = btn.w;
-		paintButtonLabel(btn, btn.label.text);
-		refreshButton(btn);
-	}
-
-	function paintButtonLabel(btn:BrowserButton, text:String):Void
-	{
-		btn.label.text = clipText(text, btn.w - 8, FONT_BODY, false);
-		btn.label.y = Math.round(btn.y + (btn.h - btn.label.height) / 2);
-	}
-
-	/** Applies the press feedback and the enabled state without touching the geometry. */
-	function refreshButton(btn:BrowserButton):Void
-	{
-		btn.bg.visible = btn.shown;
-		btn.label.visible = btn.shown && btn.label.text.length > 0;
 		btn.bg.alpha = btn.held ? 0.7 : (btn.enabled ? 1 : 0.55);
 		btn.label.alpha = btn.enabled ? 1 : 0.5;
+	}
+
+	/** Hover lightens a plain button; the accent and danger looks stay themselves. */
+	function buttonColor(btn:BrowserButton):Int
+	{
+		if (btn.danger)
+			return COLOR_DANGER;
+		if (btn.accent)
+			return COLOR_SELECTED;
+		return btn.hover ? COLOR_EDGE : COLOR_BOX;
 	}
 
 	// --- Data --------------------------------------------------------------------------
@@ -980,6 +1341,7 @@ class BlockFileBrowser extends FlxGroup
 		_all = [];
 		_selected = -1;
 		_scroll = 0;
+		_hoverRow = -1;
 
 		var songFolder:String = _songName.length > 0 ? Paths.formatToSongPath(_songName) : '';
 		var seen:Array<String> = [];
@@ -1063,6 +1425,8 @@ class BlockFileBrowser extends FlxGroup
 		return false;
 	}
 
+	// --- Block config card -------------------------------------------------------------
+
 	function refreshConfigStatus():Void
 	{
 		BlockLibrary.ensureLoaded();
@@ -1100,11 +1464,40 @@ class BlockFileBrowser extends FlxGroup
 		}
 
 		_configErrors = BlockConfigLoader.lastErrors();
-		rebuildStatusText();
+		buildCardContent();
+
+		var visible:Int = Std.int(Math.max(CARD_MIN_LINES, Math.min(_cardVisibleLines, _cardContent.length)));
+		var relayout:Bool = visible != _cardLinesUsed;
+
+		// A config that does not load unfolds the card on its own: that is exactly the moment
+		// a mod author has to see the error list. Once they fold it themselves, that wins.
+		var autoOpen:Bool = _configErrors.length > 0;
+		if (!_cardUserToggled && _cardOpen != autoOpen)
+		{
+			_cardOpen = autoOpen;
+			relayout = true;
+		}
+
+		_cardLinesUsed = visible;
+		clampCardScroll();
+
+		if (relayout)
+		{
+			layout();
+			return;
+		}
+
+		refreshCardStatus();
+		refreshCardBody();
+		refreshCardScrollbar();
 	}
 
-	function rebuildStatusText():Void
+	/** The detailed lines behind the summary: block counts, scanned files, problems. */
+	function buildCardContent():Void
 	{
+		_cardContent = [];
+		_cardColors = [];
+
 		var categories:Int = 0;
 		var blocks:Int = 0;
 		if (BlockLibrary.categories != null)
@@ -1119,37 +1512,132 @@ class BlockFileBrowser extends FlxGroup
 			}
 		}
 
-		var width:Float = _innerW - RELOAD_W - 10;
-		setStatusLine(0, clipText('Blocks: ' + blocks + ' in ' + categories + ' categories - runtime: ' + _configRuntime, width, FONT_SMALL), COLOR_TEXT);
+		pushCard('Blocks: ' + blocks + ' in ' + categories + ' categories - runtime: ' + _configRuntime, COLOR_TEXT);
 
-		if (_configFiles.length > 0)
+		if (_configFiles.length < 1)
 		{
-			var extra:String = _configFiles.length > 1 ? '  (+' + (_configFiles.length - 1) + ' more)' : '';
-			var record:String = displayPath(configPathOf(_configFiles[0])) + fileStampOf(_configFiles[0]) + extra;
-			setStatusLine(1, clipText(record, width, FONT_SMALL, true), COLOR_DIM);
+			pushCard('No external block config found yet.', COLOR_WARN);
+			pushCard('  add <mod>/blockcode/blocks.json or blocks.lua', COLOR_DIM);
 		}
 		else
 		{
-			setStatusLine(1, clipText('No external block config yet - add <mod>/blockcode/blocks.json', width, FONT_SMALL), COLOR_DIM);
+			for (record in _configFiles)
+				pushCard('  ' + displayPath(configPathOf(record)) + fileStampOf(record), COLOR_DIM);
 		}
 
-		if (_configErrors.length > 0)
-			setStatusLine(2, clipText(_configErrors.length + ' config problem(s): ' + _configErrors[0], width, FONT_SMALL), COLOR_DANGER);
-		else if (_configFiles.length > 1)
-			setStatusLine(2, clipText('All scanned block config files loaded without errors.', width, FONT_SMALL), COLOR_DIM);
+		if (_configErrors.length < 1)
+			pushCard('Every scanned config file loaded without errors.', COLOR_OK);
 		else
-			setStatusLine(2, '', COLOR_DIM);
+		{
+			for (message in _configErrors)
+				pushCard('! ' + message, COLOR_DANGER);
+		}
 	}
 
-	function setStatusLine(index:Int, text:String, color:Int):Void
+	function pushCard(text:String, color:Int):Void
 	{
-		if (index < 0 || index >= _statusLines.length)
+		if (_cardContent.length >= CARD_LINE_POOL * 4)
 			return;
 
-		var line:FlxText = _statusLines[index];
-		line.text = text;
-		line.color = color;
-		line.visible = text.length > 0;
+		_cardContent.push(text);
+		_cardColors.push(color);
+	}
+
+	/** The one line a modder acts on, plus the status stripe on the card's left edge. */
+	function refreshCardStatus():Void
+	{
+		if (_cardSummary == null)
+			return;
+
+		var files:Int = _configFiles.length;
+		var errors:Int = _configErrors.length;
+		var color:Int = errors > 0 ? COLOR_DANGER : (files > 0 ? COLOR_OK : COLOR_WARN);
+		var plural:String = files == 1 ? '' : 's';
+		var summary:String;
+
+		if (errors > 0)
+			summary = files + ' config file' + plural + ' scanned' + SEPARATOR + errors + ' error' + (errors == 1 ? '' : 's');
+		else if (files > 0)
+			summary = files + ' config file' + plural + ' scanned' + SEPARATOR + '0 errors  -  tap for details';
+		else
+			summary = 'No block config file found  -  tap to see where one goes';
+
+		_cardSummary.text = clipText(summary, _cardSummaryW, _fontBody);
+		_cardSummary.color = color;
+		_cardEdgeColor = paintTint(_cardEdge, _innerX, _cardY, CARD_EDGE_W, _cardH, color, _cardEdgeColor);
+	}
+
+	function refreshCardBody():Void
+	{
+		if (_cardTexts.length < 1)
+			return;
+
+		if (!_cardBodyVisible)
+		{
+			for (text in _cardTexts)
+				text.visible = false;
+			return;
+		}
+
+		var first:Int = Std.int(_cardScroll);
+		if (first < 0)
+			first = 0;
+
+		for (i in 0..._cardTexts.length)
+		{
+			var text:FlxText = _cardTexts[i];
+			var index:Int = first + i;
+
+			if (i >= _cardLinesUsed || index >= _cardContent.length)
+			{
+				text.visible = false;
+				continue;
+			}
+
+			text.visible = true;
+			text.color = _cardColors[index];
+			text.text = clipText(_cardContent[index], _cardTextW, _fontSmall, false);
+			text.x = Math.round(_cardTextX);
+			text.y = Math.round(_cardBodyY + _gapTight + i * _lineH);
+		}
+	}
+
+	function refreshCardScrollbar():Void
+	{
+		if (!_cardBodyVisible || _cardScrollMax <= 0 || _cardContent.length < 1)
+		{
+			_cardBarBg.visible = false;
+			_cardBarThumb.visible = false;
+			return;
+		}
+
+		var barX:Float = _innerX + _innerW - _cardBarW;
+		paint(_cardBarBg, barX, _cardBodyY, _cardBarW, _cardBodyH, COLOR_BOX);
+		_cardBarBg.visible = true;
+
+		var visible:Float = Math.max(1, _cardLinesUsed);
+		var thumbH:Float = _cardBodyH * (visible / _cardContent.length);
+		thumbH = FlxMath.bound(thumbH, BlockLayout.touchSize() * 0.7, _cardBodyH);
+
+		var range:Float = Math.max(0, _cardBodyH - thumbH);
+		var pct:Float = _cardScrollMax > 0 ? FlxMath.bound(_cardScroll / _cardScrollMax, 0, 1) : 0;
+
+		paint(_cardBarThumb, barX, _cardBodyY + pct * range, _cardBarW, thumbH, COLOR_EDGE);
+		_cardBarThumb.visible = true;
+	}
+
+	function clampCardScroll():Void
+	{
+		_cardScrollMax = Math.max(0, _cardContent.length - _cardLinesUsed);
+		_cardScroll = FlxMath.bound(_cardScroll, 0, _cardScrollMax);
+	}
+
+	function toggleCard():Void
+	{
+		_cardOpen = !_cardOpen;
+		_cardUserToggled = true;
+		playSound('scrollMenu');
+		layout();
 	}
 
 	/** Path part of a `configSignature()` record, which is `path|size|mtime`. */
@@ -1170,6 +1658,8 @@ class BlockFileBrowser extends FlxGroup
 		return size == null ? '' : '  ' + formatSize(size);
 	}
 
+	// --- Filtering ---------------------------------------------------------------------
+
 	function applyFilter():Void
 	{
 		rebuildChips();
@@ -1182,6 +1672,7 @@ class BlockFileBrowser extends FlxGroup
 			_filterKey = key;
 			_selected = -1;
 			_scroll = 0;
+			_hoverRow = -1;
 		}
 
 		var needle:String = _search.trim().toLowerCase();
@@ -1207,10 +1698,20 @@ class BlockFileBrowser extends FlxGroup
 		if (_selected >= _filtered.length)
 			_selected = -1;
 
-		clampScroll();
+		// A chip strip that needs a different number of rows moves the list, so the whole
+		// panel is laid out again - which also refreshes everything below.
+		var chipKey:String = _chipLabels.join('|');
+		if (chipKey != _chipKey)
+		{
+			_chipKey = chipKey;
+			layout();
+			return;
+		}
+
+		refreshEmptyState();
 		refreshRows();
 		refreshScrollbar();
-		refreshEmptyState();
+		refreshConfirm();
 		refreshCount();
 		refreshFooter();
 	}
@@ -1223,21 +1724,30 @@ class BlockFileBrowser extends FlxGroup
 				return entry.inSongFolder;
 			case 'mod':
 				return entry.mod == _filterMod;
+			case 'mods':
+				return entry.mod.length > 0;
 			default:
 				return true;
 		}
 	}
 
-	/** Builds the filter chips out of the mod folders that actually contain scripts. */
+	/** Builds the chip labels out of the mod folders that actually contain scripts. */
 	function rebuildChips():Void
 	{
 		var mods:Array<String> = [];
 		var counts:Map<String, Int> = new Map();
+		var modTotal:Int = 0;
+		var songTotal:Int = 0;
 
 		for (entry in _all)
 		{
+			if (entry.inSongFolder)
+				songTotal++;
+
 			if (entry.mod.length < 1)
 				continue;
+
+			modTotal++;
 			if (!counts.exists(entry.mod))
 			{
 				counts.set(entry.mod, 0);
@@ -1256,65 +1766,100 @@ class BlockFileBrowser extends FlxGroup
 			return a < b ? -1 : (a > b ? 1 : 0);
 		});
 
-		var labels:Array<String> = ['ALL'];
-		var kinds:Array<String> = ['all'];
-		var modNames:Array<String> = [''];
+		var labels:Array<String> = [];
+		var kinds:Array<String> = [];
+		var modNames:Array<String> = [];
 
-		var songChip:Bool = _filterKind == 'song';
-		for (entry in _all)
-		{
-			if (entry.inSongFolder)
-			{
-				songChip = true;
-				break;
-			}
-		}
+		labels.push(countLabel('All', _all.length));
+		kinds.push('all');
+		modNames.push('');
 
-		if (songChip)
+		if (_songName.length > 0)
 		{
-			labels.push('SONG');
+			labels.push(countLabel('This song', songTotal));
 			kinds.push('song');
 			modNames.push('');
 		}
 
+		if (modTotal > 0)
+		{
+			labels.push(countLabel('All mods', modTotal));
+			kinds.push('mods');
+			modNames.push('');
+		}
+
+		var cap:Int = BlockLayout.compact ? 2 : MAX_MOD_CHIPS;
+		var added:Int = 0;
 		for (mod in mods)
 		{
-			if (labels.length >= MAX_CHIPS)
+			if (added >= cap)
 				break;
-			labels.push(mod.toUpperCase());
+
+			labels.push(countLabel(shortenName(mod, 12), counts.exists(mod) ? counts.get(mod) : 0));
 			kinds.push('mod');
 			modNames.push(mod);
+			added++;
 		}
+
+		_chipLabels = labels;
+		_chipKinds = kinds;
+		_chipMods = modNames;
 
 		// A filter whose chip is gone falls back to everything.
 		if (_filterKind == 'song' && !kinds.contains('song'))
 			_filterKind = 'all';
+		if (_filterKind == 'mods' && !kinds.contains('mods'))
+			_filterKind = 'all';
 		if (_filterKind == 'mod' && !modNames.contains(_filterMod))
 			_filterKind = 'all';
 
-		for (i in 0...MAX_CHIPS)
+		ensureChipButtons(labels.length);
+
+		for (i in 0..._chipButtons.length)
 		{
-			_chipTexts[i] = i < labels.length ? labels[i] : '';
-			_chipKinds[i] = i < kinds.length ? kinds[i] : '';
-			_chipMods[i] = i < modNames.length ? modNames[i] : '';
-
-			var btn:BrowserButton = _chips[i];
-			if (_chipKinds[i].length < 1)
-			{
-				btn.shown = false;
-				refreshButton(btn);
-				continue;
-			}
-
-			btn.accent = (_chipKinds[i] == _filterKind) && (_filterKind != 'mod' || _chipMods[i] == _filterMod);
+			_chipButtons[i].accent = isActiveChip(i);
+			refreshButton(_chipButtons[i]);
 		}
+	}
 
-		layoutChips();
+	function ensureChipButtons(count:Int):Void
+	{
+		while (_chipButtons.length < count)
+		{
+			var btn:BrowserButton = makeButton(false, false);
+			btn.shown = false;
+			_chipButtons.push(btn);
+		}
+	}
+
+	static function countLabel(name:String, count:Int):String
+	{
+		return name + ' (' + count + ')';
+	}
+
+	static function shortenName(name:String, max:Int):String
+	{
+		if (name.length <= max)
+			return name;
+
+		return name.substr(0, Std.int(Math.max(1, max - 3))) + '...';
+	}
+
+	function isActiveChip(index:Int):Bool
+	{
+		if (index < 0 || index >= _chipKinds.length)
+			return false;
+
+		if (_chipKinds[index] != _filterKind)
+			return false;
+		if (_filterKind == 'mod')
+			return _chipMods[index] == _filterMod;
+		return true;
 	}
 
 	function selectChip(index:Int):Void
 	{
-		if (index < 0 || index >= _chips.length || _chipKinds[index].length < 1)
+		if (index < 0 || index >= _chipKinds.length || _chipKinds[index].length < 1)
 			return;
 
 		var kind:String = _chipKinds[index];
@@ -1328,16 +1873,29 @@ class BlockFileBrowser extends FlxGroup
 		applyFilter();
 	}
 
+	function resetFilters():Void
+	{
+		_search = '';
+		_filterKind = 'all';
+		_filterMod = '';
+		playSound('scrollMenu');
+		refreshSearchText();
+		applyFilter();
+	}
+
+	// --- Rows --------------------------------------------------------------------------
+
 	function refreshRows():Void
 	{
 		ensureRowSlots();
 
 		var count:Int = _filtered.length;
-		var first:Int = Std.int(Math.floor(_scroll / ROW_H));
+		var step:Float = Math.max(1, _rowH + _rowGap);
+		var first:Int = Std.int(Math.floor(_scroll / step));
 		if (first < 0)
 			first = 0;
 
-		var rowW:Int = Std.int(Math.max(1, _listW - SCROLLBAR_W));
+		var rowW:Int = Std.int(Math.max(1, _rowW));
 
 		for (slot in 0..._rows.length)
 		{
@@ -1351,24 +1909,69 @@ class BlockFileBrowser extends FlxGroup
 			}
 
 			var entry:ScriptEntry = _filtered[index];
-			var y:Float = index * ROW_H - _scroll;
-			var selected:Bool = index == _selected;
-
-			if (row.bg.width != rowW || row.bg.height != Std.int(ROW_H) || row.selected != selected)
+			var y:Float = index * step - _scroll;
+			if (y > _listH || y + _rowH < 0)
 			{
-				row.selected = selected;
-				row.bg.makeGraphic(rowW, Std.int(ROW_H), selected ? COLOR_SELECTED : COLOR_ROW);
+				setRowVisible(row, false);
+				continue;
 			}
 
+			var visual:Int = rowVisual(index);
+
+			if (row.bg.graphic == null || row.bg.width != rowW || row.bg.height != Std.int(_rowH) || row.visual != visual)
+			{
+				row.visual = visual;
+				row.bg.makeGraphic(rowW, Std.int(_rowH), rowColor(visual));
+			}
+
+			var top:Float = Math.round(y);
+			var nameY:Float = top + _rowPadY;
+			var detailY:Float = nameY + Math.round(_fontBody * 1.25);
+
+			if (row.name.fieldWidth != _rowTextW)
+				row.name.fieldWidth = _rowTextW;
+			if (row.size.fieldWidth != _sizeBoxW)
+				row.size.fieldWidth = _sizeBoxW;
+
 			setRowVisible(row, true);
-			row.bg.setPosition(0, Math.round(y));
-			row.name.text = clipText(entry.name, rowW - ROW_TEXT_X - SIZE_BOX_W - 12, 16, false);
-			row.name.setPosition(ROW_TEXT_X, Math.round(y) + 7);
-			row.path.text = clipText(displayPath(entry.path), rowW - ROW_TEXT_X * 2, FONT_SMALL, true);
-			row.path.color = selected ? COLOR_TEXT : COLOR_DIM;
-			row.path.setPosition(ROW_TEXT_X, Math.round(y) + 31);
+			row.bg.setPosition(0, top);
+
+			row.name.text = clipText(entry.name, _rowTextW, _fontBody, false);
+			row.name.color = COLOR_TEXT;
+			row.name.setPosition(_rowTextX, nameY);
+
+			row.detail.text = clipText(shortPath(entry.path), _rowTextW - _sizeBoxW - _gap, _fontSmall, true);
+			row.detail.color = visual == 2 ? COLOR_TEXT : COLOR_DIM;
+			row.detail.setPosition(_rowTextX, detailY);
+
 			row.size.text = sizeLabel(entry);
-			row.size.setPosition(rowW - SIZE_BOX_W - 10, Math.round(y) + 10);
+			row.size.color = visual == 2 ? COLOR_TEXT : COLOR_DIM;
+			row.size.setPosition(_rowW - _sizeBoxW - _rowTextX, detailY);
+		}
+	}
+
+	/** 0 = plain row, 1 = mouse hover, 2 = selected or being pressed. */
+	function rowVisual(index:Int):Int
+	{
+		if (_gesture == 'list' && !_pressDragged && index == _pressRow)
+			return 2;
+		if (index == _selected)
+			return 2;
+		if (index == _hoverRow && !_ptrPressed)
+			return 1;
+		return 0;
+	}
+
+	static function rowColor(visual:Int):Int
+	{
+		switch (visual)
+		{
+			case 1:
+				return COLOR_HOVER;
+			case 2:
+				return COLOR_SELECTED;
+			default:
+				return COLOR_ROW;
 		}
 	}
 
@@ -1376,7 +1979,7 @@ class BlockFileBrowser extends FlxGroup
 	{
 		row.bg.visible = shown;
 		row.name.visible = shown;
-		row.path.visible = shown;
+		row.detail.visible = shown;
 		row.size.visible = shown;
 	}
 
@@ -1389,31 +1992,77 @@ class BlockFileBrowser extends FlxGroup
 		return '';
 	}
 
+	/** `mods/<mod>/scripts/foo.lua` reads as `blockcode/scripts/foo.lua` in a row. */
+	static function shortPath(path:String):String
+	{
+		var shown:String = displayPath(path);
+		if (shown.startsWith('mods/'))
+			return shown.substring(5);
+		return shown;
+	}
+
+	// --- Scrolling ---------------------------------------------------------------------
+
+	/** How tall the scrollable content is right now: the rows, or the empty state. */
+	function contentHeight():Float
+	{
+		if (_filtered.length > 0)
+			return _filtered.length * (_rowH + _rowGap) - _rowGap;
+
+		return _emptyH;
+	}
+
+	function clampScroll():Void
+	{
+		_contentH = contentHeight();
+		_maxScroll = Math.max(0, _contentH - _listH);
+		_scroll = FlxMath.bound(_scroll, 0, _maxScroll);
+	}
+
 	function refreshScrollbar():Void
 	{
-		_contentH = _filtered.length * ROW_H;
+		_contentH = contentHeight();
 
 		if (_contentH <= _listH || _listH <= 0)
 		{
 			_scrollTrack.visible = false;
 			_scrollThumb.visible = false;
+			_thumbY = 0;
+			_thumbH = 0;
 			return;
 		}
 
-		paint(_scrollTrack, _listW - SCROLLBAR_W, 0, SCROLLBAR_W, _listH, COLOR_BG);
+		paint(_scrollTrack, _barX, 0, _barW, _listH, COLOR_BOX);
 		_scrollTrack.visible = true;
 
-		var thumbH:Float = Math.max(28, _listH * (_listH / _contentH));
-		var range:Float = Math.max(0, _listH - thumbH);
-		var pct:Float = _maxScroll > 0 ? _scroll / _maxScroll : 0;
-		if (pct < 0)
-			pct = 0;
-		if (pct > 1)
-			pct = 1;
+		var thumbH:Float = Math.max(BlockLayout.touchSize(), _listH * (_listH / _contentH));
+		if (thumbH > _listH)
+			thumbH = _listH;
 
-		paint(_scrollThumb, _listW - SCROLLBAR_W, pct * range, SCROLLBAR_W, thumbH, COLOR_DIM);
+		var range:Float = Math.max(0, _listH - thumbH);
+		var pct:Float = _maxScroll > 0 ? FlxMath.bound(_scroll / _maxScroll, 0, 1) : 0;
+
+		_thumbH = thumbH;
+		_thumbY = pct * range;
+
+		paint(_scrollThumb, _barX, _thumbY, _barW, _thumbH, COLOR_EDGE);
 		_scrollThumb.visible = true;
 	}
+
+	function scrollTo(y:Float):Void
+	{
+		_scroll = y;
+		clampScroll();
+		refreshRows();
+
+		// The empty state is what scrolls when there are no rows at all.
+		if (_filtered.length < 1)
+			refreshEmptyState();
+
+		refreshScrollbar();
+	}
+
+	// --- Header texts ------------------------------------------------------------------
 
 	function refreshCount():Void
 	{
@@ -1421,40 +2070,79 @@ class BlockFileBrowser extends FlxGroup
 		var shown:Int = _filtered.length;
 
 		if (shown == total)
-			_countText.text = total + ' script' + (total == 1 ? '' : 's');
+			_countText.text = clipText(total + ' script' + (total == 1 ? '' : 's'), _countW, _fontSmall);
 		else
-			_countText.text = shown + ' / ' + total + ' shown';
+			_countText.text = clipText(shown + ' of ' + total + ' shown', _countW, _fontSmall);
 	}
 
 	function refreshFooter():Void
 	{
-		var wantDelete:Bool = supportsDelete() && _selected >= 0 && _confirmIndex < 0;
-		if (_deleteBtn.shown != wantDelete)
-			layoutFooter();
-		else
+		_loadBtn.shown = true;
+		_cancelBtn.shown = true;
+		_deleteBtn.shown = supportsDelete() && _selected >= 0 && _confirmIndex < 0;
+		_loadBtn.enabled = _selected >= 0 && _selected < _filtered.length;
+
+		refreshButton(_loadBtn);
+		refreshButton(_cancelBtn);
+		refreshButton(_deleteBtn);
+	}
+
+	/** LOAD on the far right, CANCEL next to it, DELETE on the far left so it stays away from LOAD. */
+	function layoutFooterButtons():Void
+	{
+		var loadW:Float = footerWidth('LOAD');
+		var cancelW:Float = footerWidth('CANCEL');
+		var deleteW:Float = footerWidth('DELETE');
+
+		var total:Float = loadW + cancelW + deleteW + _gap * 2;
+		if (total > _innerW)
 		{
-			_loadBtn.enabled = _selected >= 0 && _selected < _filtered.length;
-			refreshButton(_loadBtn);
-			refreshButton(_deleteBtn);
+			var shrink:Float = Math.max(0, _innerW - _gap * 2) / Math.max(1, loadW + cancelW + deleteW);
+			loadW = Math.max(BlockLayout.touchSize(), loadW * shrink);
+			cancelW = Math.max(BlockLayout.touchSize(), cancelW * shrink);
+			deleteW = Math.max(BlockLayout.touchSize(), deleteW * shrink);
 		}
+
+		var right:Float = _innerX + _innerW;
+		paintButton(_loadBtn, right - loadW, _buttonsY, loadW, _ctlH);
+		paintButtonLabel(_loadBtn, 'LOAD');
+
+		right -= loadW + _gap;
+		paintButton(_cancelBtn, right - cancelW, _buttonsY, cancelW, _ctlH);
+		paintButtonLabel(_cancelBtn, 'CANCEL');
+
+		paintButton(_deleteBtn, _innerX, _buttonsY, deleteW, _ctlH);
+		paintButtonLabel(_deleteBtn, 'DELETE');
+	}
+
+	function footerWidth(label:String):Float
+	{
+		return Math.round(Math.max(BlockLayout.buttonWidth(label), BlockLayout.touchSize() * 1.3));
 	}
 
 	function refreshFooterText():Void
 	{
-		if (_footerText == null)
+		if (_hintText == null)
 			return;
 
-		if (_messageTimer > 0 && _message.length > 0)
+		if (!_hintVisible)
 		{
-			_footerText.color = _messageError ? COLOR_DANGER : COLOR_WARN;
-			_footerText.text = clipText(_message, _footerTextW, FONT_SMALL);
-			_footerText.visible = true;
+			_hintText.visible = false;
 			return;
 		}
 
-		_footerText.color = COLOR_DIM;
-		_footerText.text = clipText(footerHint(), _footerTextW, FONT_SMALL);
-		_footerText.visible = true;
+		if (_messageTimer > 0 && _message.length > 0)
+		{
+			_hintText.color = _messageError ? COLOR_DANGER : COLOR_WARN;
+			_hintText.text = clipText(_message, _innerW, _fontSmall);
+		}
+		else
+		{
+			_hintText.color = COLOR_DIM;
+			_hintText.text = clipText(footerHint(), _innerW, _fontSmall);
+		}
+
+		_hintText.visible = true;
 	}
 
 	function footerHint():String
@@ -1462,11 +2150,10 @@ class BlockFileBrowser extends FlxGroup
 		if (_editingSearch)
 			return 'Type to filter. ENTER keeps it, ESC cancels.';
 
-		#if sys
-		return 'Tap to select, tap again to load. Press and hold to delete.';
-		#else
-		return 'Tap a script to select it, tap it again (or press LOAD) to open it.';
-		#end
+		if (BlockLayout.isMobile())
+			return supportsDelete() ? 'Tap to select, tap again to load. Hold to delete.' : 'Tap a script to select it, tap it again to open it.';
+
+		return supportsDelete() ? 'Click to select, click again to load. Click and hold to delete.' : 'Click a script to select it, click it again to open it.';
 	}
 
 	function status(message:String, isError:Bool):Void
@@ -1477,56 +2164,234 @@ class BlockFileBrowser extends FlxGroup
 		refreshFooterText();
 	}
 
+	// --- Empty state -------------------------------------------------------------------
+
+	/**
+	 * The state a beginner meets first: either nothing is on disk yet (so the panel names
+	 * the folders `BlockFileIO` writes into) or the current filter/search has no hits (so
+	 * the panel offers the way back to the full list).
+	 */
 	function refreshEmptyState():Void
 	{
+		if (_emptyTitle == null)
+			return;
+
+		clampScroll();
+
 		if (_filtered.length > 0)
 		{
-			_emptyText.visible = false;
+			_emptyTitle.visible = false;
+			for (text in _emptyLines)
+				text.visible = false;
+			_resetBtn.shown = false;
+			refreshButton(_resetBtn);
+			_emptyH = 0;
 			return;
 		}
 
-		_emptyText.visible = true;
+		buildEmptyContent();
+
+		var x:Float = _emptyX;
+		var w:Float = _emptyW;
+		var y:Float = _emptyY - _scroll;
+
+		_emptyTitle.visible = true;
+		_emptyTitle.color = _emptyColors[0];
+		_emptyTitle.fieldWidth = w;
+		_emptyTitle.text = clipText(_emptyContent[0], w, _fontBody, false);
+		_emptyTitle.setPosition(Math.round(x), Math.round(y));
+		y += Math.round(_fontBody * 1.35);
+
+		for (i in 0..._emptyLines.length)
+		{
+			var text:FlxText = _emptyLines[i];
+			var index:Int = i + 1;
+
+			if (index >= _emptyContent.length)
+			{
+				text.visible = false;
+				continue;
+			}
+
+			var line:String = _emptyContent[index];
+			text.visible = true;
+			text.color = _emptyColors[index];
+			text.fieldWidth = w;
+			text.text = clipText(line, w, _fontSmall, line.length > 0 && line.charAt(0) == ' ');
+			text.setPosition(Math.round(x), Math.round(y));
+			y += line.length < 1 ? Math.round(_lineH * 0.6) : _lineH;
+		}
+
+		_resetBtn.shown = _all.length > 0 && (_search.length > 0 || _filterKind != 'all');
+		if (_resetBtn.shown)
+		{
+			var label:String = 'SHOW ALL';
+			var buttonW:Float = Math.max(footerWidth(label), label.length * _fontBody * CHAR_W + _pad * 2);
+			y += _gap;
+			paintButton(_resetBtn, x, y, buttonW, _ctlH);
+			paintButtonLabel(_resetBtn, label);
+			y += _ctlH;
+		}
+		else
+		{
+			refreshButton(_resetBtn);
+		}
+
+		_emptyH = Math.max(1, y - (_emptyY - _scroll)) + _pad;
+		clampScroll();
+	}
+
+	function buildEmptyContent():Void
+	{
+		_emptyContent = [];
+		_emptyColors = [];
 
 		if (_all.length > 0)
 		{
-			_emptyText.text = 'Nothing matches the current filter.\n\nSet the filter back to ALL, or clear the search box, to see every script.';
+			var needle:String = _search.trim();
+
+			if (needle.length > 0)
+				pushEmpty('No script matches "' + needle + '"', COLOR_TEXT);
+			else if (_filterKind == 'song')
+				pushEmpty('No script in this song folder yet', COLOR_TEXT);
+			else if (_filterKind == 'mod' || _filterKind == 'mods')
+				pushEmpty('No script in that mod folder', COLOR_TEXT);
+			else
+				pushEmpty('No script matches the current filter', COLOR_TEXT);
+
+			pushEmpty('', COLOR_DIM);
+			pushEmpty('Pick ALL, or clear the search box, to list every script.', COLOR_DIM);
+
+			if (_filterKind == 'song' && _songName.length > 0)
+				pushEmpty('This song is scanned as "' + Paths.formatToSongPath(_songName) + '".', COLOR_DIM);
+
 			return;
 		}
 
-		var lines:Array<String> = [];
-		lines.push('No .lua scripts found yet.');
-		lines.push('');
-		lines.push('The block editor saves scripts into these folders:');
+		pushEmpty('No .lua script found yet', COLOR_TEXT);
+		pushEmpty('', COLOR_DIM);
+		pushEmpty('The editor loads every .lua it finds in these folders:', COLOR_DIM);
 
-		var usable:Float = _listW - 24 - SCROLLBAR_W;
 		var seen:Array<String> = [];
 		for (target in BlockFileIO.execTargetsFor(_songName))
 		{
-			var shown:String = clipText(displayPath(target), usable - 24, FONT_SMALL, true);
-			if (seen.contains(shown))
+			var shown:String = displayPath(target);
+			if (shown.length < 1 || seen.contains(shown))
 				continue;
 			seen.push(shown);
-			lines.push('  ' + shown);
+			pushEmpty('   ' + shown, COLOR_DIM);
 		}
 
-		lines.push('');
-		lines.push('Build blocks and press SAVE, or drop an existing .lua into one of them.');
-		lines.push('Block definitions go into <mod>/blockcode/blocks.json.');
-		_emptyText.text = lines.join('\n');
+		if (_songName.length < 1)
+		{
+			pushEmpty('', COLOR_DIM);
+			pushEmpty('Open a song first to get a song folder here.', COLOR_WARN);
+		}
+
+		pushEmpty('', COLOR_DIM);
+		pushEmpty('Build blocks, then press SAVE in the Save panel - the script', COLOR_DIM);
+		pushEmpty('is written into one of these folders. An existing .lua can', COLOR_DIM);
+		pushEmpty('just be dropped into one of them.', COLOR_DIM);
+		pushEmpty('', COLOR_DIM);
+		pushEmpty('Your own blocks live in <mod>/blockcode/blocks.json.', COLOR_DIM);
 	}
 
-	function clampScroll():Void
+	function pushEmpty(text:String, color:Int):Void
 	{
-		_contentH = _filtered.length * ROW_H;
-		var maxScroll:Float = _contentH - _listH;
-		if (maxScroll < 0)
-			maxScroll = 0;
-		_maxScroll = maxScroll;
+		if (_emptyContent.length > EMPTY_LINE_POOL)
+			return;
 
-		if (_scroll < 0)
-			_scroll = 0;
-		if (_scroll > maxScroll)
-			_scroll = maxScroll;
+		_emptyContent.push(text);
+		_emptyColors.push(color);
+	}
+
+	// --- Delete confirmation -----------------------------------------------------------
+
+	function refreshConfirm():Void
+	{
+		if (_confirmTitle == null)
+			return;
+
+		var open:Bool = _confirmIndex >= 0 && _confirmIndex < _filtered.length;
+
+		_confirmScrim.visible = open;
+		_confirmCard.visible = open;
+		_confirmEdge.visible = open;
+		_confirmTitle.visible = open;
+		_confirmName.visible = open;
+		_confirmBody.visible = open;
+		_yesBtn.shown = open;
+		_noBtn.shown = open;
+
+		if (!open)
+		{
+			refreshButton(_yesBtn);
+			refreshButton(_noBtn);
+			_confirmCardX = 0;
+			_confirmCardY = 0;
+			_confirmCardW = 0;
+			_confirmCardH = 0;
+			return;
+		}
+
+		var entry:ScriptEntry = _filtered[_confirmIndex];
+		var backupName:String = _confirmBackup.length > 0 ? _confirmBackup : entry.name + '.bak';
+
+		var cardW:Float = Math.min(Math.max(240, _listW * 0.86), 460 * BlockLayout.scale);
+		if (cardW > _listW - _pad * 2)
+			cardW = Math.max(160, _listW - _pad * 2);
+
+		var nameH:Float = Math.round(_fontBody * 1.3);
+		var bodyH:Float = _lineH * 2;
+		var cardH:Float = _pad + nameH + _gapTight + nameH + _gapTight + bodyH + _gap + _ctlH + _pad;
+
+		_confirmCardW = Math.round(cardW);
+		_confirmCardH = Math.round(cardH);
+		_confirmCardX = Math.round((_listW - cardW) / 2);
+		_confirmCardY = Math.round((_listH - cardH) / 2);
+		if (_confirmCardY < _pad)
+			_confirmCardY = _pad;
+
+		paint(_confirmScrim, 0, 0, _listW, _listH, COLOR_SCRIM);
+		paint(_confirmCard, _confirmCardX, _confirmCardY, _confirmCardW, _confirmCardH, COLOR_BOX);
+		paint(_confirmEdge, _confirmCardX, _confirmCardY, _confirmCardW, 3, COLOR_DANGER);
+
+		var inner:Float = Math.max(40, _confirmCardW - _pad * 2);
+		var y:Float = _confirmCardY + _pad;
+
+		placeText(_confirmTitle, _confirmCardX + _pad, y, inner, FlxTextAlign.CENTER, _fontBody);
+		_confirmTitle.text = clipText('MOVE SCRIPT TO BACKUP?', inner, _fontBody);
+		y += nameH + _gapTight;
+
+		placeText(_confirmName, _confirmCardX + _pad, y, inner, FlxTextAlign.CENTER, _fontBody);
+		_confirmName.text = clipText(entry.name, inner, _fontBody);
+		y += nameH + _gapTight;
+
+		// The file itself is never deleted: it is renamed, and renaming it back restores it.
+		// Both lines are clipped by hand so the two of them always fit the reserved height.
+		placeText(_confirmBody, _confirmCardX + _pad, y, inner, FlxTextAlign.CENTER, _fontSmall);
+		_confirmBody.text = clipText('The file is renamed to ' + backupName + '.', inner, _fontSmall)
+			+ '\n'
+			+ clipText('Rename it back to restore it.', inner, _fontSmall);
+
+		var buttonW:Float = Math.max(BlockLayout.touchSize(), (_confirmCardW - _pad * 2 - _gap) / 2);
+		var buttonY:Float = _confirmCardY + _confirmCardH - _pad - _ctlH;
+
+		paintButton(_yesBtn, _confirmCardX + _pad, buttonY, buttonW, _ctlH);
+		paintButtonLabel(_yesBtn, 'MOVE TO .BAK');
+
+		paintButton(_noBtn, _confirmCardX + _pad + buttonW + _gap, buttonY, buttonW, _ctlH);
+		paintButtonLabel(_noBtn, 'KEEP');
+	}
+
+	function inConfirmCard(px:Float, py:Float):Bool
+	{
+		if (_confirmIndex < 0 || _confirmCardW <= 0)
+			return false;
+
+		var lx:Float = px - _listX;
+		var ly:Float = py - _listY;
+		return lx >= _confirmCardX && lx <= _confirmCardX + _confirmCardW && ly >= _confirmCardY && ly <= _confirmCardY + _confirmCardH;
 	}
 
 	// --- File actions ------------------------------------------------------------------
@@ -1553,9 +2418,10 @@ class BlockFileBrowser extends FlxGroup
 			return;
 
 		_confirmIndex = index;
-		confirmFileName();
-		layoutConfirm();
-		layoutFooter();
+		_confirmBackup = fileNameOf(unusedBackupPath(_filtered[index].path));
+		layoutFooterButtons();
+		refreshConfirm();
+		refreshFooter();
 		playSound('scrollMenu');
 	}
 
@@ -1565,26 +2431,9 @@ class BlockFileBrowser extends FlxGroup
 			return;
 
 		_confirmIndex = -1;
-		layoutConfirm();
-		layoutFooter();
-	}
-
-	function confirmFileName():Void
-	{
-		if (_confirmTitle == null || _confirmBody == null)
-			return;
-
-		if (_confirmIndex < 0 || _confirmIndex >= _filtered.length)
-		{
-			_confirmTitle.text = '';
-			_confirmBody.text = '';
-			return;
-		}
-
-		var entry:ScriptEntry = _filtered[_confirmIndex];
-		var usable:Float = _listW - 24 - SCROLLBAR_W;
-		_confirmTitle.text = clipText(entry.name + ' will become ' + entry.name + '.bak', usable, FONT_BODY);
-		_confirmBody.text = clipText(displayPath(entry.path), usable, FONT_SMALL, true);
+		refreshConfirm();
+		refreshFooter();
+		refreshRows();
 	}
 
 	function deleteConfirmed():Void
@@ -1605,8 +2454,8 @@ class BlockFileBrowser extends FlxGroup
 			status(entry.name + ' moved to ' + fileNameOf(backup) + '.', false);
 			_selected = -1;
 			rescan();
-			applyFilter();
 			refreshConfigStatus();
+			applyFilter();
 		}
 		else
 		{
@@ -1728,7 +2577,9 @@ class BlockFileBrowser extends FlxGroup
 		if (text == null)
 			return '';
 
-		var max:Int = Std.int(width / (fontSize * CHAR_W));
+		// `CHAR_W` is an estimate, and every field the result lands in has `wordWrap` on, so
+		// a line that is a character too long would wrap into a second row. Keep a margin.
+		var max:Int = Std.int((width * 0.96) / (fontSize * CHAR_W));
 		if (max < 4)
 			max = 4;
 		if (text.length <= max)
@@ -1867,19 +2718,22 @@ class BlockFileBrowser extends FlxGroup
 
 	function refreshSearchText():Void
 	{
-		var width:Float = _searchBtn.w - 20;
+		if (_searchText == null)
+			return;
+
+		var width:Float = _searchTextW;
 
 		if (_editingSearch)
 		{
 			_searchHint.visible = false;
 			_searchText.visible = true;
-			_searchText.text = clipText(_search, width, FONT_BODY, true) + '_';
+			_searchText.text = clipText(_search, width, _fontBody, true) + '_';
 		}
 		else if (_search.length > 0)
 		{
 			_searchHint.visible = false;
 			_searchText.visible = true;
-			_searchText.text = clipText(_search, width, FONT_BODY, true);
+			_searchText.text = clipText(_search, width, _fontBody, true);
 		}
 		else
 		{
@@ -1960,10 +2814,50 @@ class BlockFileBrowser extends FlxGroup
 		return false;
 	}
 
+	/** Mouse hover only: on a touch screen the finger is the pointer and there is no hover. */
+	function updateHover():Void
+	{
+		var target:BrowserButton = null;
+		var row:Int = -1;
+
+		if (!BlockLayout.isMobile() && !_ptrPressed && _touchId < 0 && !_editingSearch)
+		{
+			target = buttonAt(_ptrX, _ptrY);
+			if (target == null && _confirmIndex < 0 && _gesture.length < 1)
+				row = rowAt(_ptrX, _ptrY);
+		}
+
+		if (target != _hoverButton)
+		{
+			if (_hoverButton != null)
+			{
+				_hoverButton.hover = false;
+				refreshButton(_hoverButton);
+			}
+
+			_hoverButton = target;
+
+			if (_hoverButton != null)
+			{
+				_hoverButton.hover = true;
+				refreshButton(_hoverButton);
+			}
+		}
+
+		if (row != _hoverRow)
+		{
+			_hoverRow = row;
+			refreshRows();
+		}
+	}
+
 	function handlePointer(elapsed:Float):Void
 	{
 		if (_ptrJustPressed)
 		{
+			_pressButton = null;
+			_pressOutsideConfirm = false;
+
 			var pressed:BrowserButton = buttonAt(_ptrX, _ptrY);
 			if (pressed != null && pressed.enabled)
 			{
@@ -1971,10 +2865,14 @@ class BlockFileBrowser extends FlxGroup
 				refreshButton(pressed);
 				_pressButton = pressed;
 			}
-			else
+			else if (_confirmIndex >= 0 && !inConfirmCard(_ptrX, _ptrY))
 			{
-				_pressButton = null;
+				// Pressing outside the confirmation card cancels it, as a modal should.
+				_pressOutsideConfirm = true;
 			}
+
+			if (_pressButton == null)
+				startGesture();
 		}
 
 		if (_ptrJustReleased)
@@ -1986,62 +2884,134 @@ class BlockFileBrowser extends FlxGroup
 			{
 				pressed.held = false;
 				refreshButton(pressed);
-				if (pressed.enabled && pressed.contains(_ptrX, _ptrY))
+				if (pressed.enabled && buttonHit(pressed, _ptrX, _ptrY))
 					activateButton(pressed);
 			}
+
+			if (_pressOutsideConfirm)
+			{
+				_pressOutsideConfirm = false;
+				playSound('cancelMenu');
+				closeConfirm();
+			}
+
+			if (_gesture.length > 0)
+				finishGesture();
+		}
+		else if (_gesture.length > 0 && _ptrPressed)
+		{
+			continueGesture(elapsed);
 		}
 
+		handleWheel();
+	}
+
+	function startGesture():Void
+	{
 		// The confirmation owns the pointer while it is up.
 		if (_confirmIndex >= 0)
 			return;
 
-		handleListGesture(elapsed);
-		handleWheel();
+		if (pointerOnBar(_ptrX, _ptrY))
+		{
+			_gesture = 'bar';
+			beginBarDrag();
+			return;
+		}
+
+		if (_cardBodyVisible && _cardScrollMax > 0 && inCardBody(_ptrX, _ptrY))
+		{
+			_gesture = 'card';
+			_pressY = _ptrY;
+			_pressScroll = _cardScroll;
+			_pressDragged = false;
+			return;
+		}
+
+		if (!inList(_ptrX, _ptrY))
+			return;
+
+		_gesture = 'list';
+		_pressRow = rowAt(_ptrX, _ptrY);
+		_pressTime = 0;
+		_pressY = _ptrY;
+		_pressScroll = _scroll;
+		_pressDragged = false;
+		refreshRows();
 	}
 
-	function handleListGesture(elapsed:Float):Void
+	function continueGesture(elapsed:Float):Void
 	{
-		if (_ptrJustPressed && inList(_ptrX, _ptrY))
+		var dy:Float = _ptrY - _pressY;
+
+		switch (_gesture)
 		{
-			_gestureActive = true;
-			_pressRow = rowAt(_ptrX, _ptrY);
-			_pressTime = 0;
-			_pressY = _ptrY;
-			_pressScroll = _scroll;
-			_pressDragged = false;
+			case 'bar':
+				barDragTo(_ptrY);
+			case 'card':
+				if (!_pressDragged && Math.abs(dy) > DRAG_SLOP)
+					_pressDragged = true;
+				if (_pressDragged)
+				{
+					_cardScroll = _pressScroll - dy / Math.max(1, _lineH);
+					clampCardScroll();
+					refreshCardBody();
+					refreshCardScrollbar();
+				}
+			case 'list':
+				_pressTime += elapsed;
+				if (!_pressDragged && Math.abs(dy) > DRAG_SLOP)
+					_pressDragged = true;
+
+				if (_pressDragged)
+				{
+					scrollTo(_pressScroll - dy);
+				}
+				else if (_pressRow >= 0 && supportsDelete() && _pressTime >= LONG_PRESS)
+				{
+					var index:Int = _pressRow;
+					_pressRow = -1;
+					_gesture = '';
+					openConfirm(index);
+				}
+		}
+	}
+
+	function finishGesture():Void
+	{
+		var was:String = _gesture;
+		_gesture = '';
+
+		if (was == 'list' && !_pressDragged && _pressRow >= 0 && _confirmIndex < 0)
+			tapRow(_pressRow);
+
+		_pressRow = -1;
+		_pressDragged = false;
+		refreshRows();
+	}
+
+	/** Presses on the scrollbar strip: on the thumb it drags, beside it it jumps. */
+	function beginBarDrag():Void
+	{
+		var thumbTop:Float = _listY + _thumbY;
+		if (_ptrY >= thumbTop && _ptrY <= thumbTop + _thumbH && _thumbH > 0)
+		{
+			_barGrab = _ptrY - thumbTop;
+			return;
 		}
 
-		if (_gestureActive && _ptrPressed)
-		{
-			_pressTime += elapsed;
+		_barGrab = _thumbH * 0.5;
+		barDragTo(_ptrY);
+	}
 
-			if (!_pressDragged && Math.abs(_ptrY - _pressY) > DRAG_SLOP)
-				_pressDragged = true;
+	function barDragTo(py:Float):Void
+	{
+		var range:Float = _listH - _thumbH;
+		if (range <= 0 || _maxScroll <= 0)
+			return;
 
-			if (_pressDragged)
-			{
-				_scroll = _pressScroll - (_ptrY - _pressY);
-				clampScroll();
-				refreshRows();
-				refreshScrollbar();
-			}
-			else if (_pressRow >= 0 && _pressTime >= LONG_PRESS)
-			{
-				var index:Int = _pressRow;
-				_pressRow = -1;
-				openConfirm(index);
-			}
-		}
-
-		if (_ptrJustReleased)
-		{
-			if (_gestureActive && !_pressDragged && _pressRow >= 0 && _confirmIndex < 0)
-				tapRow(_pressRow);
-
-			_gestureActive = false;
-			_pressRow = -1;
-			_pressDragged = false;
-		}
+		var pct:Float = FlxMath.bound((py - _listY - _barGrab) / range, 0, 1);
+		scrollTo(pct * _maxScroll);
 	}
 
 	function handleWheel():Void
@@ -2050,13 +3020,20 @@ class BlockFileBrowser extends FlxGroup
 			return;
 
 		var pos:FlxPoint = FlxG.mouse.getScreenPosition(_overlay, _auxPoint);
-		if (!inList(pos.x, pos.y))
+
+		if (_cardBodyVisible && _cardScrollMax > 0 && inCardBody(pos.x, pos.y))
+		{
+			_cardScroll -= FlxG.mouse.wheel;
+			clampCardScroll();
+			refreshCardBody();
+			refreshCardScrollbar();
+			return;
+		}
+
+		if (!inList(pos.x, pos.y) || _maxScroll <= 0)
 			return;
 
-		_scroll -= FlxG.mouse.wheel * WHEEL_STEP;
-		clampScroll();
-		refreshRows();
-		refreshScrollbar();
+		scrollTo(_scroll - FlxG.mouse.wheel * WHEEL_STEP);
 	}
 
 	function tapRow(index:Int):Void
@@ -2095,6 +3072,12 @@ class BlockFileBrowser extends FlxGroup
 			return;
 		}
 
+		if (btn == _cardToggle)
+		{
+			toggleCard();
+			return;
+		}
+
 		if (btn == _loadBtn)
 		{
 			pick(_selected);
@@ -2113,6 +3096,12 @@ class BlockFileBrowser extends FlxGroup
 			refreshSearchText();
 			playSound('cancelMenu');
 			applyFilter();
+			return;
+		}
+
+		if (btn == _resetBtn)
+		{
+			resetFilters();
 			return;
 		}
 
@@ -2135,7 +3124,7 @@ class BlockFileBrowser extends FlxGroup
 			return;
 		}
 
-		var chip:Int = _chips.indexOf(btn);
+		var chip:Int = _chipButtons.indexOf(btn);
 		if (chip >= 0)
 			selectChip(chip);
 	}
@@ -2144,24 +3133,56 @@ class BlockFileBrowser extends FlxGroup
 	{
 		if (_confirmIndex >= 0)
 		{
-			if (_yesBtn.contains(px, py))
+			if (buttonHit(_yesBtn, px, py))
 				return _yesBtn;
-			if (_noBtn.contains(px, py))
+			if (buttonHit(_noBtn, px, py))
 				return _noBtn;
 			return null;
 		}
 
-		for (btn in _buttons)
+		// Last registered wins: buttons built later draw on top of the ones before them, and
+		// that is what makes the clear "X" inside the search field take the tap it needs.
+		var i:Int = _buttons.length - 1;
+		while (i >= 0)
 		{
-			if (btn != null && btn.contains(px, py))
+			var btn:BrowserButton = _buttons[i];
+			if (btn != null && buttonHit(btn, px, py))
 				return btn;
+			i--;
 		}
 		return null;
+	}
+
+	/** Hit test in the space of the camera that draws the button. */
+	function buttonHit(btn:BrowserButton, px:Float, py:Float):Bool
+	{
+		if (btn == null)
+			return false;
+
+		if (btn.listSpace)
+			return btn.contains(px - _listX, py - _listY);
+		return btn.contains(px, py);
 	}
 
 	function inList(px:Float, py:Float):Bool
 	{
 		return px >= _listX && px <= _listX + _listW && py >= _listY && py <= _listY + _listH;
+	}
+
+	function inCardBody(px:Float, py:Float):Bool
+	{
+		if (!_cardBodyVisible)
+			return false;
+
+		return px >= _cardBodyX && px <= _cardBodyX + _cardBodyW && py >= _cardBodyY && py <= _cardBodyY + _cardBodyH;
+	}
+
+	function pointerOnBar(px:Float, py:Float):Bool
+	{
+		if (_maxScroll <= 0 || !inList(px, py))
+			return false;
+
+		return px >= _listX + _barX;
 	}
 
 	/** Entry index under the pointer, or `-1`. The rows are drawn in list space, so this works in list space too. */
@@ -2174,7 +3195,7 @@ class BlockFileBrowser extends FlxGroup
 		if (local < 0)
 			return -1;
 
-		var index:Int = Std.int(local / ROW_H);
+		var index:Int = Std.int(local / Math.max(1, _rowH + _rowGap));
 		if (index < 0 || index >= _filtered.length)
 			return -1;
 		return index;

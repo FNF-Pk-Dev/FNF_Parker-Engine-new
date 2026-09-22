@@ -1,6 +1,9 @@
 package editors.blockcode;
 
 import flixel.group.FlxGroup;
+import flixel.input.touch.FlxTouch;
+import openfl.display.BitmapData;
+import openfl.geom.Rectangle;
 
 /**
  * Bottom-sheet on-screen keyboard, drawn entirely with `FlxSprite`s, for phones and tablets (and
@@ -12,19 +15,30 @@ import flixel.group.FlxGroup;
  * through `onKey` so it can mirror the buffer or react to `enter` / `close` without polling. The
  * buffer is the single source of truth and is always readable with `getText()`.
  *
- * Shape: a sheet anchored to the bottom of `cam`'s view - a preview line of the current text, a
- * control row (the four layout switchers, clear, close) and the key rows of the active layout:
- * 6 to 10 keys per row depending on how wide the view is, and every key at least `MIN_KEY_HEIGHT`
- * logical pixels tall. The sheet is 40% of `FlxG.height` unless the rows need more room, and never
- * under 220px. Four layouts: `letters` (QWERTY), `numbers`, `symbols` and `code`, which carries the
- * punctuation and the four-space TAB key Lua wants.
+ * Shape, top to bottom: a preview strip (the text being typed, scrolled so the caret stays visible,
+ * the character count and a Hide button), a layout switcher row (`ABC` / `123` / `#+=` / `code` /
+ * `CLR`), the character rows of the active layout and finally the function row (`abc`/`ABC` shift,
+ * plus `TAB` in the code layout, space, delete and enter). Every key is a rounded rectangle with a
+ * 1px outline, it fills with the accent colour while it is held and shrinks slightly, and the gap
+ * between two keys is at least 16% of a key height so a thumb cannot land between them. Four
+ * layouts: `letters` (QWERTY), `numbers`, `symbols` and `code`, which carries every Lua character
+ * people actually type - `( ) [ ] { } = " ' . , : ; < > + - * / % # ~ $ _` plus the four-space TAB.
  *
- * Everything lives in `cam`'s own screen space (`scrollFactor == 0`, group `cameras == [cam]`), so
- * the sheet stays glued to the bottom of that camera whatever the editor does to the scroll and
- * zoom behind it. Pointers are read from `FlxG.touches` first - only the first touch drives the
- * keyboard - and from `FlxG.mouse` as the desktop fallback. While closed the group is invisible,
- * inactive and its `update` returns before touching anything, so a tap meant for the editor is
- * never intercepted.
+ * Sizing comes from `BlockLayout`: key height `max(touchSize(), 44)` (a little taller upright), key
+ * fonts from `BlockLayout.font('body')` for single characters and `font('small')` for words, padding
+ * from `BlockLayout.spacing()`. The sheet is capped at `min(BlockLayout.height * 0.45, 460 *
+ * BlockLayout.scale)` so the workspace above it stays visible. When the rows would not fit that
+ * cap they are reflowed with more keys per row - a wrapped row is never clipped - and portrait
+ * screens start from fewer, fatter keys (a thumb keyboard) while landscape keeps wide rows. Only a
+ * viewport too short for one finger per row lets the sheet grow past the cap, and it never covers
+ * more than 70% of the view.
+ *
+ * Pointers are read from `FlxG.touches` first - only the first touch drives the keyboard, while any
+ * finger is down the synthesized mouse is ignored - and from `FlxG.mouse` as the desktop fallback.
+ * A key lights up when the finger lands on it and fires when the finger lifts off the same key, so
+ * dragging off cancels a press; the delete key is the exception, it fires at once and repeats while
+ * it is held. While closed the group is invisible, inactive and its `update` returns before touching
+ * anything, so a tap meant for the editor is never intercepted.
  *
  * No external assets: flat theme colors and `Paths.font("vcr.ttf")`.
  */
@@ -36,6 +50,9 @@ class BlockVirtualKeyboard extends FlxGroup
 	public static inline var COLOR_KEY_TEXT:Int = 0xFFC0CAF5;
 	public static inline var COLOR_ACCENT:Int = 0xFF3D59A1;
 	public static inline var COLOR_PREVIEW:Int = 0xFF0F0F14;
+	public static inline var COLOR_BORDER:Int = 0xFF414868;
+	public static inline var COLOR_HINT:Int = 0xFF565F89;
+	public static inline var COLOR_DANGER:Int = 0xFFF7768E;
 
 	/** Layout names `setLayout` accepts. */
 	public static inline var LAYOUT_LETTERS:String = 'letters';
@@ -47,7 +64,7 @@ class BlockVirtualKeyboard extends FlxGroup
 	/** Smallest sheet height in logical pixels. */
 	public static inline var MIN_HEIGHT:Float = 220;
 
-	/** Sheet height as a fraction of `FlxG.height`, before the minimums are applied. */
+	/** Sheet height as a fraction of `FlxG.height`, used when the sheet has not been laid out yet. */
 	public static inline var HEIGHT_RATIO:Float = 0.4;
 
 	/** Smallest key height in logical pixels - one finger. */
@@ -67,10 +84,33 @@ class BlockVirtualKeyboard extends FlxGroup
 	static inline var ACT_CLOSE:Int = 8;
 	static inline var ACT_LAYOUT:Int = 9;
 
+	/** Longest and shortest key row: ten keys read like a phone keyboard, four is still usable. */
+	static inline var MAX_COLUMNS:Int = 10;
+
+	static inline var MIN_COLUMNS:Int = 4;
+
+	/** How long the delete key has to be held before it starts repeating, and how fast it then goes. */
+	static inline var REPEAT_DELAY:Float = 0.42;
+
+	static inline var REPEAT_INTERVAL:Float = 0.085;
+	static inline var REPEAT_MIN_INTERVAL:Float = 0.04;
+
+	/** `vcr.ttf` is monospaced: the width of one character as a fraction of the font size. */
+	static inline var CHAR_RATIO:Float = 0.66;
+
+	/** The sheet never covers more of the view than this, however much the rows want. */
+	static inline var SHEET_CEILING_RATIO:Float = 0.7;
+
+	/** How far the body of a held key shrinks for feedback. */
+	static inline var PRESSED_SCALE:Float = 0.94;
+
+	/** Sample used to measure one character of the preview font. */
+	static inline var CELL_SAMPLE:String = '0000000000';
+
 	/** Fired after every key press with the key name: `A`..`Z`, `0`..`9`, `space`, `backspace`, `enter`, `tab`, `shift`, `clear` or `close`. */
 	public var onKey:String->Void = null;
 
-	/** Fired by the close key after `onKey('close')`, right before the sheet closes itself. */
+	/** Fired by the close/hide key after `onKey('close')`, right before the sheet closes itself. */
 	public var onClose:Void->Void = null;
 
 	var _cam:FlxCamera;
@@ -84,22 +124,33 @@ class BlockVirtualKeyboard extends FlxGroup
 	var _sheet:FlxSprite = null;
 	var _accent:FlxSprite = null;
 	var _previewBg:FlxSprite = null;
+	var _previewFrame:FlxSprite = null;
 	var _preview:FlxText = null;
+	var _count:FlxText = null;
+	var _caret:FlxSprite = null;
 
 	var _sheetH:Float = 0;
 	var _builtViewW:Float = -1;
 	var _builtViewH:Float = -1;
+	var _builtScale:Float = -1;
+	var _builtPortrait:Bool = false;
 	var _layoutDirty:Bool = true;
-	var _charWidth:Float = 0;
+	var _cellW:Float = 0;
+	var _previewTextX:Float = 0;
+	var _previewFieldW:Float = 0;
+	var _caretBlink:Float = 0;
 
 	var _ptrPoint:FlxPoint = null;
 	var _ptrX:Float = 0;
 	var _ptrY:Float = 0;
 	var _ptrPressed:Bool = false;
 	var _ptrJustPressed:Bool = false;
-	var _ptrJustReleased:Bool = false;
 	var _activeTouchID:Int = -1;
-	var _pressedIndex:Int = -1;
+	var _holdKey:Int = -1;
+	var _holdFired:Bool = false;
+	var _holdTime:Float = 0;
+	var _holdNext:Float = REPEAT_DELAY;
+	var _holdInterval:Float = REPEAT_INTERVAL;
 
 	public function new(cam:FlxCamera)
 	{
@@ -121,14 +172,16 @@ class BlockVirtualKeyboard extends FlxGroup
 	 */
 	public function open(initial:String, multiline:Bool):Void
 	{
+		BlockLayout.ensure();
+
 		_text = (initial != null) ? initial : '';
 		_multiline = multiline;
 		_shift = false;
-		_pressedIndex = -1;
+		releaseHold();
 		_activeTouchID = -1;
 		_ptrPressed = false;
 		_ptrJustPressed = false;
-		_ptrJustReleased = false;
+		_caretBlink = 0;
 		_open = true;
 		visible = true;
 		active = true;
@@ -146,9 +199,10 @@ class BlockVirtualKeyboard extends FlxGroup
 	public function close():Void
 	{
 		_open = false;
-		_pressedIndex = -1;
+		releaseHold();
 		_activeTouchID = -1;
 		_ptrPressed = false;
+		_ptrJustPressed = false;
 		visible = false;
 		active = false;
 	}
@@ -183,7 +237,10 @@ class BlockVirtualKeyboard extends FlxGroup
 		_layout = canonical;
 		_layoutDirty = true;
 		if (_open)
+		{
 			rebuildIfNeeded();
+			refreshKeyVisuals();
+		}
 	}
 
 	/** Height of the sheet in the camera's screen space, 0 while it has never been laid out. */
@@ -201,12 +258,17 @@ class BlockVirtualKeyboard extends FlxGroup
 		if (!_open)
 			return;
 
+		BlockLayout.ensure();
+
 		super.update(elapsed);
 
 		rebuildIfNeeded();
 		pollPointer();
-		handlePointer();
+		handlePointer(elapsed);
+		// A press may have switched the layout, which rebuilds every key.
+		rebuildIfNeeded();
 		refreshKeyVisuals();
+		updateCaret(elapsed);
 	}
 
 	override public function draw():Void
@@ -230,88 +292,154 @@ class BlockVirtualKeyboard extends FlxGroup
 	{
 		_ptrPressed = false;
 		_ptrJustPressed = false;
-		_ptrJustReleased = false;
-		_ptrX = 0;
-		_ptrY = 0;
 
 		if (pollTouch())
 			return;
 
-		if (FlxG.mouse == null)
+		if (_cam == null || FlxG.mouse == null)
 			return;
 
-		var pos = FlxG.mouse.getScreenPosition(_cam, _ptrPoint);
+		var pos:FlxPoint = FlxG.mouse.getScreenPosition(_cam, _ptrPoint);
 		_ptrX = pos.x;
 		_ptrY = pos.y;
 		_ptrPressed = FlxG.mouse.pressed;
 		_ptrJustPressed = FlxG.mouse.justPressed;
-		_ptrJustReleased = FlxG.mouse.justReleased;
 	}
 
-	/** Reads the touch that owns the keyboard, claiming the first new one. Returns false to fall back to the mouse. */
+	/**
+	 * Reads the touch that owns the keyboard and claims the first new one. Returns true whenever the
+	 * touch screen has anything to do with this frame, so the (synthesized) mouse never handles a
+	 * finger a second time.
+	 */
 	function pollTouch():Bool
 	{
 		#if FLX_TOUCH
-		if (FlxG.touches == null)
+		if (FlxG.touches == null || FlxG.touches.list == null)
 			return false;
+
+		var list:Array<FlxTouch> = FlxG.touches.list;
 
 		if (_activeTouchID >= 0)
 		{
-			for (touch in FlxG.touches.list)
+			for (touch in list)
 			{
 				if (touch == null || touch.touchPointID != _activeTouchID)
 					continue;
 
-				var pos = touch.getScreenPosition(_cam, _ptrPoint);
+				var pos:FlxPoint = touch.getScreenPosition(_cam, _ptrPoint);
 				_ptrX = pos.x;
 				_ptrY = pos.y;
 				_ptrPressed = touch.pressed;
-				_ptrJustReleased = touch.justReleased;
-				if (!_ptrPressed)
+
+				if (!touch.pressed)
 					_activeTouchID = -1;
+
 				return true;
 			}
 
-			// The touch we were tracking is gone without a release.
+			// The touch we were tracking is gone without a release: cancel, pointing nowhere.
 			_activeTouchID = -1;
-			return false;
+			_ptrX = -1;
+			_ptrY = -1;
+			return true;
 		}
 
-		for (touch in FlxG.touches.list)
+		for (touch in list)
 		{
 			if (touch == null || !touch.justPressed)
 				continue;
 
 			_activeTouchID = touch.touchPointID;
-			var pos = touch.getScreenPosition(_cam, _ptrPoint);
+			var pos:FlxPoint = touch.getScreenPosition(_cam, _ptrPoint);
 			_ptrX = pos.x;
 			_ptrY = pos.y;
 			_ptrPressed = true;
 			_ptrJustPressed = true;
 			return true;
 		}
+
+		// A finger is on the screen but it is not ours: the sheet still owns the pointer.
+		return list.length > 0;
 		#end
 
 		return false;
 	}
 
-	function handlePointer():Void
+	/**
+	 * Turns the pointer into key presses. A key fires when the finger lifts off the same key it went
+	 * down on (dragging off cancels it); the delete key fires on press so that it can repeat.
+	 */
+	function handlePointer(elapsed:Float):Void
 	{
-		if (_ptrJustReleased)
-			_pressedIndex = -1;
-
-		if (_ptrJustPressed)
+		if (_holdKey >= 0)
 		{
-			var index:Int = keyIndexAt(_ptrX, _ptrY);
-			if (index >= 0)
-			{
-				_pressedIndex = index;
-				activateKey(index);
-			}
+			handleHeldKey(elapsed);
+			return;
 		}
 
-		if (_pressedIndex >= 0 && (!_ptrPressed || keyIndexAt(_ptrX, _ptrY) != _pressedIndex))
-			_pressedIndex = -1;
+		if (!_ptrJustPressed)
+			return;
+
+		var index:Int = keyIndexAt(_ptrX, _ptrY);
+		if (index < 0 || index >= _keys.length)
+			return;
+
+		_holdKey = index;
+		_holdFired = false;
+		_holdTime = 0;
+		_holdNext = REPEAT_DELAY;
+		_holdInterval = REPEAT_INTERVAL;
+
+		if (_keys[index].spec.action == ACT_BACKSPACE)
+		{
+			_holdFired = true;
+			activateKey(index);
+		}
+	}
+
+	function handleHeldKey(elapsed:Float):Void
+	{
+		var index:Int = _holdKey;
+
+		if (!_ptrPressed)
+		{
+			var landed:Int = keyIndexAt(_ptrX, _ptrY);
+			var fired:Bool = _holdFired;
+			releaseHold();
+
+			if (_open && landed == index && !fired)
+				activateKey(index);
+
+			return;
+		}
+
+		if (keyIndexAt(_ptrX, _ptrY) != index)
+		{
+			releaseHold();
+			return;
+		}
+
+		if (!_holdFired || index >= _keys.length)
+			return;
+
+		_holdTime += elapsed;
+		if (_holdTime < _holdNext)
+			return;
+
+		_holdTime = 0;
+		_holdInterval = Math.max(REPEAT_MIN_INTERVAL, _holdInterval * 0.85);
+		_holdNext = _holdInterval;
+		activateKey(index);
+	}
+
+	/** Forgets the held key without firing anything. */
+	function releaseHold():Void
+	{
+		_holdKey = -1;
+		_holdFired = false;
+		_holdTime = 0;
+		_holdNext = REPEAT_DELAY;
+		_holdInterval = REPEAT_INTERVAL;
 	}
 
 	function keyIndexAt(x:Float, y:Float):Int
@@ -445,46 +573,80 @@ class BlockVirtualKeyboard extends FlxGroup
 			}
 
 			key.label.y = key.yPos + (key.height - key.label.height) * 0.5;
+			key.label.color = (spec.tint != 0) ? spec.tint : COLOR_KEY_TEXT;
 
-			var highlighted:Bool = (i == _pressedIndex);
-			if (!highlighted)
-				highlighted = (spec.action == ACT_SHIFT && _shift) || (spec.action == ACT_LAYOUT && spec.value == _layout);
+			var held:Bool = (i == _holdKey);
+			var active:Bool = (spec.action == ACT_SHIFT && _shift) || (spec.action == ACT_LAYOUT && spec.value == _layout);
+			key.bg.color = (held || active) ? COLOR_ACCENT : COLOR_KEY;
+			key.frame.color = (held || active) ? COLOR_KEY_TEXT : COLOR_BORDER;
 
-			key.bg.color = highlighted ? COLOR_ACCENT : COLOR_KEY;
+			var shrink:Float = held ? PRESSED_SCALE : 1;
+			key.bg.scale.set(shrink, shrink);
+			key.frame.scale.set(shrink, shrink);
 		}
 	}
 
+	/**
+	 * Draws the text being typed: the last line of the buffer, scrolled so the caret (the end of the
+	 * text, the keyboard only ever appends) stays visible, plus the line and character count.
+	 */
 	function refreshPreview():Void
 	{
 		if (_preview == null)
 			return;
 
-		var flat:String = _text.split('\n').join(' ');
-		_preview.text = flat;
+		var parts:Array<String> = _text.split('\n');
+		var line:Int = parts.length;
+		var source:String = parts[parts.length - 1];
 
-		var field = _preview.textField;
-		if (_charWidth <= 0 && field != null && flat.length > 0)
+		if (_count != null)
+			_count.text = _multiline ? ('L' + line + ' ' + _text.length) : Std.string(_text.length);
+
+		var cell:Float = (_cellW > 0) ? _cellW : BlockLayout.font('body') * CHAR_RATIO;
+		var maxChars:Int = Std.int(_previewFieldW / cell);
+		if (maxChars < 4)
+			maxChars = 4;
+
+		var shown:String = source;
+		if (shown.length > maxChars)
+			shown = '...' + shown.substr(shown.length - (maxChars - 3));
+
+		if (shown.length == 0)
 		{
-			var measured:Float = field.textWidth;
-			if (measured > 0)
-				_charWidth = measured / flat.length;
+			_preview.text = _multiline ? 'type Lua here' : 'type here';
+			_preview.color = COLOR_HINT;
+		}
+		else
+		{
+			_preview.text = shown;
+			_preview.color = COLOR_KEY_TEXT;
 		}
 
-		var perChar:Float = (_charWidth > 0) ? _charWidth : 8;
-		var maxChars:Int = Std.int(_preview.fieldWidth / perChar);
-		if (maxChars < 5)
-			maxChars = 5;
-
-		if (flat.length > maxChars)
-			_preview.text = '...' + flat.substr(flat.length - (maxChars - 3));
+		if (_caret != null)
+			_caret.x = _previewTextX + Math.min(shown.length * cell, _previewFieldW);
 	}
+
+	function updateCaret(elapsed:Float):Void
+	{
+		if (_caret == null)
+			return;
+
+		_caretBlink += elapsed;
+		if (_caretBlink > 10)
+			_caretBlink -= 10;
+
+		_caret.visible = (_text.length > 0) && ((_caretBlink % 1) < 0.6);
+	}
+
+	// --- Layout --------------------------------------------------------------------------------
 
 	function rebuildIfNeeded():Void
 	{
 		var viewW:Float = viewWidth();
 		var viewH:Float = viewHeight();
 
-		if (!_layoutDirty && _keys.length > 0 && Math.abs(viewW - _builtViewW) < 0.5 && Math.abs(viewH - _builtViewH) < 0.5)
+		if (!_layoutDirty && _keys.length > 0 && Math.abs(viewW - _builtViewW) < 0.5 && Math.abs(viewH - _builtViewH) < 0.5
+			&& _builtScale == BlockLayout.scale && _builtPortrait == BlockLayout.portrait)
 			return;
 
 		rebuildLayout(viewW, viewH);
@@ -496,63 +658,150 @@ class BlockVirtualKeyboard extends FlxGroup
 
 		_builtViewW = viewW;
 		_builtViewH = viewH;
+		_builtScale = BlockLayout.scale;
+		_builtPortrait = BlockLayout.portrait;
 		_layoutDirty = false;
 		_sheetH = 0;
-		_charWidth = 0;
+		_cellW = 0;
 
-		var rows:Array<Array<KeySpec>> = buildRows(_layout, columnsFor(viewW));
+		var pad:Float = Math.max(6, BlockLayout.spacing('tight') * 1.5);
+		var floorKey:Float = Math.max(BlockLayout.touchSize(), MIN_KEY_HEIGHT);
+		var idealKey:Float = floorKey * (BlockLayout.portrait ? 1.12 : 1);
+		var gap:Float = FlxMath.bound(idealKey * 0.16, 4, BlockLayout.spacing('loose'));
+		var innerW:Float = Math.max(64, viewW - pad * 2);
+
+		// The Hide button is inset into the strip, so the strip has to be slightly taller than a finger.
+		var previewH:Float = Math.max(BlockLayout.touchSize() + 4, 34 * BlockLayout.scale);
+		var switchH:Float = Math.max(BlockLayout.touchSize(), 40 * BlockLayout.scale);
+		var hideW:Float = Math.max(BlockLayout.touchSize() * 1.3, 58 * BlockLayout.scale);
+		var overhead:Float = pad * 2 + previewH + gap + switchH + gap;
+
+		// Rows: portrait aims for fewer, fatter keys, landscape for the wide rows the layouts are
+		// designed with. A row that does not fit is reflowed, never clipped.
+		var limit:Int = columnLimit(innerW, gap);
+		var columns:Int = softColumns(innerW, gap, limit);
+		var rows:Array<Array<KeySpec>> = buildRows(_layout, columns);
+		var cap:Float = sheetCap(viewH);
+
+		var guard:Int = 0;
+		while (rows.length > 0 && columns < limit && contentHeight(overhead, rows.length, idealKey, gap) > cap && guard < 12)
+		{
+			guard++;
+			columns++;
+			rows = buildRows(_layout, columns);
+		}
+
+		if (rows.length <= 0)
+			return;
+
 		var rowCount:Int = rows.length;
-		if (rowCount <= 0)
-			return;
+		var rowH:Float = idealKey;
+		if (contentHeight(overhead, rowCount, rowH, gap) > cap)
+		{
+			rowH = (cap - overhead - (rowCount - 1) * gap) / rowCount;
+			if (rowH < floorKey)
+				rowH = floorKey; // One finger per key beats the cap; the workspace still keeps a third.
+			if (rowH > idealKey)
+				rowH = idealKey;
+		}
 
-		var pad:Float = Math.max(6, viewH * 0.012);
-		var gap:Float = Math.max(4, viewW * 0.005);
-		var previewH:Float = Math.max(28, Math.min(48, viewH * 0.05));
-		var controlH:Float = Math.max(MIN_KEY_HEIGHT, Math.min(64, viewH * 0.062));
-		var innerW:Float = viewW - pad * 2;
-		if (innerW < 48)
-			return;
+		var sheetH:Float = contentHeight(overhead, rowCount, rowH, gap);
+		var ceiling:Float = viewH * SHEET_CEILING_RATIO;
+		if (sheetH > ceiling)
+		{
+			rowH = Math.max(16, (ceiling - overhead - (rowCount - 1) * gap) / rowCount);
+			sheetH = Math.min(ceiling, contentHeight(overhead, rowCount, rowH, gap));
+			if (sheetH > viewH)
+				sheetH = viewH;
+		}
 
-		var baseHeight:Float = (FlxG.height > 0) ? FlxG.height : viewH;
-		var needed:Float = pad * 2 + previewH + controlH + rowCount * MIN_KEY_HEIGHT + (rowCount + 1) * gap;
-		var sheetH:Float = Math.max(MIN_HEIGHT, baseHeight * HEIGHT_RATIO);
-		if (needed > sheetH)
-			sheetH = needed;
-		if (sheetH > viewH)
-			sheetH = viewH;
+		if (sheetH < 1)
+			sheetH = 1;
 
-		var sheetX:Float = 0;
 		var sheetY:Float = Math.max(0, viewH - sheetH);
 		_sheetH = sheetH;
 
-		_sheet = makeRect(sheetX, sheetY, viewW, sheetH, COLOR_SHEET);
-		_accent = makeRect(sheetX, sheetY, viewW, Math.max(2, viewH * 0.004), COLOR_ACCENT);
+		var contentW:Float = rowContentWidth(innerW, columns, gap);
+		var rowX:Float = Math.max(pad, (viewW - contentW) * 0.5);
+		var y:Float = sheetY + pad;
 
-		var contentTop:Float = sheetY + pad;
-		_previewBg = makeRect(sheetX + pad, contentTop, innerW, previewH, COLOR_PREVIEW);
+		_sheet = makeRect(0, sheetY, viewW, sheetH, COLOR_SHEET);
+		var ruleH:Float = Math.max(2, 3 * BlockLayout.scale);
+		_accent = makeRect(0, sheetY, viewW, ruleH, COLOR_ACCENT);
+		makeRect(0, sheetY + ruleH, viewW, 1, COLOR_BORDER);
 
-		var previewSize:Int = Std.int(Math.max(12, Math.min(24, previewH * 0.62)));
-		_preview = new FlxText(sheetX + pad + 6, contentTop, Math.max(1, innerW - 12), '', previewSize);
-		_preview.setFormat(Paths.font('vcr.ttf'), previewSize, COLOR_KEY_TEXT, LEFT);
-		_preview.wordWrap = false;
-		_preview.scrollFactor.set(0, 0);
-		_preview.updateHitbox();
-		_preview.y = contentTop + Math.max(0, (previewH - _preview.height) * 0.5);
-		add(_preview);
+		buildPreviewStrip(rowX, y, contentW, previewH, hideW, gap);
+		y += previewH + gap;
 
-		var controlY:Float = contentTop + previewH + gap;
-		buildRow(controlRow(), sheetX + pad, controlY, innerW, controlH, gap);
-
-		var rowY:Float = controlY + controlH + gap;
-		var rowH:Float = (sheetY + sheetH - pad - rowY) / rowCount - gap * (rowCount - 1) / rowCount;
-		if (rowH < 1)
-			rowH = 1;
+		var switchW:Float = Math.min(contentW, 560 * BlockLayout.scale);
+		buildRow(switcherRow(), Math.max(pad, (viewW - switchW) * 0.5), y, switchW, switchH, gap);
+		y += switchH + gap;
 
 		for (row in rows)
 		{
-			buildRow(row, sheetX + pad, rowY, innerW, rowH, gap);
-			rowY += rowH + gap;
+			buildRow(row, rowX, y, contentW, rowH, gap);
+			y += rowH + gap;
 		}
+
+		refreshKeyVisuals();
+		refreshPreview();
+	}
+
+	/** Preview strip: the text (and caret), the character count and the Hide button. */
+	function buildPreviewStrip(x:Float, y:Float, w:Float, h:Float, hideW:Float, gap:Float):Void
+	{
+		var radius:Float = Math.min(h * 0.28, 10 * BlockLayout.scale);
+		_previewBg = makeRoundRect(x, y, w, h, radius, COLOR_PREVIEW);
+		_previewFrame = makeRoundFrame(x, y, w, h, radius, COLOR_BORDER);
+
+		var countW:Float = (_multiline ? 96 : 62) * BlockLayout.scale;
+		var countX:Float = x + w - hideW - 2 - gap - countW;
+		_count = new FlxText(countX, y, Math.max(1, countW), '', BlockLayout.font('small'));
+		_count.setFormat(Paths.font('vcr.ttf'), BlockLayout.font('small'), COLOR_KEY_TEXT, RIGHT);
+		_count.wordWrap = false;
+		_count.scrollFactor.set(0, 0);
+		_count.updateHitbox();
+		_count.y = y + (h - _count.height) * 0.5;
+		add(_count);
+
+		addKey(spec('HIDE', ACT_CLOSE, '', 1), x + w - hideW - 2, y + 2, hideW, Math.max(1, h - 4));
+
+		var inner:Float = Math.max(3, BlockLayout.spacing('tight'));
+		_previewTextX = x + inner + 2;
+		_previewFieldW = Math.max(24, countX - gap - _previewTextX);
+
+		var size:Int = BlockLayout.font('body');
+		_preview = new FlxText(_previewTextX, y, _previewFieldW, '', size);
+		_preview.setFormat(Paths.font('vcr.ttf'), size, COLOR_KEY_TEXT, LEFT);
+		_preview.wordWrap = false;
+		_preview.scrollFactor.set(0, 0);
+		_preview.updateHitbox();
+		_preview.y = y + (h - _preview.height) * 0.5;
+		add(_preview);
+
+		_cellW = measureCell(size);
+
+		var caretH:Float = Math.max(6, h * 0.56);
+		_caret = makeRect(_previewTextX, y + (h - caretH) * 0.5, Math.max(2, 2 * BlockLayout.scale), caretH, COLOR_ACCENT);
+	}
+
+	/** `vcr.ttf` is monospaced, so one measured sample gives the width of every character. */
+	function measureCell(size:Int):Float
+	{
+		var probe:FlxText = new FlxText(0, 0, 0, CELL_SAMPLE, size);
+		probe.setFormat(Paths.font('vcr.ttf'), size, COLOR_KEY_TEXT, LEFT);
+		probe.wordWrap = false;
+
+		var measured:Float = 0;
+		if (probe.textField != null)
+			measured = probe.textField.textWidth;
+
+		probe.destroy();
+
+		if (measured > 0)
+			return measured / CELL_SAMPLE.length;
+
+		return size * CHAR_RATIO;
 	}
 
 	function clearLayout():Void
@@ -562,42 +811,39 @@ class BlockVirtualKeyboard extends FlxGroup
 			if (key == null)
 				continue;
 
-			remove(key.bg, true);
-			remove(key.label, true);
-			key.bg.destroy();
-			key.label.destroy();
+			dropSprite(key.bg);
+			dropSprite(key.frame);
+			dropSprite(key.label);
 		}
 
 		_keys = [];
-		_pressedIndex = -1;
+		releaseHold();
 
-		if (_sheet != null)
-		{
-			remove(_sheet, true);
-			_sheet.destroy();
-			_sheet = null;
-		}
-		if (_accent != null)
-		{
-			remove(_accent, true);
-			_accent.destroy();
-			_accent = null;
-		}
-		if (_previewBg != null)
-		{
-			remove(_previewBg, true);
-			_previewBg.destroy();
-			_previewBg = null;
-		}
-		if (_preview != null)
-		{
-			remove(_preview, true);
-			_preview.destroy();
-			_preview = null;
-		}
+		dropSprite(_sheet);
+		dropSprite(_accent);
+		dropSprite(_previewBg);
+		dropSprite(_previewFrame);
+		dropSprite(_preview);
+		dropSprite(_count);
+		dropSprite(_caret);
+
+		_sheet = null;
+		_accent = null;
+		_previewBg = null;
+		_previewFrame = null;
+		_preview = null;
+		_count = null;
+		_caret = null;
 	}
 
-	// --- Layout --------------------------------------------------------------------------------
+	function dropSprite(sprite:FlxSprite):Void
+	{
+		if (sprite == null)
+			return;
+
+		remove(sprite, true);
+		sprite.destroy();
+	}
 
 	/** Builds the key rows of `layout`, reflowed so a row never holds more than `columns` keys. */
 	function buildRows(layout:String, columns:Int):Array<Array<KeySpec>>
@@ -611,14 +857,14 @@ class BlockVirtualKeyboard extends FlxGroup
 				designed.push(charRow('-/:;()$&@"'));
 				designed.push(charRow(".,?!'#%*+="));
 			case LAYOUT_SYMBOLS:
-				designed.push(charRow("[]{}<>/\\"));
+				designed.push(charRow('[]{}<>/\\'));
 				designed.push(charRow('^`~_|$&#'));
 				designed.push(charRow("()\"'.,:;"));
 			case LAYOUT_CODE:
-				designed.push(charRow('()[]{}'));
-				designed.push(charRow("=\"'.,:;"));
-				designed.push(charRow('<>+-*/%'));
-				designed.push([charKey('#'), charKey('~'), charKey("$"), charKey('_'), tabKey()]);
+				// Every Lua character the layouts above leave out; the rows carry the four-space TAB.
+				designed.push(charRow("()[]{}=\"'"));
+				designed.push(charRow('.,:;<>+-'));
+				designed.push(charRow("*/%#~$_"));
 			default:
 				designed.push(charRow('qwertyuiop'));
 				designed.push(charRow('asdfghjkl'));
@@ -633,20 +879,8 @@ class BlockVirtualKeyboard extends FlxGroup
 		}
 
 		// The function row is the one row that is never reflowed: shift / space / del / enter stay put.
-		rows.push(functionRow());
+		rows.push(functionRow(layout));
 		return rows;
-	}
-
-	/** How many keys a row may hold on a view this wide: 10 normally, 6 on a very narrow one. */
-	function columnsFor(viewW:Float):Int
-	{
-		var columns:Int = Std.int(viewW / 88);
-		if (columns < 6)
-			columns = 6;
-		if (columns > 10)
-			columns = 10;
-
-		return columns;
 	}
 
 	/** Splits an over-long row into evenly sized chunks, so a reflowed row never ends in a stray key. */
@@ -674,36 +908,85 @@ class BlockVirtualKeyboard extends FlxGroup
 		return chunks;
 	}
 
-	/** The layout switcher row: ABC / 123 / #+= / code, clear and close. */
-	function controlRow():Array<KeySpec>
+	/** How many keys a row may hold on a view this wide before a key gets narrower than a finger. */
+	function columnLimit(innerW:Float, gap:Float):Int
+	{
+		var minKeyW:Float = Math.max(38, BlockLayout.touchSize() * 0.9);
+		var columns:Int = Std.int((innerW + gap) / (minKeyW + gap));
+
+		return Std.int(FlxMath.bound(columns, MIN_COLUMNS, MAX_COLUMNS));
+	}
+
+	/**
+	 * Keys per row the sheet aims for: upright screens want fewer, fatter keys - a thumb keyboard -
+	 * while landscape keeps the wide rows the layouts are designed with.
+	 */
+	function softColumns(innerW:Float, gap:Float, limit:Int):Int
+	{
+		var target:Float = (BlockLayout.portrait ? 84 : 66) * BlockLayout.scale;
+		var columns:Int = Std.int((innerW + gap) / (target + gap));
+
+		return Std.int(FlxMath.bound(columns, MIN_COLUMNS, limit));
+	}
+
+	/** Widest a row may spread: a very wide view would otherwise stretch ten keys across the screen. */
+	function rowContentWidth(innerW:Float, columns:Int, gap:Float):Float
+	{
+		var maxKeyW:Float = Math.max(120 * BlockLayout.scale, innerW / 12);
+		var wanted:Float = columns * maxKeyW + (columns - 1) * gap;
+
+		return Math.min(innerW, wanted);
+	}
+
+	static function contentHeight(overhead:Float, rowCount:Int, rowH:Float, gap:Float):Float
+	{
+		return overhead + rowCount * rowH + (rowCount - 1) * gap;
+	}
+
+	/** Where the sheet may reach, in this camera's screen space: the BlockLayout cap, unit-scaled. */
+	function sheetCap(viewH:Float):Float
+	{
+		var unit:Float = (BlockLayout.height > 0) ? viewH / BlockLayout.height : 1;
+		var cap:Float = Math.min(BlockLayout.height * 0.45, 460 * BlockLayout.scale) * unit;
+
+		return Math.max(MIN_HEIGHT * unit, cap);
+	}
+
+	/** The layout switcher: the active layout is filled with the accent colour. */
+	function switcherRow():Array<KeySpec>
 	{
 		return [
 			layoutKey(LAYOUT_LETTERS, 'ABC'),
 			layoutKey(LAYOUT_NUMBERS, '123'),
 			layoutKey(LAYOUT_SYMBOLS, '#+='),
 			layoutKey(LAYOUT_CODE, 'code'),
-			spec('CLR', ACT_CLEAR, '', 1),
-			spec('X', ACT_CLOSE, '', 1)
+			spec('CLR', ACT_CLEAR, '', 1, COLOR_DANGER)
 		];
 	}
 
-	function functionRow():Array<KeySpec>
+	/** The bottom row: shift reports its own state through its label, TAB only exists for Lua. */
+	function functionRow(layout:String):Array<KeySpec>
 	{
-		return [
-			spec('shift', ACT_SHIFT, '', 1.4),
-			spec('SPACE', ACT_SPACE, ' ', 3),
-			spec('DEL', ACT_BACKSPACE, '', 1.4),
-			spec('ENTER', ACT_ENTER, '', 1.4)
-		];
+		var row:Array<KeySpec> = [spec('abc', ACT_SHIFT, '', 1.5)];
+
+		if (layout == LAYOUT_CODE)
+			row.push(spec('TAB', ACT_TAB, '', 1.3));
+
+		row.push(spec('SPACE', ACT_SPACE, ' ', (layout == LAYOUT_CODE) ? 2.2 : 3));
+		row.push(spec('DEL', ACT_BACKSPACE, '', 1.5));
+		row.push(spec('ENTER', ACT_ENTER, '', 1.5));
+
+		return row;
 	}
 
-	static function spec(label:String, action:Int, value:String, flex:Float = 1):KeySpec
+	static function spec(label:String, action:Int, value:String, flex:Float = 1, tint:Int = 0):KeySpec
 	{
 		return {
 			label: label,
 			action: action,
 			value: value,
-			flex: flex
+			flex: flex,
+			tint: tint
 		};
 	}
 
@@ -719,11 +1002,6 @@ class BlockVirtualKeyboard extends FlxGroup
 			row.push(charKey(characters.charAt(i)));
 
 		return row;
-	}
-
-	static function tabKey():KeySpec
-	{
-		return spec('TAB', ACT_TAB, '', 1.5);
 	}
 
 	static function layoutKey(layout:String, label:String):KeySpec
@@ -758,10 +1036,14 @@ class BlockVirtualKeyboard extends FlxGroup
 
 	function addKey(item:KeySpec, x:Float, y:Float, w:Float, h:Float):Void
 	{
-		var bg:FlxSprite = makeRect(x, y, w, h, FlxColor.WHITE);
-		bg.color = COLOR_KEY;
+		if (w < 2 || h < 2)
+			return;
 
-		var size:Int = fitFontSize(item.label, w, Std.int(Math.max(10, Math.min(22, h * 0.34))));
+		var radius:Float = Math.min(w, h) * 0.22;
+		var bg:FlxSprite = makeRoundRect(x, y, w, h, radius, COLOR_KEY);
+		var frame:FlxSprite = makeRoundFrame(x, y, w, h, radius, COLOR_BORDER);
+
+		var size:Int = keyFontSize(item, w, h);
 		var label:FlxText = new FlxText(x, y, Math.max(1, w), item.label, size);
 		label.setFormat(Paths.font('vcr.ttf'), size, COLOR_KEY_TEXT, CENTER);
 		label.wordWrap = false;
@@ -773,6 +1055,7 @@ class BlockVirtualKeyboard extends FlxGroup
 		_keys.push({
 			spec: item,
 			bg: bg,
+			frame: frame,
 			label: label,
 			xPos: x,
 			yPos: y,
@@ -781,12 +1064,115 @@ class BlockVirtualKeyboard extends FlxGroup
 		});
 	}
 
+	/** Single characters get the body font, words the small one, both shrunk until they fit the key. */
+	function keyFontSize(item:KeySpec, keyW:Float, keyH:Float):Int
+	{
+		var role:String = (item.label != null && item.label.length <= 1) ? 'body' : 'small';
+		var wanted:Int = Std.int(Math.round(BlockLayout.font(role) * 0.95));
+		var size:Int = (wanted < 9) ? 9 : wanted;
+
+		if (item.label != null && item.label.length > 0)
+		{
+			var limit:Float = Math.max(12, keyW - 10 * BlockLayout.scale);
+			var fitted:Int = Std.int(limit / (item.label.length * CHAR_RATIO));
+			if (fitted < size)
+				size = fitted;
+		}
+
+		var byHeight:Int = Std.int((keyH - 8 * BlockLayout.scale) / 1.25);
+		if (byHeight < size)
+			size = byHeight;
+
+		return (size < 9) ? 9 : size;
+	}
+
+	/** Flat sprite of `w` x `h`; the sheet, the accent rule and the caret. */
 	function makeRect(x:Float, y:Float, w:Float, h:Float, color:Int):FlxSprite
 	{
 		var sprite:FlxSprite = new FlxSprite(x, y).makeGraphic(Std.int(Math.max(1, Math.ceil(w))), Std.int(Math.max(1, Math.ceil(h))), color);
 		sprite.scrollFactor.set(0, 0);
 		add(sprite);
 		return sprite;
+	}
+
+	/** Rounded corner fill. The bitmap is white, so `color` tints it exactly. */
+	function makeRoundRect(x:Float, y:Float, w:Float, h:Float, radius:Float, color:Int):FlxSprite
+	{
+		var sprite:FlxSprite = new FlxSprite(x, y);
+		sprite.loadGraphic(roundedBitmap(Std.int(Math.max(1, Math.ceil(w))), Std.int(Math.max(1, Math.ceil(h))), radius, FlxColor.WHITE));
+		sprite.color = color;
+		sprite.scrollFactor.set(0, 0);
+		sprite.origin.set(sprite.width * 0.5, sprite.height * 0.5);
+		add(sprite);
+		return sprite;
+	}
+
+	/** The 1px outline of the same rounded rectangle, on its own sprite so it can take its own tint. */
+	function makeRoundFrame(x:Float, y:Float, w:Float, h:Float, radius:Float, color:Int):FlxSprite
+	{
+		var sprite:FlxSprite = new FlxSprite(x, y);
+		sprite.loadGraphic(roundedFrameBitmap(Std.int(Math.max(1, Math.ceil(w))), Std.int(Math.max(1, Math.ceil(h))), radius, FlxColor.WHITE));
+		sprite.color = color;
+		sprite.scrollFactor.set(0, 0);
+		sprite.origin.set(sprite.width * 0.5, sprite.height * 0.5);
+		add(sprite);
+		return sprite;
+	}
+
+	/**
+	 * A rounded rectangle built row by row - no vector graphics, no assets, the same result on every
+	 * target. Every pixel is either opaque or transparent, so tinting the sprite keeps crisp edges.
+	 */
+	static function roundedBitmap(w:Int, h:Int, radius:Float, color:Int):BitmapData
+	{
+		var bitmap:BitmapData = new BitmapData(w, h, true, 0x00000000);
+		var r:Float = Math.min(radius, Math.min(w, h) * 0.5);
+
+		for (row in 0...h)
+		{
+			var inset:Int = cornerInset(row, h, r);
+			var span:Int = w - inset * 2;
+			if (span <= 0)
+				continue;
+
+			bitmap.fillRect(new Rectangle(inset, row, span, 1), color);
+		}
+
+		return bitmap;
+	}
+
+	/** The same silhouette hollowed out, leaving the 1px outline behind. */
+	static function roundedFrameBitmap(w:Int, h:Int, radius:Float, color:Int):BitmapData
+	{
+		var bitmap:BitmapData = roundedBitmap(w, h, radius, color);
+		var r:Float = Math.min(radius, Math.min(w, h) * 0.5);
+
+		for (row in 1...(h - 1))
+		{
+			var inset:Int = cornerInset(row, h, r);
+			var span:Int = w - inset * 2 - 2;
+			if (span <= 0)
+				continue;
+
+			bitmap.fillRect(new Rectangle(inset + 1, row, span, 1), 0x00000000);
+		}
+
+		return bitmap;
+	}
+
+	/** Horizontal inset of a rounded corner at `row`, in whole pixels. */
+	static function cornerInset(row:Int, h:Int, r:Float):Int
+	{
+		var dy:Float = 0;
+		if (row < r)
+			dy = r - row - 0.5;
+		else if (row >= h - r)
+			dy = row - (h - r) + 0.5;
+		else
+			return 0;
+
+		var dx:Float = r - Math.sqrt(Math.max(0, r * r - dy * dy));
+		return Std.int(Math.round(dx));
 	}
 
 	// --- Helpers -------------------------------------------------------------------------------
@@ -808,27 +1194,10 @@ class BlockVirtualKeyboard extends FlxGroup
 		return (_cam != null && _cam.zoom > 0.0001) ? _cam.zoom : 1;
 	}
 
-	/** `vcr.ttf` is monospace, so the key width gives a usable estimate for a label that is too long. */
-	function fitFontSize(label:String, keyW:Float, wanted:Int):Int
-	{
-		var size:Int = (wanted < 9) ? 9 : wanted;
-		if (label == null || label.length == 0)
-			return size;
-
-		var limit:Float = keyW - 8;
-		if (label.length * size * 0.62 > limit)
-		{
-			var shrunk:Int = Std.int(limit / (label.length * 0.62));
-			size = (shrunk < 9) ? 9 : shrunk;
-		}
-
-		return size;
-	}
-
 	function keyLabel(item:KeySpec):String
 	{
 		if (item.action == ACT_SHIFT)
-			return _shift ? 'SHIFT' : 'shift';
+			return _shift ? 'ABC' : 'abc';
 
 		return item.label;
 	}
@@ -854,11 +1223,12 @@ class BlockVirtualKeyboard extends FlxGroup
 	}
 }
 
-/** One drawn key: its rectangle, its label and where it sits in the camera's screen space. */
+/** One drawn key: its rectangle, its body, its outline and where it sits in the camera's screen space. */
 private typedef KeyboardKey =
 {
 	var spec:KeySpec;
 	var bg:FlxSprite;
+	var frame:FlxSprite;
 	var label:FlxText;
 	var xPos:Float;
 	var yPos:Float;
@@ -873,4 +1243,7 @@ private typedef KeySpec =
 	var action:Int;
 	var value:String;
 	var flex:Float;
+
+	/** Label colour override, 0 for the default key text colour. */
+	var tint:Int;
 }
