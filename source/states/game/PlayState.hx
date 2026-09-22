@@ -1161,6 +1161,12 @@ class PlayState extends MusicBeatState
 		addAndroidControls();
 		androidc.visible = false;
 		addTouchPad("NONE", "P");
+		// The P (pause) button must not be drawn on the game camera: `camGame` is the one that gets
+		// camera shake, beat zoom and every modchart camera move, and a pad drawn there visibly
+		// jitters under the finger. `addPadCamera()` gives the pad its own transparent camera
+		// (appended to the camera list, on top of the game cameras) so it stays put while the song
+		// shakes around it. It has to come after `addTouchPad`, which creates the pad.
+		addPadCamera();
 		_touchpad.visible = false;
 		#end
 
