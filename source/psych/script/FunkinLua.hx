@@ -153,14 +153,31 @@ class FunkinLua extends GlobalScript
 
 		try
 		{
-			var code:String = Paths.getContent(script);
+			// Paths.getContent() returns null for a file that is not there, and the native side of
+			// luau_loadsource() does strlen(source) without checking it: a null source is an instant
+			// null-pointer dereference, not a catchable error. Android resolves script paths through the
+			// storage/asset layout, where "not there" is common, while on desktop it never happens -
+			// which is exactly why only the APK died here. Never hand a missing/empty script to the VM.
+			var code:Null<String> = Paths.getContent(script);
+			if (code == null || code.trim().length == 0)
+			{
+				var missingMsg:String = 'Error loading lua script: "$script" (file not found or empty)';
+				trace(missingMsg);
+				luaTrace(missingMsg, true, false, FlxColor.RED);
+				Lua.close(lua);
+				lua = null;
+				return;
+			}
+
 			var status:Int = LuaL.luau_loadsource(lua, script, code);
 			if (status != Lua.LUA_OK)
 			{
 				var resultStr:String = Lua.tostring(lua, -1);
 				Lua.pop(lua, 1);
+				if (resultStr == null) // Lua may raise a non-string error object
+					resultStr = 'Unknown error (non-string error object)';
 				trace('Error on lua script! ' + resultStr);
-				#if (windows || android)
+				#if desktop
 				CoolUtil.showPopUp(resultStr, 'Error on lua script!');
 				#else
 				luaTrace('Error loading lua script: "$script"\n' + resultStr, true, false, FlxColor.RED);
@@ -3884,8 +3901,10 @@ class FunkinLua extends GlobalScript
 		{
 			var err:String = Lua.tostring(lua, -1);
 			Lua.pop(lua, 1);
+			if (err == null) // Lua may raise a non-string error object
+				err = 'Unknown error (non-string error object)';
 			trace('Error running lua script! ' + err);
-			#if (windows || android)
+			#if desktop
 			CoolUtil.showPopUp(err, 'Error running lua script!');
 			#else
 			luaTrace('Error running lua script: "$scriptName"\n' + err, true, false, FlxColor.RED);

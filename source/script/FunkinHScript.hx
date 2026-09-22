@@ -618,13 +618,24 @@ class HScript extends Script
 			{
 				CPPInterface.messageBox(fullMsg, winTitle != null ? winTitle : '${scriptName}: Script Error');
 			}
-			#else
+			#elseif desktop
 			var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
 			if (stack != null && stack.length > 0)
 			{
 				fullMsg += '\n\nStack Trace:\n$stack';
 			}
 			CoolUtil.showPopUp(fullMsg, winTitle != null ? winTitle : '${scriptName}: Script Error');
+			#else
+			// Android and web: CoolUtil.showPopUp() is a native dialog (a JNI/UI-thread call on Android)
+			// and this runs from script *loading* paths, where it can fail or kill the process instead of
+			// reporting the error. Print on the on-screen script overlay the engine already uses outside
+			// a song; inside a song that still lands in PlayState's debug text.
+			var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+			if (stack != null && stack.length > 0)
+			{
+				fullMsg += '\n\nStack Trace:\n$stack';
+			}
+			ScriptDebugOverlay.report(fullMsg, FlxColor.RED);
 			#end
 		}
 		catch (e:Dynamic)

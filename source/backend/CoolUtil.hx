@@ -293,12 +293,30 @@ class CoolUtil
 	}
 
 	/**
-	 * Show a popup dialog
+	 * Show a popup dialog.
+	 *
+	 * The script-error paths (`FunkinLua`, `FunkinHScript`) call this while a state is still being
+	 * built, so it must never throw and must never hand Java a null string: on Android the dialog is a
+	 * JNI/UI-thread call that can fail (or take the whole process down) instead of raising something
+	 * the caller can catch. The arguments are sanitised and the native call is guarded for that reason.
 	 */
 	public static function showPopUp(message:String, title:String):Void
 	{
+		if (message == null || message.length == 0)
+			message = '(no message)';
+
+		if (title == null || title.length == 0)
+			title = '(no title)';
+
 		#if android
-		android.Tools.showAlertDialog(title, message, {name: "OK", func: null}, null);
+		try
+		{
+			android.Tools.showAlertDialog(title, message, {name: "OK", func: null}, null);
+		}
+		catch (e:Dynamic)
+		{
+			trace('showPopUp failed to show "$title": $e');
+		}
 		#else
 		FlxG.stage.window.alert(message, title);
 		#end

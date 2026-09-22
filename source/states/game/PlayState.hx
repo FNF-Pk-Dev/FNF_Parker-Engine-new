@@ -358,7 +358,7 @@ class PlayState extends MusicBeatState
 
 		if (isBlockTest && blockScriptPath != "" && FileSystem.exists(blockScriptPath))
 		{
-			luaArray.push(new FunkinLua(blockScriptPath));
+			loadLuaFile(blockScriptPath);
 		}
 
 		debugKeysChart = ClientPrefs.copyKey(ClientPrefs.keyBinds.get('debug_1'));
@@ -1559,7 +1559,7 @@ class PlayState extends MusicBeatState
 				if (script.scriptName == luaFile)
 					return;
 			}
-			luaArray.push(new FunkinLua(luaFile));
+			loadLuaFile(luaFile);
 		}
 		#end
 	}
@@ -5284,7 +5284,7 @@ class PlayState extends MusicBeatState
 
 	public function runLuaCode(string:String)
 	{
-		luaArray.push(new FunkinLua(Paths.getPreloadPath(string)));
+		loadLuaFile(Paths.getPreloadPath(string));
 	}
 
 	override function beatHit()
@@ -5447,23 +5447,25 @@ class PlayState extends MusicBeatState
 			{
 				for (file in FileSystem.readDirectory(folder))
 				{
+					var scriptPath:String = folder + file;
+
 					// Load Lua scripts
 					if (file.endsWith('.lua') && !filesPushed.contains(file))
 					{
-						luaArray.push(new FunkinLua(folder + file));
-						filesPushed.push(file);
+						if (loadLuaFile(scriptPath))
+							filesPushed.push(file);
 					}
 					// Load LScript scripts
 					else if (file.endsWith('.lscript') && !filesPushed.contains(file))
 					{
-						lscriptArray.push(initLScript(folder + file));
-						filesPushed.push(file);
+						if (loadLScriptFile(scriptPath))
+							filesPushed.push(file);
 					}
 					// Load Python scripts
 					else if (file.endsWith('.py') && !filesPushed.contains(file))
 					{
-						pscriptArray.push(initPScript(folder + file));
-						filesPushed.push(file);
+						if (loadPScriptFile(scriptPath))
+							filesPushed.push(file);
 					}
 				}
 			}
@@ -5483,35 +5485,35 @@ class PlayState extends MusicBeatState
 			#if LUA_ALLOWED
 			var luaToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.lua');
 			if (FileSystem.exists(luaToLoad))
-				luaArray.push(new FunkinLua(luaToLoad));
+				loadLuaFile(luaToLoad);
 			else
 			{
 				luaToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.lua');
 				if (FileSystem.exists(luaToLoad))
-					luaArray.push(new FunkinLua(luaToLoad));
+					loadLuaFile(luaToLoad);
 			}
 			#end
 
 			// Load LScript
 			var lscriptToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.lscript');
 			if (FileSystem.exists(lscriptToLoad))
-				lscriptArray.push(initLScript(lscriptToLoad));
+				loadLScriptFile(lscriptToLoad);
 			else
 			{
 				lscriptToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.lscript');
 				if (FileSystem.exists(lscriptToLoad))
-					lscriptArray.push(initLScript(lscriptToLoad));
+					loadLScriptFile(lscriptToLoad);
 			}
 
 			// Load PScript (Python)
 			var pyToLoad:String = Paths.modFolders('custom_notetypes/' + notetype + '.py');
 			if (FileSystem.exists(pyToLoad))
-				pscriptArray.push(initPScript(pyToLoad));
+				loadPScriptFile(pyToLoad);
 			else
 			{
 				pyToLoad = SUtil.getPath() + Paths.getPreloadPath('custom_notetypes/' + notetype + '.py');
 				if (FileSystem.exists(pyToLoad))
-					pscriptArray.push(initPScript(pyToLoad));
+					loadPScriptFile(pyToLoad);
 			}
 
 			// Load HScript - check mods folder first, then preload
@@ -5566,22 +5568,24 @@ class PlayState extends MusicBeatState
 			{
 				for (file in FileSystem.readDirectory(folder))
 				{
+					var scriptPath:String = folder + file;
+
 					#if LUA_ALLOWED
 					if (file.endsWith('.lua') && !filesPushed.contains(file))
 					{
-						luaArray.push(new FunkinLua(folder + file));
-						filesPushed.push(file);
+						if (loadLuaFile(scriptPath))
+							filesPushed.push(file);
 					}
 					#end
 					if (file.endsWith('.lscript') && !filesPushed.contains(file))
 					{
-						lscriptArray.push(initLScript(folder + file));
-						filesPushed.push(file);
+						if (loadLScriptFile(scriptPath))
+							filesPushed.push(file);
 					}
 					if (file.endsWith('.py') && !filesPushed.contains(file))
 					{
-						pscriptArray.push(initPScript(folder + file));
-						filesPushed.push(file);
+						if (loadPScriptFile(scriptPath))
+							filesPushed.push(file);
 					}
 				}
 			}
@@ -5601,24 +5605,21 @@ class PlayState extends MusicBeatState
 		var luaToLoad:String = Paths.modFolders(luaFile);
 		if (FileSystem.exists(luaToLoad))
 		{
-			luaArray.push(new FunkinLua(luaToLoad));
-			return true;
+			return loadLuaFile(luaToLoad);
 		}
 		else
 		{
 			luaToLoad = Paths.getPreloadPath(luaFile);
 			if (FileSystem.exists(luaToLoad))
 			{
-				luaArray.push(new FunkinLua(luaToLoad));
-				return true;
+				return loadLuaFile(luaToLoad);
 			}
 		}
 		#elseif sys
 		var luaToLoad:String = Paths.getPreloadPath(luaFile);
 		if (OpenFlAssets.exists(luaToLoad))
 		{
-			luaArray.push(new FunkinLua(luaToLoad));
-			return true;
+			return loadLuaFile(luaToLoad);
 		}
 		#end
 		return false;
@@ -5637,24 +5638,21 @@ class PlayState extends MusicBeatState
 		var pyToLoad:String = Paths.modFolders(pyFile);
 		if (FileSystem.exists(pyToLoad))
 		{
-			pscriptArray.push(initPScript(pyToLoad));
-			return true;
+			return loadPScriptFile(pyToLoad);
 		}
 		else
 		{
 			pyToLoad = Paths.getPreloadPath(pyFile);
 			if (FileSystem.exists(pyToLoad))
 			{
-				pscriptArray.push(initPScript(pyToLoad));
-				return true;
+				return loadPScriptFile(pyToLoad);
 			}
 		}
 		#elseif sys
 		var pyToLoad:String = Paths.getPreloadPath(pyFile);
 		if (OpenFlAssets.exists(pyToLoad))
 		{
-			pscriptArray.push(initPScript(pyToLoad));
-			return true;
+			return loadPScriptFile(pyToLoad);
 		}
 		#end
 		return false;
@@ -5672,24 +5670,21 @@ class PlayState extends MusicBeatState
 		var luaToLoad:String = Paths.modFolders(luaFile);
 		if (FileSystem.exists(luaToLoad))
 		{
-			lscriptArray.push(initLScript(luaToLoad));
-			return true;
+			return loadLScriptFile(luaToLoad);
 		}
 		else
 		{
 			luaToLoad = Paths.getPreloadPath(luaFile);
 			if (FileSystem.exists(luaToLoad))
 			{
-				lscriptArray.push(initLScript(luaToLoad));
-				return true;
+				return loadLScriptFile(luaToLoad);
 			}
 		}
 		#elseif sys
 		var luaToLoad:String = Paths.getPreloadPath(luaFile);
 		if (OpenFlAssets.exists(luaToLoad))
 		{
-			lscriptArray.push(initLScript(luaToLoad));
-			return true;
+			return loadLScriptFile(luaToLoad);
 		}
 		#end
 		return false;
@@ -6225,6 +6220,102 @@ class PlayState extends MusicBeatState
 		script.execute();
 		script.setParent(this);
 		return script;
+	}
+
+	/** Reports a script that could not be loaded, the way `startVideo` reports a file it could not find. */
+	function reportScriptFailure(message:String):Void
+	{
+		trace(message);
+		FlxG.log.error(message);
+
+		#if LUA_ALLOWED
+		// Still null while `create()` has not reached the point that builds the debug text group: log only
+		if (luaDebugGroup != null)
+			addTextToDebug(message, FlxColor.RED);
+		#end
+	}
+
+	/** Whether `filePath` is a file this target can read, the same check `Paths.getContent()` makes. */
+	function scriptFileExists(filePath:String):Bool
+	{
+		#if sys
+		return FileSystem.exists(filePath);
+		#else
+		return OpenFlAssets.exists(filePath);
+		#end
+	}
+
+	/**
+	 * Loads a Lua file, but never builds a `FunkinLua` from a path that does not resolve to a readable file:
+	 * that constructor reads its source through `Paths.getContent()`, which returns null for a file that is
+	 * not there, and the native `luau_loadsource()` behind it dereferences that null instead of raising, so
+	 * the process dies with nothing left to catch.
+	 */
+	function loadLuaFile(filePath:String):Bool
+	{
+		if (!scriptFileExists(filePath))
+		{
+			reportScriptFailure('Lua script not found: "$filePath"');
+			return false;
+		}
+
+		try
+		{
+			luaArray.push(new FunkinLua(filePath));
+			return true;
+		}
+		catch (e:Dynamic)
+		{
+			reportScriptFailure('Failed to load lua script: "$filePath" - ' + Std.string(e));
+		}
+		return false;
+	}
+
+	/** `loadLuaFile` for `.lscript` files, keeping `initLScript`'s own registration of the script. */
+	function loadLScriptFile(filePath:String):Bool
+	{
+		if (!scriptFileExists(filePath))
+		{
+			reportScriptFailure('LScript file not found: "$filePath"');
+			return false;
+		}
+
+		try
+		{
+			// `initLScript` is the registration point: it pushes the script into `lscriptArray` itself.
+			// (It used to be pushed twice - once in there and once by the caller - so every lscript
+			// callback ran twice per event for the same script.)
+			var script:FunkinLScript = initLScript(filePath);
+			if (script != null)
+				return true;
+		}
+		catch (e:Dynamic)
+		{
+			reportScriptFailure('Failed to load lscript: "$filePath" - ' + Std.string(e));
+		}
+		return false;
+	}
+
+	/** `loadLuaFile` for `.py` files; `initPScript` registers the script in `pscriptArray` itself. */
+	function loadPScriptFile(filePath:String):Bool
+	{
+		if (!scriptFileExists(filePath))
+		{
+			reportScriptFailure('Python script not found: "$filePath"');
+			return false;
+		}
+
+		try
+		{
+			var script:FunkinPython = initPScript(filePath);
+			if (script != null)
+				return true;
+		}
+		catch (e:Dynamic)
+		{
+			reportScriptFailure('Failed to load python script: "$filePath" - ' + Std.string(e));
+		}
+		return false;
 	}
 
 	function initScripts()

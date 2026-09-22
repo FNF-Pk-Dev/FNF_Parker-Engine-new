@@ -322,11 +322,29 @@ end
 	 * reach the VM's own handling, which is what used to abort the process.
 	 *
 	 * A chunk that does not run leaves the state closed: the script has nothing to dispatch to then.
+	 * A null or empty chunk never reaches the VM at all - it is one of the reported failures below.
 	 */
 	function runChunk(chunkName:String, code:String):Bool
 	{
 		if (lua == null)
 			return false;
+
+		// The native loader takes both strings as `const char*` and starts with `strlen()` on them
+		// (`linc::luau::load_source`, and the same function again as CodeGen's fallback), so a null
+		// or absent chunk has to be refused before it is handed over: on Android, where a script path
+		// that resolves to nothing is normal, that used to be an instant process death rather than a
+		// failure anything could report. `scriptMessage()` / `ScriptDebugOverlay` are the only
+		// reporting used on the way out - no native dialog, which cannot be raised from here safely.
+		if (code == null || code.length == 0)
+		{
+			scriptMessage('Failed to parse script at ${describePath(filePath)}: the script is empty', FlxColor.RED);
+			closeState();
+			return false;
+		}
+
+		// The name is what a Luau error message points at, and it goes to the native loader too, so it
+		// falls back to the script's own path (or a readable stand-in) when a caller passes nothing.
+		final name:String = (chunkName != null && chunkName.length > 0) ? chunkName : describePath(filePath);
 
 		var success:Bool = false;
 		var failure:Null<String> = null;
@@ -334,16 +352,16 @@ end
 		running = true;
 		try
 		{
-			if (LuaL.luau_loadsource(lua, chunkName, code) != Lua.LUA_OK)
-				failure = 'Failed to parse script at $filePath: ${takeError()}';
+			if (LuaL.luau_loadsource(lua, name, code) != Lua.LUA_OK)
+				failure = 'Failed to parse script at ${describePath(filePath)}: ${takeError()}';
 			else if (Lua.pcall(lua, 0, 0, 0) != Lua.LUA_OK)
-				failure = 'Failed to run script at $filePath: ${takeError()}';
+				failure = 'Failed to run script at ${describePath(filePath)}: ${takeError()}';
 			else
 				success = true;
 		}
 		catch (e:Dynamic)
 		{
-			failure = 'Failed to run script at $filePath: ' + Std.string(e);
+			failure = 'Failed to run script at ${describePath(filePath)}: ' + Std.string(e);
 		}
 		running = false;
 
@@ -358,28 +376,55 @@ end
 		return success;
 	}
 
-	/** Reads and pops the error message the VM left on the stack. */
+	/**
+	 * Reads and pops the error message the VM left on the stack. A stack entry that is not a string
+	 * (and so gives `Lua.tostring()` nothing) still has to produce a readable message: this text goes
+	 * into the failure that gets reported.
+	 */
 	function takeError():String
 	{
+		if (lua == null)
+			return 'unknown error';
+
 		final message:String = Lua.tostring(lua, -1);
 		Lua.pop(lua, 1);
-		return (message != null && message.length > 0) ? message.trim() : 'unknown error';
+
+		final trimmed:String = message != null ? message.trim() : '';
+		return trimmed.length > 0 ? trimmed : 'unknown error';
 	}
 
-	/** Reads the script file the constructor was given. */
+	/**
+	 * `filePath` the way a report spells it. A script built without a usable path (the constructor's
+	 * `fileName`, which is also what `Paths.getContent()` and the native loader are given) reads as a
+	 * stand-in instead of as an empty string or `null` in the message.
+	 */
+	static inline function describePath(path:Null<String>):String
+		return (path != null && path.length > 0) ? path : 'unknown script';
+
+	/**
+	 * Reads the script file the constructor was given. A path that was never usable is a reported
+	 * failure like an unreadable file: handing it to the filesystem would be another native call with
+	 * nothing in it.
+	 */
 	function readScript():Null<String>
 	{
+		if (filePath == null || filePath.length == 0)
+		{
+			scriptMessage('LScript: script not found: ${describePath(filePath)}', FlxColor.RED);
+			return null;
+		}
+
 		try
 		{
 			final code:Null<String> = Paths.getContent(filePath);
 			if (code == null)
-				scriptMessage('LScript: script not found: $filePath', FlxColor.RED);
+				scriptMessage('LScript: script not found: ${describePath(filePath)}', FlxColor.RED);
 
 			return code;
 		}
 		catch (e:Dynamic)
 		{
-			scriptMessage('Failed to read script at $filePath: ' + Std.string(e), FlxColor.RED);
+			scriptMessage('Failed to read script at ${describePath(filePath)}: ' + Std.string(e), FlxColor.RED);
 			return null;
 		}
 	}
@@ -771,7 +816,7 @@ end
 				final status:Int = Lua.pcall(lua, callArgs.length, 1, 0);
 				if (status != Lua.LUA_OK)
 				{
-					failure = 'Failed to call function "$method" at $filePath: ${takeError()}';
+					failure = 'Failed to call function "$method" at ${describePath(filePath)}: ${takeError()}';
 				}
 				else
 				{
@@ -791,7 +836,7 @@ end
 		}
 		catch (e:Dynamic)
 		{
-			failure = 'Failed to call function "$method" at $filePath: ' + Std.string(e);
+			failure = 'Failed to call function "$method" at ${describePath(filePath)}: ' + Std.string(e);
 		}
 		running = false;
 
@@ -882,9 +927,19 @@ end
 	 * The script gets a Lua wrapper that calls back into `luaCall()`, which is what keeps engine
 	 * functions on the bridge: an error they raise is reported instead of unwinding into the VM, and
 	 * a value they return is converted here rather than by the raw callback path.
+	 *
+	 * The name goes to `Lua.pushstring()` and `Lua.setglobal()`, which take it as a `const char*` and
+	 * `strlen()` it, so a name-less bind is refused and reported here rather than handed over - `set()`
+	 * already refuses a null name, this keeps the native boundary safe on its own.
 	 */
 	function bind(name:String, fn:Dynamic):Void
 	{
+		if (name == null || name.length == 0)
+		{
+			scriptMessage('$scriptName: could not bind a global without a name', FlxColor.RED);
+			return;
+		}
+
 		bindings.set(name, fn);
 
 		final top:Int = Lua.gettop(lua);
@@ -1251,14 +1306,21 @@ end
 	 * Script messages normally go to PlayState's debug text, which only exists while a song
 	 * is running — scripted states (see LScriptSState) have none, so print those on the shared
 	 * on-screen overlay (ScriptDebugOverlay) instead of dropping them.
+	 *
+	 * Both of those only ever draw: nothing here reaches a platform dialog (`CoolUtil.showPopUp()` /
+	 * `android.Tools.showAlertDialog`) the way the script-error paths used to, which cannot be raised
+	 * from a script-loading call on Android. A message without text still prints as a readable line
+	 * rather than being handed on as null.
 	 */
 	function scriptMessage(msg:String, color:FlxColor):Void
 	{
+		final line:String = (msg != null && msg.length > 0) ? msg : '$scriptName: an empty message was reported';
+
 		final playState:PlayState = PlayState.instance;
 		if (playState != null)
-			playState.addTextToDebug(msg, color);
+			playState.addTextToDebug(line, color);
 		else
-			ScriptDebugOverlay.report(msg, color);
+			ScriptDebugOverlay.report(line, color);
 	}
 
 	/**
