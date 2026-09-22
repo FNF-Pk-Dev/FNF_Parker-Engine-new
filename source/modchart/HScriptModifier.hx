@@ -1,43 +1,124 @@
 // @author Riconuts
 package modchart;
 
-// import playfields.NoteField;
 import script.FunkinHScript;
 import script.hscript.HScript;
 import modchart.Modifier;
 import math.Vector3;
 
+/**
+	Registers a modifier whose behaviour is written in HScript (`modifiers/<name>.hscript`, see
+	`HScriptModifier.fromName`, or a source string through `HScriptModifier.fromString`).
+
+	## What the script sees
+
+	`this` inside the script *is* this modifier, so `this.modMgr` (the `ModManager`), `this.parent`
+	(the modifier this one is a submod of) and the modifier's own accessors - `this.getValue(player)`,
+	`this.getPercent(player)`, `this.setValue(value, player)`, `this.setPercent(percent, player)`,
+	`this.getSubmodValue(name, player)`, `this.getSubmodPercent(name, player)` - are reachable from it.
+	The `ModifierType` and `ModifierOrder` values are script globals: `NOTE_MOD`, `MISC_MOD`, `FIRST`,
+	`PRE_REVERSE`, `REVERSE`, `POST_REVERSE`, `DEFAULT`, `LAST`.
+
+	A script only has to implement the callbacks it cares about; every other one falls back to
+	`Modifier`: `getModType`, `ignorePos`, `ignoreUpdateReceptor`, `ignoreUpdateNote`, `doesUpdate`,
+	`shouldExecute`, `getOrder`, `getName`, `getValue`, `getPercent`, `setValue`, `setPercent`,
+	`getSubmods`, `getSubmodPercent`, `getSubmodValue`, `updateReceptor`, `updateNote` and
+	`update(elapsed)`. `onCreate` / `onCreatePost` run once, right after the script body.
+
+	A modifier stays inactive until its percent is not `0` (or `shouldExecute` says otherwise), and
+	`updateReceptor` / `updateNote` are only dispatched to a modifier that reports `NOTE_MOD` from
+	`getModType` - a script that moves arrows has to do both.
+
+	## Composition: what a modifier may and may not write
+
+	The modifier stack is only one of the layers that move an arrow: a `FlxTween` (`noteTweenX`,
+	`FlxTween.tween(strum, {x: ...})`), `setProperty` and the dance animations move it too. Position
+	and angle compose additively, scale composes multiplicatively, and the appliers
+	(`ModManager.applyPosition()`, `applyScale()`, `applyAngle()`) remember what *they* wrote so that
+	everything else survives next to the modchart. `modchart.ModchartComposed` is the frozen contract.
+	Two rules follow for a script modifier:
+
+	- **Add to the `pos` vector, never assign the sprite's transform.** While `updateReceptor` /
+	  `updateNote` run, the position vector `ModManager.getPos()` handed in is exposed as `this.pos`,
+	  so `this.pos.x += 20` is how a modifier moves an arrow - and that is exactly what composes with
+	  a tween. This is also how the built-in modifiers work: they take `pos` and add to it.
+	- **Never write `note.x`, `note.y`, `note.scale` or `note.angle` directly** (nor through the
+	  sprite's `scale` point). The appliers own those properties. A write behind their back is measured
+	  as *external* motion and kept, so the modifier and the tween keep pushing the sprite every frame
+	  and it drifts instead of composing.
+
+	If a script really has to own the transform absolutely - a teleport, a custom path, a value that
+	must not compose with anything - it has two options:
+
+	- keep writing through `this.pos` (preferred): the arrow still lands exactly where the modifier
+	  puts it, and a `FlxTween` running next to it keeps working;
+	- set `this.modMgr.composeExternals = false` for the duration and back to `true` afterwards. That
+	  restores the pre-composition absolute behaviour, where the applier overwrites `x` / `y` / `scale`
+	  / `angle` from `pos` every frame - which also erases any running `FlxTween` again, i.e. exactly
+	  the bug this layer exists to fix - so only use it for a short, deliberate interval. The appliers
+	  keep their baseline fresh while the switch is off, so turning composition back on does not make
+	  the sprite jump.
+
+	Anything that moves a sprite outside a modifier or a tween (a hand-written teleport, a
+	`setProperty`, a restart) should tell the composition about it:
+	`this.modMgr.syncComposition(obj)` adopts that sprite's current transform as the new baseline, so
+	the composition does not drag it back to where it was, while `this.modMgr.resetComposition()`
+	drops everything that was accumulated - for one sprite, or for every sprite the appliers have
+	written to, which is what a song restart wants.
+**/
 class HScriptModifier extends Modifier
 {
 	public var script:HScript;
 	public var scripts:FunkinHScript;
 	public var name:String = "unknown";
 
-	public function new(modMgr:ModManager, ?parent:Modifier, script:FunkinHScript)
+	/**
+		The shared position vector of the arrow the manager is updating right now, exposed to the
+		script as `this.pos` while `updateReceptor` / `updateNote` run.
+
+		A modifier **adds** to it (`this.pos.x += 20`, `this.pos.y -= 10`, ...). It must not assign
+		`x`, `y`, `scale` or `angle` on the `Note` / `StrumNote` itself: `ModManager.applyPosition()`,
+		`applyScale()` and `applyAngle()` own those properties and remember what they wrote, so a write
+		behind their back makes the modifier and a running `FlxTween` fight over the sprite.
+
+		Mutating this vector is what reaches the appliers - assigning a whole new `Vector3` to it does
+		not, because the manager keeps and reads back the instance it handed in.
+	**/
+	public var pos:Vector3;
+
+	public function new(modMgr:ModManager, ?parent:Modifier, script:HScript)
 	{
 		scripts = new FunkinHScript();
-		scripts.onAddScript.push(modchart);
 
 		this.script = script;
 		this.modMgr = modMgr;
 		this.parent = parent;
 
+		if (this.script != null)
+			scripts.scripts.push(this.script);
+
 		super(this.modMgr, this.parent);
+
+		modchart();
 	}
 
+	/**
+		Called once the backing script exists: binds `this`, `modMgr` and `parent` inside it and runs
+		its `onCreate` / `onCreatePost`.
+
+		The value accessors are deliberately *not* installed as script globals: `this` already is this
+		modifier (so `this.getValue(player)` and friends reach the overrides below), and a global
+		`getValue` would both shadow a `getValue` the script defines itself and make the `getValue`
+		override call that very global back into itself.
+	**/
 	function modchart()
 	{
+		if (script == null)
+			return;
+
 		script.set("this", this);
 		script.set("modMgr", this.modMgr);
 		script.set("parent", this.parent);
-		script.set("getValue", getValue);
-		script.set("getPercent", getPercent);
-		script.set("getSubmodValue", getSubmodValue);
-		script.set("getSubmodPercent", getSubmodPercent);
-		script.set("setValue", setValue);
-		script.set("setPercent", setPercent);
-		script.set("setSubmodValue", setSubmodValue);
-		script.set("setSubmodPercent", setSubmodPercent);
 
 		script.executeFunc("onCreate");
 
@@ -58,8 +139,7 @@ class HScriptModifier extends Modifier
 
 	public static function fromString(modMgr:ModManager, ?parent:Modifier, scriptSource:String):HScriptModifier
 	{
-		return new HScriptModifier(modMgr, parent, // FunkinHScript.fromString(scriptSource, "HScriptModifier", _scriptEnums, false)
-			scripts.addScript("HScriptModifier").executeString(scriptSource));
+		return new HScriptModifier(modMgr, parent, new HScript(scriptSource, "HScriptModifier", _scriptEnums));
 	}
 
 	public static function fromName(modMgr:ModManager, ?parent:Modifier, scriptName:String):Null<HScriptModifier>
@@ -70,8 +150,7 @@ class HScriptModifier extends Modifier
 			if (!FileSystem.exists(filePath))
 				continue;
 
-			var mod = new HScriptModifier(modMgr, parent, // FunkinHScript.fromFile(filePath, filePath, _scriptEnums, false)
-				scripts.addScript(filePath).executeString(filePath));
+			var mod = new HScriptModifier(modMgr, parent, new HScript(File.getContent(filePath), 'HScriptModifier:$scriptName', _scriptEnums));
 			mod.name = scriptName;
 			return mod;
 		}
@@ -80,81 +159,106 @@ class HScriptModifier extends Modifier
 		return null;
 	}
 
+	/**
+		True when the script implements that callback (and false when there is no script at all, in
+		which case every callback falls back to `Modifier`).
+	**/
+	inline function hasScriptFunc(funcName:String):Bool
+		return script != null && script.exists(funcName);
+
 	//// this is where a macro could have helped me, if i weren't so stupid.
 	// lol i'll probably rewrite this to use a macro dont worry bb
 
 	override public function getModType()
-		return script.exists("getModType") ? script.executeFunc("getModType") : super.getModType();
+		return hasScriptFunc("getModType") ? script.executeFunc("getModType") : super.getModType();
 
 	override public function ignorePos()
-		return script.exists("ignorePos") ? script.executeFunc("ignorePos") : super.ignorePos();
+		return hasScriptFunc("ignorePos") ? script.executeFunc("ignorePos") : super.ignorePos();
 
 	override public function ignoreUpdateReceptor()
-		return script.exists("ignoreUpdateReceptor") ? script.executeFunc("ignoreUpdateReceptor") : super.ignoreUpdateReceptor();
+		return hasScriptFunc("ignoreUpdateReceptor") ? script.executeFunc("ignoreUpdateReceptor") : super.ignoreUpdateReceptor();
 
 	override public function ignoreUpdateNote()
-		return script.exists("ignoreUpdateNote") ? script.executeFunc("ignoreUpdateNote") : super.ignoreUpdateNote();
+		return hasScriptFunc("ignoreUpdateNote") ? script.executeFunc("ignoreUpdateNote") : super.ignoreUpdateNote();
 
 	override public function doesUpdate()
-		return script.exitsVar("doesUpdate") ? script.executeFunc("doesUpdate") : super.doesUpdate();
+		return hasScriptFunc("doesUpdate") ? script.executeFunc("doesUpdate") : super.doesUpdate();
 
 	override public function shouldExecute(player:Int, value:Float):Bool
-		return script.exitsVar("shouldExecute") ? script.executeFunc("shouldExecute", [player, value]) : super.shouldExecute(player, value);
+		return hasScriptFunc("shouldExecute") ? script.executeFunc("shouldExecute", [player, value]) : super.shouldExecute(player, value);
 
 	override public function getOrder():Int
-		return script.exitsVar("getOrder") ? script.executeFunc("getOrder") : super.getOrder();
+		return hasScriptFunc("getOrder") ? script.executeFunc("getOrder") : super.getOrder();
 
 	override public function getName():String
-		return script.exitsVar("getName") ? script.executeFunc("getName") : name;
+		return hasScriptFunc("getName") ? script.executeFunc("getName") : name;
 
-	// shouldnt be overriding getValue/getPercent/etc
-	// they're used purely to get the value of a modifier and should not be overwritten
-	// you sure
-
+	// getValue/getPercent are read back by the manager, they are not meant to be written through
 	override public function getValue(player:Int):Float
-		return script.exitsVar("getValue") ? script.executeFunc("getValue", [player]) : super.getValue(player);
+		return hasScriptFunc("getValue") ? script.executeFunc("getValue", [player]) : super.getValue(player);
 
 	override public function getPercent(player:Int):Float
-		return script.exitsVar("getPercent") ? script.executeFunc("getPercent", [player]) : super.getPercent(player);
+		return hasScriptFunc("getPercent") ? script.executeFunc("getPercent", [player]) : super.getPercent(player);
 
 	override public function setValue(value:Float, player:Int = -1)
-		return script.exitsVar("setValue") ? script.executeFunc("setValue", [value, player]) : super.setValue(value, player);
+		return hasScriptFunc("setValue") ? script.executeFunc("setValue", [value, player]) : super.setValue(value, player);
 
 	override public function setPercent(percent:Float, player:Int = -1)
-		return script.exitsVar("setPercent") ? script.executeFunc("setValue", [percent, player]) : super.setValue(percent, player);
+		return hasScriptFunc("setPercent") ? script.executeFunc("setPercent", [percent, player]) : super.setPercent(percent, player);
 
 	override public function getSubmodPercent(modName:String, player:Int)
-		return script.exitsVar("getSubmodPercent") ? script.executeFunc("getSubmodPercent", [modName, player]) : super.getSubmodPercent(modName, player);
+		return hasScriptFunc("getSubmodPercent") ? script.executeFunc("getSubmodPercent", [modName, player]) : super.getSubmodPercent(modName, player);
 
 	override public function getSubmodValue(modName:String, player:Int)
-		return script.exitsVar("getSubmodValue") ? script.executeFunc("getSubmodValue", [modName, player]) : super.getSubmodValue(modName, player);
+		return hasScriptFunc("getSubmodValue") ? script.executeFunc("getSubmodValue", [modName, player]) : super.getSubmodValue(modName, player);
 
 	override public function getSubmods():Array<String>
-		return script.exitsVar("getSubmods") ? script.executeFunc("getSubmods") : super.getSubmods();
+		return hasScriptFunc("getSubmods") ? script.executeFunc("getSubmods") : super.getSubmods();
 
-	//
-	override public function updateReceptor(beat:Float, receptor:StrumNote, player:Int)
-		return script.exitsVar("updateReceptor") ? script.executeFunc("updateReceptor",
-			[beat, receptor, player]) : super.updateReceptor(beat, receptor, player);
-
-	override public function updateNote(beat:Float, note:Note, player:Int)
-		return script.exitsVar("updateNote") ? script.executeFunc("updateNote", [beat, note, player]) : super.updateNote(beat, note, player);
-
-	// override public function getPos(diff:Float, tDiff:Float, beat:Float, pos:Vector3, data:Int, player:Int, obj:FlxSprite, field:NoteField):Vector3
-	// return script.exists("getPos") ? script.executeFunc("getPos", [diff, tDiff, beat, pos, data, player, obj, field]) : super.getPos(diff, tDiff, beat, pos, data, player, obj, field);
-	// override public function modifyVert(beat:Float, vert:Vector3, idx:Int, obj:FlxSprite, pos:Vector3, player:Int, data:Int, field:NoteField):Vector3
-	// return script.exists("modifyVert") ? script.executeFunc("modifyVert",
-	// [beat, vert, idx, obj, pos, player, data, field]) : super.modifyVert(beat, vert, idx, obj, pos, player, data, field);
-
-	override public function getExtraInfo(diff:Float, tDiff:Float, beat:Float, info:RenderInfo, obj:FlxSprite, player:Int, data:Int):RenderInfo
+	/**
+		Hands the shared position vector to the script as `this.pos` and lets it add to it. The vector
+		is the one `ModManager.getPos()` produced, and the manager reads it back afterwards, so adding
+		to `this.pos` moves the arrow through the modchart layer instead of overwriting the appliers.
+	**/
+	override public function updateReceptor(beat:Float, receptor:StrumNote, pos:Vector3, player:Int)
 	{
-		return script.exists("getExtraInfo") ? script.executeFunc("getExtraInfo",
-			[diff, tDiff, beat, info, obj, player, data]) : super.getExtraInfo(diff, tDiff, beat, info, obj, player, data);
+		if (!hasScriptFunc("updateReceptor"))
+		{
+			super.updateReceptor(beat, receptor, pos, player);
+			return;
+		}
+
+		this.pos = pos;
+		script.executeFunc("updateReceptor", [beat, receptor, player]);
+		this.pos = null;
 	}
 
-	override public function update(elapsed:Float, beat:Float)
-		return script.exists("update") ? script.executeFunc("update", [elapsed, beat]) : super.update(elapsed, beat);
+	override public function updateNote(beat:Float, note:Note, pos:Vector3, player:Int)
+	{
+		if (!hasScriptFunc("updateNote"))
+		{
+			super.updateNote(beat, note, pos, player);
+			return;
+		}
 
-	override public function isRenderMod():Bool
-		return script.exists("isRenderMod") ? script.executeFunc("isRenderMod") : super.isRenderMod();
+		this.pos = pos;
+		script.executeFunc("updateNote", [beat, note, player]);
+		this.pos = null;
+	}
+
+	override public function update(elapsed:Float)
+	{
+		if (!hasScriptFunc("update"))
+		{
+			super.update(elapsed);
+			return;
+		}
+
+		script.executeFunc("update", [elapsed]);
+	}
+
+	// Schmovin' leftovers this fork's `Modifier` does not have: `getPos(diff, tDiff, beat, pos, data,
+	// player, obj, field)`, `modifyVert(...)`, `getExtraInfo(...)` (its `RenderInfo` type does not
+	// exist here) and `isRenderMod()`. `updateReceptor`/`updateNote` above are where a script can
+	// still change the position of something, because `this.pos` is handed to it there.
 }

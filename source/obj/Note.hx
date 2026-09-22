@@ -20,13 +20,43 @@ typedef EventNote =
 	value2:String
 }
 
-class Note extends FlxSprite
+class Note extends FlxSprite implements modchart.ModchartComposed
 {
 	public var vec3Cache:Vector3 = new Vector3(); // for vector3 operations in modchart code
 	public var defScale:FlxPoint = FlxPoint.get(); // for modcharts to keep the scaling
 
+	// ModchartComposed composition state: what the modchart wrote last frame + the motion everything else did
+	public var modAppliedX:Float = Math.NaN;
+	public var modAppliedY:Float = Math.NaN;
+	public var modExternalX:Float = 0;
+	public var modExternalY:Float = 0;
+	public var modAppliedScaleX:Float = Math.NaN;
+	public var modAppliedScaleY:Float = Math.NaN;
+	public var modExternalScaleX:Float = 1;
+	public var modExternalScaleY:Float = 1;
+	public var modAppliedAngle:Float = Math.NaN;
+	public var modExternalAngle:Float = 0;
+	public var modchartTouched:Bool = false;
+
+	/** Forgets what the modchart wrote, so any later tween starts from the object's current transform. */
+	public function resetModchartComposition():Void
+	{
+		modAppliedX = Math.NaN;
+		modAppliedY = Math.NaN;
+		modExternalX = 0;
+		modExternalY = 0;
+		modAppliedScaleX = Math.NaN;
+		modAppliedScaleY = Math.NaN;
+		modExternalScaleX = 1;
+		modExternalScaleY = 1;
+		modAppliedAngle = Math.NaN;
+		modExternalAngle = 0;
+		modchartTouched = false;
+	}
+
 	override function destroy()
 	{
+		resetModchartComposition();
 		defScale.put();
 		super.destroy();
 	}

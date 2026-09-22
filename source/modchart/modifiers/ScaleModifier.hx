@@ -67,14 +67,14 @@ class ScaleModifier extends NoteModifier
 		if (note.isSustainNote)
 			scale.y = note.defScale.y;
 
-		note.scale.copyFrom(scale);
+		modMgr.applyScale(note, scale.x, scale.y);
 		scale.putWeak();
 	}
 
 	override function updateReceptor(beat:Float, receptor:StrumNote, pos:Vector3, player:Int)
 	{
 		var scale = getScale(receptor, FlxPoint.weak(receptor.defScale.x, receptor.defScale.y), receptor.noteData, player);
-		receptor.scale.copyFrom(scale);
+		modMgr.applyScale(receptor, scale.x, scale.y);
 		scale.putWeak();
 	}
 

@@ -8,13 +8,43 @@ import math.*;
 
 using StringTools;
 
-class StrumNote extends FlxSprite
+class StrumNote extends FlxSprite implements modchart.ModchartComposed
 {
 	public var vec3Cache:Vector3 = new Vector3(); // for vector3 operations in modchart code
 	public var defScale:FlxPoint = FlxPoint.get(); // for modcharts to keep the scaling
 
+	// ModchartComposed - tracking state of the modchart/external transform composition (see modchart/ModchartComposed.hx), only ModManager's appliers read and write these
+	public var modAppliedX:Float = Math.NaN;
+	public var modAppliedY:Float = Math.NaN;
+	public var modExternalX:Float = 0;
+	public var modExternalY:Float = 0;
+	public var modAppliedScaleX:Float = Math.NaN;
+	public var modAppliedScaleY:Float = Math.NaN;
+	public var modExternalScaleX:Float = 1;
+	public var modExternalScaleY:Float = 1;
+	public var modAppliedAngle:Float = Math.NaN;
+	public var modExternalAngle:Float = 0;
+	public var modchartTouched:Bool = false;
+
+	/** Forgets what the modchart wrote, so any later tween starts from the object's current transform. */
+	public function resetModchartComposition():Void
+	{
+		modAppliedX = Math.NaN;
+		modAppliedY = Math.NaN;
+		modExternalX = 0;
+		modExternalY = 0;
+		modAppliedScaleX = Math.NaN;
+		modAppliedScaleY = Math.NaN;
+		modExternalScaleX = 1;
+		modExternalScaleY = 1;
+		modAppliedAngle = Math.NaN;
+		modExternalAngle = 0;
+		modchartTouched = false;
+	}
+
 	override function destroy()
 	{
+		resetModchartComposition();
 		defScale.put();
 		super.destroy();
 	}
@@ -130,6 +160,7 @@ class StrumNote extends FlxSprite
 			}
 		}
 		defScale.copyFrom(scale);
+		resetModchartComposition(); // the scale/position just got rebuilt, so the old modchart baseline is stale
 		updateHitbox();
 
 		if (lastAnim != null)
@@ -145,6 +176,7 @@ class StrumNote extends FlxSprite
 		x += 50;
 		x += ((FlxG.width / 2) * player);
 		ID = noteData;
+		resetModchartComposition(); // a recycled receptor starts from this fresh neutral transform
 	}
 
 	override function update(elapsed:Float)

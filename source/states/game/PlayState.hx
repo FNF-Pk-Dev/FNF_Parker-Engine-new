@@ -1050,6 +1050,7 @@ class PlayState extends MusicBeatState
 
 		generateSong(SONG.song);
 		modManager = new ModManager(this);
+		modManager.resetComposition();
 
 		setDefaultLScripts("modManager", modManager);
 		setDefaultHScripts("modManager", modManager);
@@ -1882,6 +1883,16 @@ class PlayState extends MusicBeatState
 				// if(ClientPrefs.middleScroll) opponentStrums.members[i].visible = false;
 			}
 
+			// Take the freshly placed receptors as the modchart baseline so the first frame starts clean.
+			for (strum in playerStrums.members)
+			{
+				modManager.syncComposition(strum);
+			}
+			for (strum in opponentStrums.members)
+			{
+				modManager.syncComposition(strum);
+			}
+
 			modManager.receptors = [playerStrums.members, opponentStrums.members];
 			callOnLuas('preModifierRegister', []);
 			callOnScripts('preModifierRegister', []);
@@ -2198,6 +2209,9 @@ class PlayState extends MusicBeatState
 	function startSong():Void
 	{
 		startingSong = false;
+
+		if (modManager != null)
+			modManager.resetComposition();
 
 		previousFrameTime = FlxG.game.ticks;
 		lastReportedPlayheadPosition = 0;
@@ -3079,16 +3093,14 @@ class PlayState extends MusicBeatState
 			{
 				var pos = modManager.getPos(0, 0, 0, curDecBeat, strum.noteData, 1, strum, [], strum.vec3Cache);
 				modManager.updateObject(curDecBeat, strum, pos, 1);
-				strum.x = pos.x;
-				strum.y = pos.y;
+				modManager.applyPosition(strum, pos);
 			});
 
 			playerStrums.forEachAlive(function(strum:StrumNote)
 			{
 				var pos = modManager.getPos(0, 0, 0, curDecBeat, strum.noteData, 0, strum, [], strum.vec3Cache);
 				modManager.updateObject(curDecBeat, strum, pos, 0);
-				strum.x = pos.x;
-				strum.y = pos.y;
+				modManager.applyPosition(strum, pos);
 			});
 		}
 
@@ -3139,8 +3151,18 @@ class PlayState extends MusicBeatState
 							modManager.updateObject(curBeat, daNote, pos, pN);
 							pos.x += daNote.offsetX;
 							pos.y += daNote.offsetY;
-							daNote.x = pos.x;
-							daNote.y = pos.y;
+							if (!daNote.copyX || !daNote.copyY)
+							{
+								// The note owns this axis: compose so a tween on x/y survives.
+								modManager.applyPosition(daNote, pos);
+							}
+							else
+							{
+								// Receptor-driven below (strumX/strumY + distance): drop the composition baseline.
+								daNote.x = pos.x;
+								daNote.y = pos.y;
+								daNote.resetModchartComposition();
+							}
 							if (daNote.isSustainNote)
 							{
 								var futureSongPos = Conductor.songPosition + 75;
@@ -5197,6 +5219,9 @@ class PlayState extends MusicBeatState
 			hx.stop();
 			GlobalScript.releaseScript(hx);
 		}
+
+		if (modManager != null)
+			modManager.resetComposition();
 
 		luaArray = [];
 		hscriptArray = [];

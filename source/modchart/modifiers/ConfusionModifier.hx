@@ -17,14 +17,15 @@ class ConfusionModifier extends NoteModifier
 	override function updateNote(beat:Float, note:Note, pos:Vector3, player:Int)
 	{
 		if (!note.isSustainNote)
-			note.angle = (getValue(player) + getSubmodValue('confusion${note.noteData}', player) + getSubmodValue('note${note.noteData}Angle', player));
-		else
-			note.angle = note.mAngle;
+			modMgr.applyAngle(note,
+				(getValue(player) + getSubmodValue('confusion${note.noteData}', player) + getSubmodValue('note${note.noteData}Angle', player)));
+		else if (note.mAngle != 0) // sustain notes ride the path angle; with no angle to contribute, leave the property to whoever else owns it
+			modMgr.applyAngle(note, note.mAngle);
 	}
 
 	override function updateReceptor(beat:Float, receptor:StrumNote, pos:Vector3, player:Int)
-		receptor.angle = (getValue(player) + getSubmodValue('confusion${receptor.noteData}', player)
-			+ getSubmodValue('receptor${receptor.noteData}Angle', player));
+		modMgr.applyAngle(receptor,
+			(getValue(player) + getSubmodValue('confusion${receptor.noteData}', player) + getSubmodValue('receptor${receptor.noteData}Angle', player)));
 
 	override function getSubmods()
 	{

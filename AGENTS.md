@@ -80,7 +80,8 @@ source/                     single classpath entry (<classpath name="source" />)
                             (→ script.FunkinHScript), HScriptUtil (global script API),
                             OScriptState, MacroState
   psych/                    Psych-derived classes (FunkinLua, CallbackHandler, psych/cutscenes, psych/obj)
-  modchart/                 ModManager, Modifier/NoteModifier/SubModifier/HScriptModifier,
+  modchart/                 ModManager, ModchartComposed (layer composition with FlxTween),
+                            Modifier/NoteModifier/SubModifier/HScriptModifier,
                             Modcharts, EventTimeline, events/, modifiers/
   options/                  BaseOptionsMenu, Option, OptionsState, Gameplay/Graphics/Visuals/Controls/
                             Notes/NoteOffset sub-states
@@ -157,6 +158,34 @@ State base classes (`backend/`):
 `PlayState` owns: `instance:PlayState`, `modManager:ModManager` (created when `ClientPrefs.getGameplaySetting('modchart')` is on), the four script registries (`luaArray`, `lscriptArray`, `pscriptArray`, `hscriptArray`), and every gameplay callback dispatch through `callOnScripts(event, args…)` / `callOnLuas(…)`.
 
 `ModManager` lives in `source/modchart/ModManager.hx` — it is a *modchart modifier* manager, **not** a mod-folder manager. Mod folders are handled by `backend/Paths.hx`, `backend/game/WeekData.hx` and `states/menu/ModsMenuState.hx`.
+
+### The modchart composes with `FlxTween` — never assign `x`/`y`/`scale`/`angle` yourself
+
+The modifier stack is only *one* of the layers that move an arrow. Before `ModchartComposed` existed, `PlayState`
+re-assigned `strum.x = pos.x; strum.y = pos.y;` (and the note equivalent) every frame from
+`ModManager.getPos()`, whose base is the fixed formula `getBaseX(data, player)` / `50 + diff`. That erased
+whatever a running `FlxTween` had just written, so enabling the modchart killed `noteTweenX` and any
+`FlxTween.tween(strum, {x: …})` — arrows could only be moved through modchart values.
+
+The fix is a composition layer (`source/modchart/ModchartComposed.hx`, implemented by `obj/Note.hx` and
+`obj/StrumNote.hx`): before writing, the applier compares what it wrote last frame with the object's current
+value, carries the difference into an `external` accumulator, and writes `modchart layer + external layer`
+(position and `angle` additively, `scale` as a ratio). So a tween keeps running *and* the modchart keeps
+driving the object, and a modchart value that changes mid-tween still layers on top of the tween's target.
+
+Rules this creates:
+
+- `ModManager.applyPosition()`, `applyScale()` and `applyAngle()` are the **only** functions allowed to write
+  `x`, `y`, `scale` or `angle` on a `Note`/`StrumNote`. A modifier that assigns them directly makes the
+  modchart and a tween fight again — add to the `pos` vector in `getPos()` instead, which needs no change.
+- `ModManager.composeExternals = false` restores the old absolutely-owning behaviour for scripts that really
+  want to own the transform (teleports, custom paths); flip it back to `true` afterwards.
+- `syncComposition(obj)` adopts the current transform as a new baseline (after a teleport or a reset) and
+  `resetComposition()` clears the bookkeeping for one object or all of them (song restart, `destroy()`).
+- `AlphaModifier` needs no such care: it drives the `ColorSwap` shader uniform, which *multiplies* `alpha`.
+- `PlayState` gates the whole application on `songIsModcharted`
+  (`ClientPrefs.getGameplaySetting('modchart', true)`), so a tween on an arrow works today either way — the
+  composition layer is what makes it work *with* the modchart on.
 
 ## 6. Assets and paths
 
@@ -260,7 +289,7 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 - **Add a stage** — a `stages/<name>.json` data file (mods or `assets/preload/stages/`) plus images; optionally a `stages/<name>.hx` script.
 - **Add a character** — `characters/<name>.json` plus `images/characters/<name>.png` atlases; scripts via `characters/<name>.<ext>`.
 - **Add a setting** — see §6 (field + `saveSettings`/`loadPrefs`) and add the UI entry in the matching `source/options/*SubState.hx`.
-- **Add a modchart modifier** — implement `modchart/Modifier.hx` (or `NoteModifier`) under `source/modchart/modifiers/` and register it in `ModManager.registerDefaultModifiers()`; scripts can also add modifiers at runtime through `HScriptModifier` / the modchart callbacks.
+- **Add a modchart modifier** — implement `modchart/Modifier.hx` (or `NoteModifier`) under `source/modchart/modifiers/` and register it in `ModManager.registerDefaultModifiers()`; scripts can also add modifiers at runtime through `HScriptModifier` / the modchart callbacks. Add to the `pos` vector in `getPos()` and, for anything that is not position, write through `ModManager.applyScale()`/`applyAngle()` — never assign `x`/`y`/`scale`/`angle` on a `Note`/`StrumNote` directly (see §5, it breaks `FlxTween`).
 - **Tweak gameplay** — `states/game/PlayState.hx` is the single hub: note spawning, `callOnScripts` hooks, camera, health, score, stage, modchart update (search for `modManager.updateTimeline`).
 - **Build Lua effects while the song plays (block editor)** — press **Key 3** (`debug_3`, `NINE`) during a song, or press "Play" in `editors/BlockCodeEditorState.hx` (it sets `PlayState.openBlockEditorOnStart`), to open `editors.blockcode.BlockCodeEditorSubstate` on top of the running `PlayState`. It live-reloads the script it saves through `BlockScriptRuntime`. Timeline markers carry a block stack each; they compile to `if curStep == N then` guards inside `onStepHit` (or to an `onEvent` guard when the marker has an event name). Everything is saved as `.lua` through `BlockFileIO` in one of three exec modes (`song`/`global`/`custom`) with a renameable script name.
 - **Add custom blocks for the block editor** — drop `blockcode/blocks.json` or `blockcode/blocks.lua` (plus anything in `blockcode/blocks/`) into a mod folder, or `assets/shared/blockcode/`. JSON and Lua schemas are documented at the top of `source/editors/blockcode/BlockConfigLoader.hx`; `example_mods/blockcode/` holds a working example of both. Blocks are matched to code by the `lua` template (`$1`, `${paramName}`), so no engine change is needed. The editor's file browser shows which files were scanned (`BlockConfigLoader.configSignature()`/`lastErrors()`).
@@ -278,6 +307,8 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 - `source/psych/script/FunkinLua.hx` is a legacy monolith still in use; prefer adding features in `source/script/` and keep Lua API changes backward-compatible.
 - `mods/` and `modsList.txt` do not exist until the game creates them; always guard filesystem access.
 - `source/editors/blockcode/BlockTypes.hx` is the frozen data contract of the whole block editor package (substate, canvas, serializer, generator, importer, config loader all code against it). Append new optional fields; do not rename or remove existing ones without updating every consumer.
+- The modchart must never assign `x`/`y`/`scale`/`angle` on a `Note`/`StrumNote` outside `ModManager.applyPosition/applyScale/applyAngle` — that is what used to erase every `FlxTween` on the arrows (see §5, "The modchart composes with `FlxTween`").
+- `loadGlobalScripts()` in `PlayState` only scans `scripts/` for `.lua`/`.lscript`/`.py` — a mod's HScript global only loads as `mods/<mod>/global.hx` through `Main`.
 - The block editor's keybind is `debug_3` (`NINE`), declared in `ClientPrefs.keyBinds` and surfaced in `source/options/ControlsSubState.hx` — add both when adding a new debug key.
 
 ## 12. Where to look first
@@ -293,6 +324,7 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 | Song/section data, timing | `source/backend/songs/Song.hx`, `Section.hx`, `Conductor.hx` |
 | Week/stage/achievement data | `source/backend/game/WeekData.hx`, `StageData.hx`, `Achievements.hx` |
 | Modchart system | `source/modchart/ModManager.hx`, `Modifier.hx`, `Modcharts.hx` |
+| Modchart ↔ `FlxTween` composition contract | `source/modchart/ModchartComposed.hx` (impl: `obj/Note.hx`, `obj/StrumNote.hx`) |
 | HScript API surface | `source/script/hscript/HScriptUtil.hx` |
 | HScript engine core (HScript/Script/ScriptType/InterpPro + default vars) | `source/script/FunkinHScript.hx` |
 | Legacy `script.hscript.*` HScript paths (typedef aliases) | `source/script/hscript/HScript.hx`, `InterpPro.hx` |

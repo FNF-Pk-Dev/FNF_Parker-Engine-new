@@ -11,8 +11,66 @@ import modchart.modifiers.*;
 import modchart.events.*;
 
 // Weird amalgamation of Schmovin' modifier system, Andromeda modifier system and my own new shit -neb
+
+/**
+	Schmovin'/Andromeda style modifier manager. It owns the modifier stack (`register`, `modArray`,
+	`activeMods`), the timeline (`EventTimeline`) and the transform that stack produces for notes and
+	receptors (`getPos`, `updateObject`).
+
+	## The modchart layers on top of everything else
+
+	The modifier stack produces only *one* of the layers that move a sprite. A `FlxTween`, a
+	`setProperty('someStrum.x', ...)` from a script, a dance animation or the stock application step
+	(`strum.x = pos.x` every frame) write `x`, `y`, `scale` and `angle` as well. Writing the
+	modchart's absolute value every frame erased those writes, which is why a running `FlxTween` on
+	an arrow stopped working as soon as this manager was enabled.
+
+	`applyPosition()`, `applyScale()` and `applyAngle()` are the fix, and they are the ONLY functions
+	allowed to write those properties on a composed sprite (see `ModchartComposed`). They remember
+	what the modchart wrote last frame, take the difference between that and the sprite's current
+	value as *external* motion, and write `modchart layer + external layer`:
+
+	```haxe
+	external += obj.x - modAppliedX; // a FlxTween (or anything else) moved it since our write
+	obj.x = pos.x + external;        // modchart layer + external layer
+	modAppliedX = obj.x;
+	```
+
+	Position and angle compose additively, scale composes multiplicatively (`modExternalScale*` is a
+	ratio that defaults to `1`). The per-sprite tracking state is declared by the `ModchartComposed`
+	interface - implemented by `obj.Note` and `obj.StrumNote` - so it travels with the sprite through
+	pooling, `destroy()` and state changes; a sprite that does not implement it (a plain `FlxSprite`
+	handed in by a script) keeps the old absolute behaviour.
+
+	`syncComposition()` adopts a sprite's current transform as the new baseline (call it after a
+	teleport or a fresh placement), `resetComposition()` does the same for one sprite or for every
+	sprite this manager has written to (song start, song restart, destroy), and
+	`composeExternals = false` switches composition off entirely: the appliers then write the
+	modifier stack's transform absolutely, just like before composition existed, which is the escape
+	hatch for a script that wants to own the transform itself. The absolute write still refreshes the
+	baseline, so a script can turn composition back on at any time without the sprite jumping.
+**/
 class ModManager
 {
+	/**
+		When `true` (the default) the appliers carry the motion of everything that is not the modchart
+		forward instead of overwriting it. Scripts that want to own `x`/`y`/`scale`/`angle` themselves
+		can set it to `false` to get the old absolute writes back.
+	**/
+	public var composeExternals:Bool = true;
+
+	/** The tracked list is only swept once it grows past this many entries (see `sweepComposed`). */
+	private static inline var COMPOSED_MIN_SWEEP:Int = 256;
+
+	/** Every sprite the appliers have written to, duplicates included; `resetComposition(null)` walks it. */
+	private var composedObjects:Array<FlxSprite> = [];
+
+	/** Set of sprites already kept by the sweep in progress, so duplicates can be dropped. Empty outside a sweep. */
+	private var composedScratch:Map<FlxSprite, Bool> = new Map();
+
+	/** Current size `composedObjects` may reach before the appliers sweep it. */
+	private var composedSweepAt:Int = COMPOSED_MIN_SWEEP;
+
 	public function registerDefaultModifiers()
 	{
 		var quickRegs:Array<Any> = [
@@ -116,11 +174,8 @@ class ModManager
 			// this is a better way to do it
 			// (ofc its not EXACTLY what 4mbr0s3 did but.. y'know, it's close to it)
 
-			// so this actually has an issue
-			// this doesnt take into account any other submods
-			// so if you turn a submod off
-			// it turns the parent mod off, too, when it shouldnt
-			// so what I need to do is like, check other submods before removing the parent
+			// a submod turning off must not turn its parent off while another submod - or the parent's own
+			// value - is still running, so both are checked before anything is removed below
 
 			if (activeMods[player] == null)
 				activeMods[player] = [];
@@ -140,7 +195,7 @@ class ModManager
 				var modParent = daMod.parent;
 				if (modParent == null)
 				{
-					for (name => mod in daMod.submods)
+					for (subName => subMod in daMod.submods)
 					{
 						modParent = daMod; // because if this gets called at all, there's atleast 1 submod!!
 						break;
@@ -150,25 +205,28 @@ class ModManager
 					activeMods[player].remove(daMod.getName());
 				if (modParent != null)
 				{
-					if (modParent.shouldExecute(player, modParent.getValue(player)))
+					// the parent may still be running on its own value, or through one of its other submods,
+					// in which case it stays active and nothing else is removed
+					var parentStillRuns:Bool = modParent.shouldExecute(player, modParent.getValue(player));
+					if (!parentStillRuns)
 					{
-						activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
-						return;
-					}
-					for (subname => submod in modParent.submods)
-					{
-						if (submod.shouldExecute(player, submod.getValue(player)))
+						for (subName => subMod in modParent.submods)
 						{
-							activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
-							return;
+							if (subMod.shouldExecute(player, subMod.getValue(player)))
+							{
+								parentStillRuns = true;
+								break;
+							}
 						}
 					}
-					activeMods[player].remove(modParent.getName());
+					if (!parentStillRuns)
+						activeMods[player].remove(modParent.getName());
 				}
 				else
 					activeMods[player].remove(daMod.getName());
 			}
 
+			// sorting is the expensive part, so it happens once, after activeMods has settled
 			activeMods[player].sort((a, b) -> Std.int(register.get(a).getOrder() - register.get(b).getOrder()));
 		}
 	}
@@ -274,6 +332,221 @@ class ModManager
 			pos = mod.getPos(time, diff, tDiff, beat, pos, data, player, obj);
 		}
 		return pos;
+	}
+
+	// ------------------------------------------------------------------------------------------------
+	// Transform appliers - the only functions allowed to write x/y/scale/angle of a composed sprite.
+	// ------------------------------------------------------------------------------------------------
+
+	/**
+		Writes the modchart layer's position (the `Vector3` produced by `getPos()`) onto `obj`, carrying
+		everything that is not the modchart (a `FlxTween`, a `setProperty`, a dance animation) forward.
+		This replaces the old `strum.x = pos.x; strum.y = pos.y;` application step.
+	**/
+	public function applyPosition(obj:FlxSprite, pos:Vector3):Void
+	{
+		if (obj == null)
+			return;
+
+		var c:ModchartComposed = composedOf(obj);
+		if (c == null)
+		{
+			obj.x = pos.x;
+			obj.y = pos.y;
+			return;
+		}
+
+		if (!composeExternals)
+		{
+			// Escape hatch: the plain absolute write of old builds. The baseline is still refreshed and the
+			// external layers dropped so a script can turn composition back on without the sprite jumping.
+			obj.x = pos.x;
+			obj.y = pos.y;
+			c.modExternalX = 0;
+			c.modExternalY = 0;
+			c.modAppliedX = obj.x;
+			c.modAppliedY = obj.y;
+			c.modchartTouched = true;
+			trackComposed(obj);
+			return;
+		}
+
+		if (!Math.isNaN(c.modAppliedX))
+		{
+			c.modExternalX += obj.x - c.modAppliedX;
+			c.modExternalY += obj.y - c.modAppliedY;
+		}
+		obj.x = pos.x + c.modExternalX;
+		obj.y = pos.y + c.modExternalY;
+		c.modAppliedX = obj.x;
+		c.modAppliedY = obj.y;
+		c.modchartTouched = true;
+		trackComposed(obj);
+	}
+
+	/**
+		Writes the modchart layer's scale onto `obj`. External scaling is remembered as a *ratio*, so a
+		`FlxTween` on `scale.x`/`scale.y` (or a sustain note's `resizeByRatio`) survives next to it.
+	**/
+	public function applyScale(obj:FlxSprite, scaleX:Float, scaleY:Float):Void
+	{
+		if (obj == null)
+			return;
+
+		var c:ModchartComposed = composedOf(obj);
+		if (c == null)
+		{
+			obj.scale.set(scaleX, scaleY);
+			return;
+		}
+
+		if (!composeExternals)
+		{
+			obj.scale.set(scaleX, scaleY);
+			c.modExternalScaleX = 1;
+			c.modExternalScaleY = 1;
+			c.modAppliedScaleX = obj.scale.x;
+			c.modAppliedScaleY = obj.scale.y;
+			c.modchartTouched = true;
+			trackComposed(obj);
+			return;
+		}
+
+		if (!Math.isNaN(c.modAppliedScaleX) && c.modAppliedScaleX > 0 && c.modAppliedScaleY > 0)
+		{
+			c.modExternalScaleX *= obj.scale.x / c.modAppliedScaleX;
+			c.modExternalScaleY *= obj.scale.y / c.modAppliedScaleY;
+		}
+		obj.scale.set(scaleX * c.modExternalScaleX, scaleY * c.modExternalScaleY);
+		c.modAppliedScaleX = obj.scale.x;
+		c.modAppliedScaleY = obj.scale.y;
+		c.modchartTouched = true;
+		trackComposed(obj);
+	}
+
+	/** Writes the modchart layer's rotation (degrees) onto `obj`, on top of whatever else rotated it. **/
+	public function applyAngle(obj:FlxSprite, degrees:Float):Void
+	{
+		if (obj == null)
+			return;
+
+		var c:ModchartComposed = composedOf(obj);
+		if (c == null)
+		{
+			obj.angle = degrees;
+			return;
+		}
+
+		if (!composeExternals)
+		{
+			obj.angle = degrees;
+			c.modExternalAngle = 0;
+			c.modAppliedAngle = obj.angle;
+			c.modchartTouched = true;
+			trackComposed(obj);
+			return;
+		}
+
+		if (!Math.isNaN(c.modAppliedAngle))
+			c.modExternalAngle += obj.angle - c.modAppliedAngle;
+
+		obj.angle = degrees + c.modExternalAngle;
+		c.modAppliedAngle = obj.angle;
+		c.modchartTouched = true;
+		trackComposed(obj);
+	}
+
+	/** Adopts `obj`'s current transform as the new baseline: the next write starts from where it is now. */
+	public function syncComposition(obj:FlxSprite):Void
+	{
+		var c:ModchartComposed = composedOf(obj);
+		if (c == null)
+			return;
+
+		clearComposition(c);
+		trackComposed(obj);
+	}
+
+	/** Clears the tracking for one sprite, or for every sprite the appliers have written to when `obj` is null. */
+	public function resetComposition(?obj:FlxSprite = null):Void
+	{
+		if (obj != null)
+		{
+			var c:ModchartComposed = composedOf(obj);
+			if (c != null)
+				clearComposition(c);
+			composedObjects = composedObjects.filter(held -> held != obj);
+			return;
+		}
+
+		for (held in composedObjects)
+		{
+			var c:ModchartComposed = composedOf(held);
+			if (c != null)
+				clearComposition(c);
+		}
+		composedObjects = [];
+		composedScratch.clear();
+	}
+
+	/**
+		Null when the sprite does not implement `ModchartComposed`. The cast is unchecked: every sprite
+		given to the appliers goes through here or not at all.
+	**/
+	static function composedOf(obj:FlxSprite):ModchartComposed
+	{
+		if (obj == null || !Std.isOfType(obj, ModchartComposed))
+			return null;
+		return cast obj;
+	}
+
+	/** Adds `obj` to the tracked list, sweeping dead and duplicated entries when it gets too long. */
+	private function trackComposed(obj:FlxSprite):Void
+	{
+		composedObjects.push(obj);
+		if (composedObjects.length > composedSweepAt)
+			sweepComposed();
+	}
+
+	/**
+		Keeps the live, unique sprites in `composedObjects`, which matters because notes are created
+		constantly. A sprite is dead once it was killed or destroyed, and those are dropped: they are
+		never handed to an applier again. The threshold grows with the number of sprites that survive,
+		so a busy song sweeps once per few hundred applier calls instead of once per frame.
+	**/
+	private function sweepComposed():Void
+	{
+		var kept:Array<FlxSprite> = [];
+		for (obj in composedObjects)
+		{
+			if (obj == null || (!obj.exists && !obj.alive))
+				continue;
+			if (composedScratch.exists(obj))
+				continue;
+			composedScratch.set(obj, true);
+			kept.push(obj);
+		}
+		composedScratch.clear();
+		composedObjects = kept;
+		composedSweepAt = kept.length * 2;
+		if (composedSweepAt < COMPOSED_MIN_SWEEP)
+			composedSweepAt = COMPOSED_MIN_SWEEP;
+	}
+
+	/** Forgets what the modchart wrote, so the next applier call starts from the sprite's current transform. */
+	static function clearComposition(c:ModchartComposed):Void
+	{
+		c.modAppliedX = Math.NaN;
+		c.modAppliedY = Math.NaN;
+		c.modExternalX = 0;
+		c.modExternalY = 0;
+		c.modAppliedScaleX = Math.NaN;
+		c.modAppliedScaleY = Math.NaN;
+		c.modExternalScaleX = 1;
+		c.modExternalScaleY = 1;
+		c.modAppliedAngle = Math.NaN;
+		c.modExternalAngle = 0;
+		c.modchartTouched = false;
 	}
 
 	public function queueEaseP(step:Float, endStep:Float, modName:String, percent:Float, style:String = 'linear', player:Int = -1, ?startVal:Float)
