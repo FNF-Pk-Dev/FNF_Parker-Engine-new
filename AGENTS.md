@@ -53,6 +53,33 @@ CI (`.github/workflows/`): `main.yml` builds Android on `ubuntu-24.04` with Haxe
 
 Version pins are loose in practice: `Project.xml` asks for `openfl 9.2.2` / `lime 7.7.0`, while `hmm.json` pins `lime 8.0.2` / `openfl 9.2.2`, and the reference machine runs lime 8.1.3 / openfl 9.3.4. Lime only warns about this (`Warning: Ignoring unknown fps=""` is also harmless), so do not "fix" the pins without being asked.
 
+### Verifying a change when `lime build` is unavailable
+
+On some machines `haxelib run lime build windows` fails before compiling anything with
+`Error: Could not find haxelib "hxcpp-debug-server"` — that haxelib is registered as a **dev path**
+pointing at a VSCode extension directory that may no longer exist. It is unrelated to the engine and must
+not be worked around by editing `.haxelib` or the project files.
+
+Two working fallbacks, in order of strength:
+
+```bash
+# 1. Typecheck / codegen only (fast, ~60-90 s, respects every define). Also the quickest
+#    way to check a compile error after an edit.
+haxe export/release/windows/haxe/debug.hxml
+
+# 2. A real compile + link: strip the -D no-compilation flag that the generated hxml carries,
+#    then build. Incremental, so repeat builds are fast.
+sed '/^-D no-compilation$/d' export/release/windows/haxe/debug.hxml > /tmp/real_debug.hxml
+haxe "$(cygpath -w /tmp/real_debug.hxml)"     # look for "Link: ApplicationMain-debug.exe"
+```
+
+`configure` regenerates `export/release/windows/haxe/debug.hxml` and restores `-D no-compilation`, so the
+stripped copy has to be recreated after that. The linked binary lands at
+`export/release/windows/obj/ApplicationMain-debug.exe`; if that file's mtime did not move, you only
+typechecked and did **not** link. A build that dies with `fatal error C1083: ... Permission denied` on
+`*.obj` usually means orphaned `cl.exe` processes from an interrupted build still hold the files — wait for
+them to exit rather than deleting the `obj/` tree.
+
 ## 3. Repository map
 
 ```
@@ -341,8 +368,18 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 - **Never hand a null/absent source to a script loader.** `Paths.getContent()` returns `null` for a missing file, and `LuaL.luau_loadsource()` in the `linc_luau` haxelib ends in `strlen(source)` with no null check (`linc/linc_lua.cpp`, `load_source`), so a null source is a `strlen(nullptr)` — the process dies instantly with no Haxe exception to catch (reproduced: a standalone hxcpp program calling `luau_loadsource(state, "chunk", null)` exits with code 139/SIGSEGV). Check the file exists first, and treat a null/empty chunk as a reported, survivable failure (`FunkinLua` and `FunkinLScript` do this in their constructors now). `llua/LuaRequire.hx` in the fork passes that same possibly-null source for a `require()` of a missing module, so a mod's `require` can still kill the app until the fork guards it.
 - `loadGlobalScripts()` in `PlayState` only scans `scripts/` for `.lua`/`.lscript`/`.py` — a mod's HScript global only loads as `mods/<mod>/global.hx` through `Main`.
 - The block editor's keybind is `debug_3` (`NINE`), declared in `ClientPrefs.keyBinds` and surfaced in `source/options/ControlsSubState.hx` — add both when adding a new debug key.
+- **A splash's `x`/`y` is its centre, and callers must pass the receptor's midpoint.** `NoteSplash.setupNoteSplash()` aligns from the frame's real content rect because the shipped splash art is far off its own declared canvas centre; handing it `strum.x`/`strum.y` (the receptor's top-left) offsets the burst by up to ~13 px and makes it jump between the two animations. See §5, "Where a note splash actually goes".
+- **Sustain length is driven by `defScale`, not `scale`.** `ScaleModifier` runs unconditionally and restores `scale.y = defScale.y` on every hold piece, so anything that stretches a sustain (`Note.hx`'s constructor, `resizeByRatio()`, `reloadNote()`) has to update `defScale` too or the trail breaks into chunks under the modchart. See §5, "Sustains, the modchart's scale modifier, and `defScale`".
 
-## 12. Where to look first
+## 12. Workflow for this repository
+
+- **Commit and push when a task is finished.** The remote is `origin` = `https://github.com/FNF-Pk-Dev/FNF_Parker-Engine-new.git`, branch `main`. After finishing a task, commit the work with a message that explains *why* the change is needed (not just what moved), then `git push origin main`.
+- **Update this file in the same commit** whenever a change alters something documented here — a new module, a new preference, a new invariant, a changed build/verify step. Add the guidance where a reader would look for it (the relevant §), not in a changelog at the bottom.
+- **Never commit local scratch or secrets.** `.promptx/` and `.github/py.py` are ignored on purpose — `py.py` has a plaintext API token in it. Stage files explicitly rather than `git add -A`, and keep `export/` (build output) out of commits.
+- **Report honestly when a change could not be verified.** `lime build` may be unavailable (§2); a typecheck is not a link, and neither is a playtest. Say which of the three you actually did.
+- **Be careful with `git checkout`/`git stash` on files you have edited.** Both discard working-tree changes irreversibly; check for a backup (or commit first) before using them to compare against `HEAD`.
+
+## 13. Where to look first
 
 | Need | File |
 |---|---|
@@ -356,6 +393,9 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 | Week/stage/achievement data | `source/backend/game/WeekData.hx`, `StageData.hx`, `Achievements.hx` |
 | Modchart system | `source/modchart/ModManager.hx`, `Modifier.hx`, `Modcharts.hx` |
 | Modchart ↔ `FlxTween` composition contract | `source/modchart/ModchartComposed.hx` (impl: `obj/Note.hx`, `obj/StrumNote.hx`) |
+| Shared menu/HUD tween helpers (`uiAnimations`, menu beat sync) | `source/backend/UIAnim.hx` |
+| Sustain trail rendering / `defScale` bookkeeping | `source/obj/Note.hx` (§5), `source/modchart/modifiers/ScaleModifier.hx` |
+| Note splash placement | `source/obj/NoteSplash.hx` (§5), `PlayState.spawnNoteSplashOnNote` |
 | HScript API surface | `source/script/hscript/HScriptUtil.hx` |
 | HScript engine core (HScript/Script/ScriptType/InterpPro + default vars) | `source/script/FunkinHScript.hx` |
 | Legacy `script.hscript.*` HScript paths (typedef aliases) | `source/script/hscript/HScript.hx`, `InterpPro.hx` |
