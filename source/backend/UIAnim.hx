@@ -33,10 +33,17 @@ class UIAnim
 	static inline var POP_FROM:Float = 0.8;
 
 	/**
-	 * Name of the field `popText` stashes a text's resting x in. Kept on the sprite itself so it is
-	 * reclaimed with the sprite rather than accumulating in a static map.
+	 * Real resting x of the texts `popText` is currently sliding, keyed by the text itself.
+	 *
+	 * This deliberately is **not** a reflected field on the sprite: on hxcpp `Reflect.setField`
+	 * throws `Invalid field: <name>` for a field the class does not declare, so stashing state on
+	 * a `FlxText` that way crashes the game instead of setting anything. Entries are removed once
+	 * the slide lands.
 	 */
-	static inline var REST_X_FIELD:String = 'uiAnimRestX';
+	static var popTextRestX:Map<FlxSprite, Float> = new Map();
+
+	/** Safety valve for `popTextRestX`: the map is cleared once it grows past this many entries. */
+	static inline var MAX_POP_TEXT_MEMOS:Int = 32;
 
 	public static function enabled():Bool
 	{
@@ -180,21 +187,27 @@ class UIAnim
 	 * Fades and slides a `FlxText` into place. Uses plain `FlxSprite.alpha`, so it always works.
 	 *
 	 * Safe to call repeatedly on the same text (e.g. on every selection change): while a slide is
-	 * running the real resting x is remembered on the sprite, so re-triggering mid-flight reuses it
-	 * instead of re-anchoring to wherever the previous tween had got to (which would walk the text
-	 * across the screen a little on every call). The memo is dropped again once the slide lands, so
-	 * a text whose x is repositioned by its owner between calls still picks up the new position.
+	 * running the real resting x is remembered, so re-triggering mid-flight reuses it instead of
+	 * re-anchoring to wherever the previous tween had got to (which would walk the text across the
+	 * screen a little on every call). The memo is dropped again once the slide lands, so a text
+	 * whose x is repositioned by its owner between calls still picks up the new position.
 	 */
 	public static function popText(text:FlxText, delay:Float = 0, duration:Float = 0.3):Void
 	{
 		if (!enabled() || text == null)
 			return;
 
-		var restX:Null<Float> = Reflect.field(text, REST_X_FIELD);
+		var restX:Null<Float> = popTextRestX.get(text);
 		if (restX == null)
 		{
 			restX = text.x;
-			Reflect.setField(text, REST_X_FIELD, restX);
+			// A cancelled slide never runs its onComplete, so bound the map rather than leak an
+			// entry per abandoned text. The oldest memo is only ever a stale anchor, so dropping it
+			// costs at most one slightly-off first frame for a text nobody is animating any more.
+			if (Lambda.count(popTextRestX) >= MAX_POP_TEXT_MEMOS)
+				popTextRestX.clear();
+
+			popTextRestX.set(text, restX);
 		}
 
 		FlxTween.cancelTweensOf(text, ['x', 'alpha']);
@@ -207,7 +220,7 @@ class UIAnim
 			startDelay: delay,
 			onComplete: function(twn:FlxTween)
 			{
-				Reflect.deleteField(text, REST_X_FIELD);
+				popTextRestX.remove(text);
 			}
 		});
 	}
