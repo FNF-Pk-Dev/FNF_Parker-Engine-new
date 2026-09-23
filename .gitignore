@@ -5,6 +5,11 @@ art/build_x32-officialrelease.bat
 art/build_x64-officialrelease.bat
 art/test_x64-debug-officialrelease.bat
 
+### Local tooling / scratch
+# Agent scratch state and ad-hoc debug scripts; some of these carry credentials.
+.promptx/
+.github/py.py
+
 ### VS Code
 export/
 .claude/
