@@ -110,7 +110,7 @@ class AndroidControlsMenu extends MusicBeatState
 		tipText.scrollFactor.set();
 		add(tipText);
 
-		addTouchPad("NONE", "B")
+		addTouchPad("NONE", "B");
 
 		changeSelection();
 	}
