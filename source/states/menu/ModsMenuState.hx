@@ -383,11 +383,37 @@ class ModsMenuState extends MusicBeatState
 
 		FlxG.mouse.visible = true;
 
+		// Entrance: the mod list and the buttons fade in, one entry at a time. Every
+		// entry positions itself (the `AttachedSprite` icons copy their alphabet's alpha
+		// through `sprTracker`, the buttons carry their size in `scale`), so `fromX`
+		// hands `flyInX` each sprite's own x and only alpha animates. `restAlpha` lands
+		// the fade on each row's idle/selected dimming.
+		var entries:Array<FlxSprite> = [];
+		for (mod in mods)
+			entries.push(mod.alphabet);
+
+		UIAnim.flyInX(entries, i -> entries[Std.int(i)].x, 0.08, 0.6, null, i -> i == curSelected ? 1 : 0.6);
+		UIAnim.flyInX(buttonsArray, i -> buttonsArray[Std.int(i)].x, 0.06);
+
+		// `noModsTxt` breathes instead of the old sine fade, and only while it is the
+		// thing on screen.
+		if (mods.length < 1)
+			UIAnim.breathe(noModsTxt, 0.06, 1.6);
+
 		#if android
 		addTouchPad("UP_DOWN", "B");
 		#end
 
 		super.create();
+	}
+
+	/** Idle/selected alphas of the mod list; re-run when the entrance faded it all up. */
+	function updateSelectionAlpha()
+	{
+		for (i in 0...mods.length)
+		{
+			UIAnim.selectItem(mods[i].alphabet, i == curSelected);
+		}
 	}
 
 	/*function getIntArray(max:Int):Array<Int>{
@@ -475,16 +501,11 @@ class ModsMenuState extends MusicBeatState
 		Paths.pushGlobalMods();
 	}
 
-	var noModsSine:Float = 0;
 	var canExit:Bool = true;
 
 	override function update(elapsed:Float)
 	{
-		if (noModsTxt.visible)
-		{
-			noModsSine += 180 * elapsed;
-			noModsTxt.alpha = 1 - Math.sin((Math.PI * noModsSine) / 180);
-		}
+		UIAnim.syncConductor();
 
 		if (canExit && controls.BACK)
 		{
@@ -575,10 +596,8 @@ class ModsMenuState extends MusicBeatState
 		var i:Int = 0;
 		for (mod in mods)
 		{
-			mod.alphabet.alpha = 0.6;
 			if (i == curSelected)
 			{
-				mod.alphabet.alpha = 1;
 				selector.sprTracker = mod.alphabet;
 				descriptionTxt.text = mod.description;
 				if (mod.restart)
@@ -606,6 +625,7 @@ class ModsMenuState extends MusicBeatState
 			}
 			i++;
 		}
+		updateSelectionAlpha();
 		updateButtonToggle();
 	}
 

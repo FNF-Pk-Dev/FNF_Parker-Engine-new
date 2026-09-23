@@ -203,6 +203,8 @@ class MainMenuState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
+		UIAnim.syncConductor();
+
 		if (FlxG.sound.music.volume < 0.8)
 		{
 			FlxG.sound.music.volume += 0.5 * FlxG.elapsed;
@@ -325,6 +327,10 @@ class MainMenuState extends MusicBeatState
 				magenta.alpha = 0.1;
 				FlxTween.tween(magenta, {alpha: 0}, 0.5, {ease: FlxEase.quadOut});
 			}
+
+			// Nudge the highlighted entry along with the beat
+			if (menuItems != null && curSelected >= 0 && curSelected < menuItems.length)
+				UIAnim.beatBump(menuItems.members[curSelected], 1.14, 0.3);
 		}
 	}
 

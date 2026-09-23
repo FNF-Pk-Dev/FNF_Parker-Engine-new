@@ -120,8 +120,11 @@ class StoryMenuState extends MusicBeatState
 			}
 
 			// Entrance Animation: Slide in from bottom
-			weekThing.y += 500;
-			FlxTween.tween(weekThing, {y: weekThing.y - 500}, 1 + (i * 0.1), {ease: FlxEase.elasticOut});
+			if (UIAnim.enabled())
+			{
+				weekThing.y += 500;
+				FlxTween.tween(weekThing, {y: weekThing.y - 500}, 1 + (i * 0.1), {ease: FlxEase.elasticOut});
+			}
 		}
 
 		WeekData.setDirectoryFromWeek(WeekData.weeksLoaded.get(WeekData.weeksList[0]));
@@ -133,8 +136,11 @@ class StoryMenuState extends MusicBeatState
 			grpWeekCharacters.add(weekCharThing);
 
 			// Entrance Animation: Slide in from top
-			weekCharThing.y -= 500;
-			FlxTween.tween(weekCharThing, {y: weekCharThing.y + 500}, 1 + (char * 0.2), {ease: FlxEase.elasticOut});
+			if (UIAnim.enabled())
+			{
+				weekCharThing.y -= 500;
+				FlxTween.tween(weekCharThing, {y: weekCharThing.y + 500}, 1 + (char * 0.2), {ease: FlxEase.elasticOut});
+			}
 		}
 
 		bgYellow.color = 0xFFF9CF51;
@@ -190,6 +196,14 @@ class StoryMenuState extends MusicBeatState
 		changeWeek();
 		changeDifficulty();
 
+		// Entrance runs last: `changeWeek()` above sets `txtWeekTitle.x` from the week's name
+		// width, and `updateText()` sets `txtTracklist`'s centered x, so animating them earlier
+		// would slide them towards a position they no longer hold.
+		UIAnim.popText(scoreText, 0.1);
+		UIAnim.popText(txtWeekTitle, 0.15);
+		UIAnim.popText(txtTracklist, 0.2);
+		UIAnim.popIn(tracksSprite, 0.15);
+
 		#if android
 		addTouchPad("FULL", "A_B_X_Y");
 		#end
@@ -206,6 +220,8 @@ class StoryMenuState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
+		UIAnim.syncConductor();
+
 		// scoreText.setFormat('VCR OSD Mono', 32);
 		lerpScore = Math.floor(FlxMath.lerp(lerpScore, intendedScore, CoolUtil.boundTo(elapsed * 30, 0, 1)));
 		if (Math.abs(intendedScore - lerpScore) < 10)
@@ -412,14 +428,24 @@ class StoryMenuState extends MusicBeatState
 			{
 				item.alpha = 1;
 				// Dynamic selection effect
-				FlxTween.cancelTweensOf(item);
-				FlxTween.tween(item, {"scale.x": 1.1, "scale.y": 1.1}, 0.2, {ease: FlxEase.elasticOut});
+				if (UIAnim.enabled())
+				{
+					FlxTween.cancelTweensOf(item);
+					FlxTween.tween(item, {"scale.x": 1.1, "scale.y": 1.1}, 0.2, {ease: FlxEase.elasticOut});
+				}
 			}
 			else
 			{
 				item.alpha = 0.6;
-				FlxTween.cancelTweensOf(item);
-				FlxTween.tween(item, {"scale.x": 1, "scale.y": 1}, 0.2, {ease: FlxEase.quadOut});
+				if (UIAnim.enabled())
+				{
+					FlxTween.cancelTweensOf(item);
+					FlxTween.tween(item, {"scale.x": 1, "scale.y": 1}, 0.2, {ease: FlxEase.quadOut});
+				}
+				else
+				{
+					item.scale.set(1, 1);
+				}
 			}
 			bullShit++;
 		}

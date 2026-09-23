@@ -10,6 +10,14 @@ using StringTools;
 
 class ResetScoreSubState extends MusicBeatSubstate
 {
+	inline static var BACKDROP_ALPHA:Float = 0.6;
+
+	// Yes/No ease between their two states in `OPTION_TWEEN`, but the first call fades them in
+	// with the rest of the entrance instead, `ENTRANCE_DELAY` later and a little slower.
+	inline static var OPTION_TWEEN:Float = 0.15;
+	inline static var ENTRANCE_DELAY:Float = 0.2;
+	inline static var ENTRANCE_TWEEN:Float = 0.35;
+
 	var bg:FlxSprite;
 	var alphabetArray:Array<Alphabet> = [];
 	var icon:HealthIcon;
@@ -38,15 +46,24 @@ class ResetScoreSubState extends MusicBeatSubstate
 		name += ' (' + CoolUtil.difficulties[difficulty] + ')?';
 
 		bg = new FlxSprite().makeGraphic(FlxG.width, FlxG.height, FlxColor.BLACK);
-		bg.alpha = 0;
 		bg.scrollFactor.set();
 		add(bg);
+		// The backdrop settles at its own translucency rather than at `popIn`'s full alpha,
+		// so it gets its own fade.
+		if (UIAnim.enabled())
+		{
+			bg.alpha = 0;
+			FlxTween.tween(bg, {alpha: BACKDROP_ALPHA}, 0.4, {ease: FlxEase.quadOut});
+		}
+		else
+		{
+			bg.alpha = BACKDROP_ALPHA;
+		}
 
 		var tooLong:Float = (name.length > 18) ? 0.8 : 1; // Fucking Winter Horrorland
 		var text:Alphabet = new Alphabet(0, 180, "Reset the score of", true);
 		text.screenCenter(X);
 		alphabetArray.push(text);
-		text.alpha = 0;
 		add(text);
 		var text:Alphabet = new Alphabet(0, text.y + 90, name, true);
 		text.scaleX = tooLong;
@@ -54,7 +71,6 @@ class ResetScoreSubState extends MusicBeatSubstate
 		if (week == -1)
 			text.x += 60 * tooLong;
 		alphabetArray.push(text);
-		text.alpha = 0;
 		add(text);
 		if (week == -1)
 		{
@@ -62,7 +78,6 @@ class ResetScoreSubState extends MusicBeatSubstate
 			icon.setGraphicSize(Std.int(icon.width * tooLong));
 			icon.updateHitbox();
 			icon.setPosition(text.x - icon.width + (10 * tooLong), text.y - 30);
-			icon.alpha = 0;
 			add(icon);
 		}
 
@@ -74,7 +89,15 @@ class ResetScoreSubState extends MusicBeatSubstate
 		noText.screenCenter(X);
 		noText.x += 200;
 		add(noText);
-		updateOptions();
+		// `ENTRANCE_DELAY` lets the entrance own the Yes/No alpha instead of the state being
+		// snapped on before the pair has even appeared.
+		updateOptions(ENTRANCE_DELAY);
+
+		// Entrance, in order: the prompt lines, then Yes/No, then the icon. Only sliding and
+		// fading is used - `popIn` would tween away the `tooLong` clamp on the name and the
+		// health icon's graphic size.
+		var entrance:Array<FlxSprite> = [alphabetArray[0], alphabetArray[1], icon];
+		UIAnim.flyInX(entrance, function(i) return entrance[Std.int(i)].x - 100, 0.15, 0.5);
 
 		#if android
 		addTouchPad("LEFT_RIGHT", "A_B");
@@ -84,18 +107,6 @@ class ResetScoreSubState extends MusicBeatSubstate
 
 	override function update(elapsed:Float)
 	{
-		bg.alpha += elapsed * 1.5;
-		if (bg.alpha > 0.6)
-			bg.alpha = 0.6;
-
-		for (i in 0...alphabetArray.length)
-		{
-			var spr = alphabetArray[i];
-			spr.alpha += elapsed * 2.5;
-		}
-		if (week == -1)
-			icon.alpha += elapsed * 2.5;
-
 		if (controls.UI_LEFT_P || controls.UI_RIGHT_P)
 		{
 			FlxG.sound.play(Paths.sound('scrollMenu'), 1);
@@ -136,17 +147,44 @@ class ResetScoreSubState extends MusicBeatSubstate
 		super.update(elapsed);
 	}
 
-	function updateOptions()
+	/**
+	 * `delay` is non-zero only for the opening call, where it hands the alpha over to a delayed
+	 * fade so the option joins the entrance; every later toggle tweens straight to the new state.
+	 */
+	function updateOptions(delay:Float = 0)
 	{
 		var scales:Array<Float> = [0.75, 1];
 		var alphas:Array<Float> = [0.6, 1.25];
 		var confirmInt:Int = onYes ? 1 : 0;
 
-		yesText.alpha = alphas[confirmInt];
-		yesText.scale.set(scales[confirmInt], scales[confirmInt]);
-		noText.alpha = alphas[1 - confirmInt];
-		noText.scale.set(scales[1 - confirmInt], scales[1 - confirmInt]);
-		if (week == -1)
+		applyOptionState(yesText, alphas[confirmInt], scales[confirmInt], delay);
+		applyOptionState(noText, alphas[1 - confirmInt], scales[1 - confirmInt], delay);
+
+		if (week == -1 && icon != null && icon.animation != null && icon.animation.curAnim != null)
 			icon.animation.curAnim.curFrame = confirmInt;
+	}
+
+	/** Eases one of the Yes/No prompts between its idle and its chosen transform. */
+	function applyOptionState(spr:Alphabet, alpha:Float, scale:Float, delay:Float = 0):Void
+	{
+		if (spr == null)
+			return;
+
+		if (!UIAnim.enabled())
+		{
+			spr.alpha = alpha;
+			spr.scaleX = scale;
+			spr.scaleY = scale;
+			return;
+		}
+
+		// An `Alphabet` only scales through `scaleX`/`scaleY`; `scale.set()` does nothing visible.
+		FlxTween.cancelTweensOf(spr, ['scaleX', 'scaleY']);
+		FlxTween.tween(spr, {scaleX: scale, scaleY: scale}, OPTION_TWEEN, {ease: FlxEase.quadOut, startDelay: delay});
+
+		FlxTween.cancelTweensOf(spr, ['alpha']);
+		if (delay > 0)
+			spr.alpha = 0;
+		FlxTween.tween(spr, {alpha: alpha}, delay > 0 ? ENTRANCE_TWEEN : OPTION_TWEEN, {ease: FlxEase.quadOut, startDelay: delay});
 	}
 }

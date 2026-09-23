@@ -44,6 +44,10 @@ class PauseSubState extends MusicBeatSubstate
 	var skipTimeTracker:Alphabet;
 	var curTime:Float = Math.max(0, Conductor.songPosition);
 
+	// Stagger and length of the menu rebuild entrance; the selection dim also waits this long.
+	inline static var MENU_STAGGER:Float = 0.1;
+	inline static var MENU_FLY_TIME:Float = 0.5;
+
 	// var botplayText:FlxText;
 	public static var songName:String = '';
 	public static var options = false;
@@ -374,12 +378,27 @@ class PauseSubState extends MusicBeatSubstate
 		if (curSelected >= menuItems.length)
 			curSelected = 0;
 
+		applySelection();
+	}
+
+	/**
+	 * Rows plus the dimming of the selected item. Split out of `changeSelection()` so the menu
+	 * entrance can restore it once its fade is over, without playing a scroll sound.
+	 */
+	function applySelection():Void
+	{
+		if (grpMenuShit == null || grpMenuShit.members == null)
+			return;
+
 		var bullShit:Int = 0;
 
 		for (item in grpMenuShit.members)
 		{
 			item.targetY = bullShit - curSelected;
 			bullShit++;
+
+			// A key press has to beat an entrance fade that is still running.
+			FlxTween.cancelTweensOf(item, ['alpha']);
 
 			item.alpha = 0.6;
 			// item.setGraphicSize(Std.int(item.width * 0.8));
@@ -415,10 +434,6 @@ class PauseSubState extends MusicBeatSubstate
 			item.targetY = i;
 			grpMenuShit.add(item);
 
-			// Entrance Animation: Fly in from right
-			item.x = FlxG.width + 500;
-			FlxTween.tween(item, {x: 90}, 0.5 + (i * 0.1), {ease: FlxEase.elasticOut, startDelay: 0.2});
-
 			if (menuItems[i] == 'Skip Time')
 			{
 				skipTimeText = new FlxText(0, 0, 0, '', 64);
@@ -434,6 +449,13 @@ class PauseSubState extends MusicBeatSubstate
 		}
 		curSelected = 0;
 		changeSelection();
+
+		// Entrance Animation: fly in from right. The items are `isMenuItem` Alphabets whose own
+		// `update()` already lerps `x` towards the target, so this only adds the ease on top.
+		// `restAlpha` lands each row's fade on its idle/selected dimming, so the selection never
+		// has to be re-applied once the entrance is over.
+		UIAnim.flyInX(grpMenuShit.members, function(_) return FlxG.width + 500, MENU_STAGGER, MENU_FLY_TIME, FlxEase.elasticOut,
+			function(i) return grpMenuShit.members[i].targetY == 0 ? 1 : 0.6);
 	}
 
 	function updateSkipTextStuff()

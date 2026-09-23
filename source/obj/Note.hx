@@ -153,6 +153,10 @@ class Note extends FlxSprite implements modchart.ModchartComposed
 		{
 			scale.y *= ratio;
 			updateHitbox();
+			// Keep the "natural" scale in step with the stretched one, or the modchart's scale
+			// modifier would undo a mid-song speed change on the next frame.
+			if (ClientPrefs.sustainTrail)
+				defScale.copyFrom(scale);
 		}
 	}
 
@@ -291,7 +295,15 @@ class Note extends FlxSprite implements modchart.ModchartComposed
 					prevNote.scale.y *= (6 / height); // Auto adjust note size
 				}
 				prevNote.updateHitbox();
-				prevNote.defScale.copyFrom(scale);
+				// Record the piece's OWN stretched scale as its natural one. Copying `scale` here
+				// (i.e. the *next* piece's un-stretched scale) used to hand the modchart's scale
+				// modifier a height of one unstretched frame, so it shrank every hold piece back to
+				// `frameHeight` and the trail broke into separate chunks. `sustainTrail` keeps the
+				// stretched value, which is what makes the pieces meet.
+				if (ClientPrefs.sustainTrail)
+					prevNote.defScale.copyFrom(prevNote.scale);
+				else
+					prevNote.defScale.copyFrom(scale);
 				// prevNote.setGraphicSize();
 			}
 
@@ -390,6 +402,10 @@ class Note extends FlxSprite implements modchart.ModchartComposed
 			scale.y = lastScaleY;
 		}
 		updateHitbox();
+		// A note-type reload (`reloadNote('HURT')`) rebuilds the graphic, so refresh the recorded
+		// natural scale too - otherwise the modchart's scale modifier restores a stale one.
+		if (isSustainNote && ClientPrefs.sustainTrail)
+			defScale.copyFrom(scale);
 
 		if (animName != null)
 			animation.play(animName, true);

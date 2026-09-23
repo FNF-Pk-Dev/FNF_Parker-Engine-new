@@ -187,6 +187,13 @@ class FreeplayState extends MusicBeatState
 		changeSelection();
 		changeDiff();
 
+		// Fade the song list and its icons in, staggered. This runs *after* `changeSelection()`,
+		// which writes the idle/selected dimming: `restAlpha` lands each row's fade on that value
+		// rather than on full alpha. Passing each sprite's own x means `flyInX` creates no x tween -
+		// these Alphabets are menu items and reposition themselves by `targetY` every frame.
+		UIAnim.flyInX(grpSongs.members, i -> grpSongs.members[Std.int(i)].x, 0.06, 0.6, null, i -> i == curSelected ? 1 : 0.6);
+		UIAnim.flyInX(iconArray, i -> iconArray[Std.int(i)].x, 0.06, 0.6, null, i -> i == curSelected ? 1 : 0.6);
+
 		var swag:Alphabet = new Alphabet(1, 0, "swag");
 
 		// JUST DOIN THIS SHIT FOR TESTING!!!
@@ -226,6 +233,10 @@ class FreeplayState extends MusicBeatState
 		text.setFormat(Paths.font("vcr.ttf"), size, FlxColor.WHITE, RIGHT);
 		text.scrollFactor.set();
 		add(text);
+
+		UIAnim.popText(scoreText, 0.1);
+		UIAnim.popText(diffText, 0.16);
+		UIAnim.popText(text, 0.2);
 
 		#if android
 		addTouchPad("FULL", "A_B_C_X_Y_Z");
@@ -280,8 +291,24 @@ class FreeplayState extends MusicBeatState
 
 	var holdTime:Float = 0;
 
+	override function beatHit()
+	{
+		super.beatHit();
+
+		if (curBeat % 2 != 0)
+			return;
+
+		// Pulse the selected icon and the score readout with the menu track. This only ever runs
+		// because `update()` pumps the conductor - see UIAnim.syncConductor.
+		if (iconArray.length > 0 && curSelected >= 0 && curSelected < iconArray.length)
+			UIAnim.beatBump(iconArray[curSelected], 1.25, 0.3);
+		UIAnim.beatBump(scoreText, 1.06, 0.3);
+	}
+
 	override function update(elapsed:Float)
 	{
+		UIAnim.syncConductor();
+
 		if (FlxG.sound.music.volume < 0.7)
 		{
 			FlxG.sound.music.volume += 0.5 * FlxG.elapsed;
@@ -579,14 +606,8 @@ class FreeplayState extends MusicBeatState
 			item.targetY = bullShit - curSelected;
 			bullShit++;
 
-			item.alpha = 0.6;
-			// item.setGraphicSize(Std.int(item.width * 0.8));
-
-			if (item.targetY == 0)
-			{
-				item.alpha = 1;
-				// item.setGraphicSize(Std.int(item.width));
-			}
+			// No scale pop here: long song names are clamped through `scaleX`
+			UIAnim.selectItem(item, item.targetY == 0, 0, 0.15);
 		}
 
 		Paths.currentModDirectory = songs[curSelected].folder;

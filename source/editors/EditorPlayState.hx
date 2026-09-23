@@ -1101,7 +1101,10 @@ class EditorPlayState extends MusicBeatState
 			var strum:StrumNote = playerStrums.members[note.noteData];
 			if (strum != null)
 			{
-				spawnNoteSplash(strum.x, strum.y, note.noteData, note);
+				// Centre the burst on the receptor, matching PlayState.spawnNoteSplashOnNote
+				var mid:FlxPoint = strum.getMidpoint();
+				spawnNoteSplash(mid.x, mid.y, note.noteData, note);
+				mid.put();
 			}
 		}
 	}

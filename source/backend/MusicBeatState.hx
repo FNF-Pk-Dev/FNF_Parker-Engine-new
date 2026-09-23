@@ -182,7 +182,7 @@ class MusicBeatState extends FlxUIState
 		final skipTransition = FlxTransitionableState.skipNextTransOut;
 		super.create();
 
-		if (!skipTransition)
+		if (!skipTransition && ClientPrefs.uiAnimations)
 		{
 			openSubState(new CustomTilesTransition(true));
 		}
@@ -274,7 +274,7 @@ class MusicBeatState extends FlxUIState
 
 	public static function switchState(nextState:FlxState):Void
 	{
-		if (!FlxTransitionableState.skipNextTransIn)
+		if (!FlxTransitionableState.skipNextTransIn && ClientPrefs.uiAnimations)
 		{
 			final leState:MusicBeatState = cast(FlxG.state, MusicBeatState);
 			leState.openSubState(new CustomTilesTransition(false));

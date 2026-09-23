@@ -114,10 +114,6 @@ class OptionsState extends MusicBeatState
 			}
 			optionText.snapToPosition();
 			grpOptions.add(optionText);
-
-			// Entrance Animation: Slide in from left
-			optionText.x = -1000;
-			FlxTween.tween(optionText, {x: 90}, 0.5 + (i * 0.1), {ease: FlxEase.elasticOut, startDelay: 0.2});
 		}
 
 		// selectorLeft = new Alphabet(0, 0, '>', true);
@@ -126,6 +122,11 @@ class OptionsState extends MusicBeatState
 		// add(selectorRight);
 
 		changeSelection();
+		// Entrance runs *after* changeSelection: that call tweens each item's x to its selected
+		// or idle resting position, and an earlier x tween here would only be cancelled by it.
+		// Fading in is enough - `changeSelection` owns x, and long option names are clamped
+		// through `scaleX`, so neither x nor scale is safe to animate from here.
+		UIAnim.flyInX(grpOptions.members, i -> grpOptions.members[Std.int(i)].x, 0.05, 0.5);
 		ClientPrefs.saveSettings();
 
 		#if android
@@ -166,6 +167,8 @@ class OptionsState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
+		UIAnim.syncConductor();
+
 		super.update(elapsed);
 
 		if (controls.UI_UP_P)
@@ -218,33 +221,12 @@ class OptionsState extends MusicBeatState
 			item.targetY = bullShit - curSelected;
 			bullShit++;
 
-			item.alpha = 0.6;
-			// item.setGraphicSize(Std.int(item.width * 0.8));
-
-			if (item.targetY == 0)
-			{
-				item.alpha = 1;
-				// item.setGraphicSize(Std.int(item.width));
-			}
-
-			item.alpha = 0.6;
-			if (item.targetY == 0)
-			{
-				item.alpha = 1;
-				// selectorLeft.x = item.x - 63;
-				// selectorLeft.y = item.y;
-				// selectorRight.x = item.x + item.width + 15;
-				// selectorRight.y = item.y;
-
-				// Dynamic selection effect
-				FlxTween.cancelTweensOf(item);
-				FlxTween.tween(item, {x: 120, alpha: 1}, 0.2, {ease: FlxEase.quadOut});
-			}
-			else
-			{
-				FlxTween.cancelTweensOf(item);
-				FlxTween.tween(item, {x: 90, alpha: 0.6}, 0.2, {ease: FlxEase.quadOut});
-			}
+			// Dynamic selection effect
+			FlxTween.cancelTweensOf(item);
+			FlxTween.tween(item, {
+				x: item.targetY == 0 ? 120 : 90,
+				alpha: item.targetY == 0 ? 1 : 0.6
+			}, 0.2, {ease: FlxEase.quadOut});
 		}
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}

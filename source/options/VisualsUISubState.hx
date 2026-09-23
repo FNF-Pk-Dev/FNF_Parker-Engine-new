@@ -38,10 +38,15 @@ class VisualsUISubState extends BaseOptionsMenu
 			false);
 		addOption(option);
 
+		var option:Option = new Option('Continuous Sustain Trail',
+			"Keeps held notes drawn as one unbroken trail.\nUncheck for the older chunked look (a separate piece per step).", 'sustainTrail', 'bool', true);
+		addOption(option);
+
 		var option:Option = new Option('Hide HUD', 'If checked, hides most HUD elements.', 'hideHud', 'bool', false);
 		addOption(option);
 
-		var option:Option = new Option('Keystrokes UI', "If checked, shows the note keys in the bottom-left corner while playing.", 'keystrokesUI', 'bool', false);
+		var option:Option = new Option('Keystrokes UI', "If checked, shows the note keys in the bottom-left corner while playing.", 'keystrokesUI', 'bool',
+			false);
 		option.onChange = function()
 		{
 			// Applied live, so the toggle can be judged without leaving the menu
@@ -55,6 +60,9 @@ class VisualsUISubState extends BaseOptionsMenu
 		addOption(option);
 
 		var option:Option = new Option('Flashing Lights', "Uncheck this if you're sensitive to flashing lights!", 'flashing', 'bool', true);
+		addOption(option);
+
+		var option:Option = new Option('UI Animations', "Uncheck to disable the menu entrance and selection animations.", 'uiAnimations', 'bool', true);
 		addOption(option);
 
 		var option:Option = new Option('Camera Zooms', "If unchecked, the camera won't zoom in on a beat hit.", 'camZooms', 'bool', true);

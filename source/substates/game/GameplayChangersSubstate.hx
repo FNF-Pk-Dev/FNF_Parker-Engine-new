@@ -35,6 +35,10 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 	private var checkboxGroup:FlxTypedGroup<CheckboxThingie>;
 	private var grpTexts:FlxTypedGroup<AttachedText>;
 
+	// Stagger and length of the option list entrance; the selection dim also waits this long.
+	inline static var OPTION_STAGGER:Float = 0.08;
+	inline static var OPTION_FLY_TIME:Float = 0.5;
+
 	function getOptions()
 	{
 		var goption:GameplayOption = new GameplayOption('Scroll Type', 'scrolltype', 'string', 'multiplicative', ["multiplicative", "constant"]);
@@ -164,6 +168,14 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 
 		changeSelection();
 		reloadCheckboxes();
+
+		// Entrance: the list slides in from the right, one option after another. The options are
+		// `isMenuItem` Alphabets whose own `update()` lerps `x` and `y` towards their target, so
+		// `popIn` is out (it would also tween their 0.8 layout scale away) and `flyInX` only adds
+		// the ease on the way; the checkboxes and value labels follow their tracked option.
+		// `restAlpha` lands each row's fade on its idle/selected dimming.
+		UIAnim.flyInX(grpOptions.members, function(_) return FlxG.width + 100, OPTION_STAGGER, OPTION_FLY_TIME, FlxEase.elasticOut,
+			function(i) return grpOptions.members[i].targetY == 0 ? 1 : 0.6);
 
 		if (PauseSubState.fromPause)
 		{
@@ -425,12 +437,29 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 		if (curSelected >= optionsArray.length)
 			curSelected = 0;
 
+		applySelection();
+		curOption = optionsArray[curSelected]; // shorter lol
+		FlxG.sound.play(Paths.sound('scrollMenu'));
+	}
+
+	/**
+	 * Rows plus the dimming of the selected option. Split out of `changeSelection()` so the menu
+	 * entrance can restore it once its fade is over, without playing a scroll sound.
+	 */
+	function applySelection():Void
+	{
+		if (grpOptions == null || grpOptions.members == null || grpTexts == null)
+			return;
+
 		var bullShit:Int = 0;
 
 		for (item in grpOptions.members)
 		{
 			item.targetY = bullShit - curSelected;
 			bullShit++;
+
+			// A key press has to beat an entrance fade that is still running.
+			FlxTween.cancelTweensOf(item, ['alpha']);
 
 			item.alpha = 0.6;
 			if (item.targetY == 0)
@@ -446,8 +475,6 @@ class GameplayChangersSubstate extends MusicBeatSubstate
 				text.alpha = 1;
 			}
 		}
-		curOption = optionsArray[curSelected]; // shorter lol
-		FlxG.sound.play(Paths.sound('scrollMenu'));
 	}
 
 	function reloadCheckboxes()

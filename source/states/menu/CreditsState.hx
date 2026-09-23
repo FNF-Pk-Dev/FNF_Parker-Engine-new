@@ -271,10 +271,35 @@ class CreditsState extends MusicBeatState
 		bg.color = getCurrentBGColor();
 		intendedColor = bg.color;
 		changeSelection();
+
+		// Entrance: the credits fade in, one entry at a time. The entries position
+		// themselves (`isMenuItem` lerps their x and `update()` lerps it again), so
+		// `fromX` hands `flyInX` each sprite's own x and only alpha animates.
+		// `restAlpha` lands the fade on the idle/selected dimming (section headers have no
+		// dimming at all), so the selection does not have to be re-applied afterwards.
+		UIAnim.flyInX(grpOptions.members, i -> grpOptions.members[Std.int(i)].x, 0.05, 0.6, null,
+			i -> unselectableCheck(i) ? 1 : (grpOptions.members[i].targetY == 0 ? 1 : 0.6));
+
 		#if android
 		addTouchPad("UP_DOWN", "A_B");
 		#end
 		super.create();
+	}
+
+	/** Idle/selected alphas of the selectable credits; re-run when the entrance faded them up. */
+	function updateSelectionAlpha()
+	{
+		for (i in 0...grpOptions.members.length)
+		{
+			// The section headers have no alpha to change
+			if (unselectableCheck(i))
+				continue;
+
+			var item:Alphabet = grpOptions.members[i];
+			UIAnim.selectItem(item, item.targetY == 0);
+			// `update()` drives x for this list, so an entry must not lerp it as well
+			item.changeX = false;
+		}
 	}
 
 	var quitting:Bool = false;
@@ -282,6 +307,8 @@ class CreditsState extends MusicBeatState
 
 	override function update(elapsed:Float)
 	{
+		UIAnim.syncConductor();
+
 		if (FlxG.sound.music.volume < 0.7)
 		{
 			FlxG.sound.music.volume += 0.5 * FlxG.elapsed;
@@ -395,16 +422,9 @@ class CreditsState extends MusicBeatState
 		{
 			item.targetY = bullShit - curSelected;
 			bullShit++;
-
-			if (!unselectableCheck(bullShit - 1))
-			{
-				item.alpha = 0.6;
-				if (item.targetY == 0)
-				{
-					item.alpha = 1;
-				}
-			}
 		}
+
+		updateSelectionAlpha();
 
 		descText.text = creditsStuff[curSelected][2];
 		descText.y = FlxG.height - descText.height + offsetThing - 60;

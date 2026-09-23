@@ -66,6 +66,7 @@ class LoadingState extends MusicBeatState
 	var cloudSpeeds:Array<Float> = [];
 	var loadingTextBg:FlxSprite;
 	var loadingText:FlxText;
+	var idleTween:FlxTween;
 	var usePowerPuffGirls:Bool = true;
 	var ppgIntroDone:Bool = false;
 	var ppgIdlePlaying:Bool = false;
@@ -195,6 +196,13 @@ class LoadingState extends MusicBeatState
 		loadBar.antialiasing = ClientPrefs.globalAntialiasing;
 		loadBar.visible = loadingRunJSON.loadbarvisible;
 		add(loadBar);
+
+		// Entrance: the backdrop fades where it stands, the run and the bar settle up into place.
+		// Nothing here is scaled - `funkay` has its graphic size rewritten every frame and
+		// `loadBar.scale.x` *is* the loading progress.
+		UIAnim.flyInY([funkay], function(_) return funkay.y, 0, 0.6);
+		UIAnim.flyInY([loadingRun], function(_) return loadingRun.y + 40, 0, 0.5);
+		UIAnim.flyInY([loadBar], function(_) return loadBar.y + 30, 0, 0.5);
 	}
 
 	function createClouds():Void
@@ -268,6 +276,12 @@ class LoadingState extends MusicBeatState
 		loadingText.scrollFactor.set();
 		loadingText.cameras = [camOther];
 		add(loadingText);
+
+		// Entrance for the bar and its label, then a slow idle "breath" on the label. Only these
+		// two are scaled here - the PowerPuff atlas below owns its own transform.
+		UIAnim.popIn(loadingTextBg, 0, 0.35);
+		UIAnim.popText(loadingText, 0.05, 0.35);
+		idleTween = UIAnim.breathe(loadingText, 0.035, 1.8);
 	}
 
 	function getLoadingLabel():String
@@ -463,6 +477,13 @@ class LoadingState extends MusicBeatState
 		if (_touchpad != null)
 			removeTouchPad();
 		#end
+
+		// The idle breath is a never-ending ping-pong tween, so it has to be stopped by hand.
+		if (idleTween != null)
+		{
+			idleTween.cancel();
+			idleTween = null;
+		}
 
 		super.destroy();
 

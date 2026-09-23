@@ -178,6 +178,14 @@ class PlayState extends MusicBeatState
 
 	public var gfSpeed:Int = 1;
 	public var health:Float = 1;
+
+	/**
+	 * Smoothed copy of `health` that the health bar is bound to, so the bar eases
+	 * towards a hit instead of snapping. `health` stays the authoritative value for
+	 * every gameplay check.
+	 */
+	public var healthDisplay:Float = 1;
+
 	public var combo:Int = 0;
 
 	private var healthBarBG:AttachedSprite;
@@ -208,6 +216,7 @@ class PlayState extends MusicBeatState
 	public static var songIsModcharted:Bool = false;
 	public static var isBlockTest:Bool = false;
 	public static var blockScriptPath:String = "";
+
 	/** Set by the block editor before loading a song so the real-time editor opens on top of it. */
 	public static var openBlockEditorOnStart:Bool = false;
 
@@ -215,8 +224,10 @@ class PlayState extends MusicBeatState
 	public var healthLoss:Float = 1;
 	public var instakillOnMiss:Bool = false;
 	public var cpuControlled:Bool = false;
+
 	/** True while the block code editor substate is open on top of the song. */
 	public static var blockEditorActive:Bool = false;
+
 	public var practiceMode:Bool = false;
 
 	public var botplaySine:Float = 0;
@@ -1100,7 +1111,7 @@ class PlayState extends MusicBeatState
 			healthBarBG.y = 0.11 * FlxG.height;
 
 		healthBar = new FlxBar(healthBarBG.x + 4, healthBarBG.y + 4, RIGHT_TO_LEFT, Std.int(healthBarBG.width - 8), Std.int(healthBarBG.height - 8), this,
-			'health', 0, 2);
+			'healthDisplay', 0, 2);
 		healthBar.scrollFactor.set();
 		// healthBar
 		healthBar.visible = !ClientPrefs.hideHud;
@@ -2016,6 +2027,7 @@ class PlayState extends MusicBeatState
 								countdownReady.destroy();
 							}
 						});
+						countdownFlourish(countdownReady);
 						FlxG.sound.play(Paths.sound('intro2' + introSoundsSuffix), 0.6);
 					case 2:
 						countdownSet = new FlxSprite().loadGraphic(Paths.image(introAlts[1]));
@@ -2036,6 +2048,7 @@ class PlayState extends MusicBeatState
 								countdownSet.destroy();
 							}
 						});
+						countdownFlourish(countdownSet);
 						FlxG.sound.play(Paths.sound('intro1' + introSoundsSuffix), 0.6);
 					case 3:
 						countdownGo = new FlxSprite().loadGraphic(Paths.image(introAlts[2]));
@@ -2058,6 +2071,7 @@ class PlayState extends MusicBeatState
 								countdownGo.destroy();
 							}
 						});
+						countdownFlourish(countdownGo);
 						FlxG.sound.play(Paths.sound('introGo' + introSoundsSuffix), 0.6);
 					case 4:
 				}
@@ -2084,6 +2098,38 @@ class PlayState extends MusicBeatState
 				// generateSong('fresh');
 			}, 5);
 		}
+	}
+
+	/**
+	 * Scales a judgement sprite up into place while the existing alpha fade runs.
+	 *
+	 * Must be called *after* the sprite's final `setGraphicSize`/`updateHitbox`, because both write
+	 * `scale` directly - a tween started before them would be overwritten. The resting scale is
+	 * whatever the caller sized it to (0.7 for rating/combo, 0.5 or `daPixelZoom` for the digits).
+	 */
+	function popUpFlourish(spr:FlxSprite, fromScale:Float):Void
+	{
+		if (!UIAnim.enabled() || spr == null)
+			return;
+
+		var restX:Float = spr.scale.x;
+		var restY:Float = spr.scale.y;
+		spr.scale.set(restX * fromScale, restY * fromScale);
+		FlxTween.tween(spr.scale, {x: restX, y: restY}, 0.15 / playbackRate, {ease: FlxEase.backOut});
+	}
+
+	/**
+	 * Gives a countdown sprite its punch: it pops in at 1.4x and shrinks into place while the
+	 * existing fade-out runs. The rise-and-fade the original code had commented out is kept out
+	 * on purpose - these sprites own their scale here and nothing else animates them.
+	 */
+	function countdownFlourish(spr:FlxSprite):Void
+	{
+		if (!UIAnim.enabled())
+			return;
+
+		spr.scale.set(1.4, 1.4);
+		FlxTween.tween(spr.scale, {x: 1, y: 1}, Conductor.crochet / 1000 * 0.8, {ease: FlxEase.backOut});
 	}
 
 	public function addBehindGF(obj:FlxObject)
@@ -2154,9 +2200,10 @@ class PlayState extends MusicBeatState
 			{
 				scoreTxtTween.cancel();
 			}
-			scoreTxt.scale.x = 1.075;
-			scoreTxt.scale.y = 1.075;
+			scoreTxt.scale.x = 1.1;
+			scoreTxt.scale.y = 1.1;
 			scoreTxtTween = FlxTween.tween(scoreTxt.scale, {x: 1, y: 1}, 0.2, {
+				ease: FlxEase.backOut,
 				onComplete: function(twn:FlxTween)
 				{
 					scoreTxtTween = null;
@@ -2932,6 +2979,16 @@ class PlayState extends MusicBeatState
 		// FlxG.watch.addQuick('VOL', vocals.amplitudeLeft);
 		// FlxG.watch.addQuick('VOLRight', vocals.amplitudeRight);
 
+		// Ease the bar towards the real health; a miss would otherwise snap the fill instantly
+		var healthSpeed:Float = healthDisplay > health ? 14 : 9;
+		healthDisplay = UIAnim.approach(healthDisplay, health, elapsed, healthSpeed);
+		if (Math.abs(healthDisplay - health) < 0.0005)
+			healthDisplay = health;
+		if (healthDisplay > 2)
+			healthDisplay = 2;
+		else if (healthDisplay < 0)
+			healthDisplay = 0;
+
 		var mult:Float = FlxMath.lerp(1, iconP1.scale.x, CoolUtil.boundTo(1 - (elapsed * 9 * playbackRate), 0, 1));
 		iconP1.scale.set(mult, mult);
 		iconP1.updateHitbox();
@@ -2939,6 +2996,11 @@ class PlayState extends MusicBeatState
 		var mult:Float = FlxMath.lerp(1, iconP2.scale.x, CoolUtil.boundTo(1 - (elapsed * 9 * playbackRate), 0, 1));
 		iconP2.scale.set(mult, mult);
 		iconP2.updateHitbox();
+
+		// Settle the beat tilt back to upright
+		var iconAngleLerp:Float = CoolUtil.boundTo(1 - (elapsed * 7 * playbackRate), 0, 1);
+		iconP1.angle = FlxMath.lerp(0, iconP1.angle, iconAngleLerp);
+		iconP2.angle = FlxMath.lerp(0, iconP2.angle, iconAngleLerp);
 
 		var iconOffset:Int = 26;
 
@@ -3066,6 +3128,10 @@ class PlayState extends MusicBeatState
 			health = 0;
 		}
 		doDeathCheck();
+
+		// Death and restarts must not ease the bar down from the old value
+		if (health <= 0 || endingSong)
+			healthDisplay = health;
 
 		modManager.updateTimeline(curDecStep);
 		modManager.update(elapsed);
@@ -4402,6 +4468,8 @@ class PlayState extends MusicBeatState
 		comboSpr.updateHitbox();
 
 		rating.updateHitbox();
+		popUpFlourish(rating, 0.7);
+		popUpFlourish(comboSpr, 0.7);
 
 		var seperatedScore:Array<Int> = [];
 
@@ -4454,6 +4522,7 @@ class PlayState extends MusicBeatState
 				numScore.setGraphicSize(Std.int(numScore.width * daPixelZoom));
 			}
 			numScore.updateHitbox();
+			popUpFlourish(numScore, 0.5);
 
 			numScore.acceleration.y = FlxG.random.int(200, 300) * playbackRate * playbackRate;
 			numScore.velocity.y -= FlxG.random.int(140, 160) * playbackRate;
@@ -4830,10 +4899,10 @@ class PlayState extends MusicBeatState
 
 			/*boyfriend.stunned = true;
 	
-																									// get stunned for 1/60 of a second, makes you able to
-																									new FlxTimer().start(1 / 60, function(tmr:FlxTimer)
-																									{
-																										boyfriend.stunned = false;
+																												// get stunned for 1/60 of a second, makes you able to
+																												new FlxTimer().start(1 / 60, function(tmr:FlxTimer)
+																												{
+																													boyfriend.stunned = false;
 			});*/
 
 			if (boyfriend.hasMissAnimations)
@@ -5038,7 +5107,11 @@ class PlayState extends MusicBeatState
 			var strum:StrumNote = playerStrums.members[note.noteData];
 			if (strum != null)
 			{
-				spawnNoteSplash(strum.x, strum.y, note.noteData, note);
+				// The receptor's own midpoint, not its top-left corner: the splash is anchored on
+				// the centre of its frame content, so passing x/y raw used to offset the burst.
+				var mid:FlxPoint = strum.getMidpoint();
+				spawnNoteSplash(mid.x, mid.y, note.noteData, note);
+				mid.put();
 			}
 		}
 	}
@@ -5050,11 +5123,14 @@ class PlayState extends MusicBeatState
 			var strum:StrumNote = opponentStrums.members[note.noteData];
 			if (strum != null)
 			{
-				spawnNoteSplash(strum.x, strum.y, note.noteData, note);
+				var mid:FlxPoint = strum.getMidpoint();
+				spawnNoteSplash(mid.x, mid.y, note.noteData, note);
+				mid.put();
 			}
 		}
 	}
 
+	/** `x`/`y` is the point the burst is centred on - see `NoteSplash.setupNoteSplash`. */
 	public function spawnNoteSplash(x:Float, y:Float, data:Int, ?note:Note = null)
 	{
 		var skin:String = 'noteSplashes';
@@ -5316,6 +5392,14 @@ class PlayState extends MusicBeatState
 
 		iconP1.updateHitbox();
 		iconP2.updateHitbox();
+
+		// Tilt the icons into the beat as they squash out; `angle` is untouched by PlayState's
+		// per-frame HUD pass, so nothing fights the wobble. `update()` eases it back to upright.
+		if (ClientPrefs.flashing)
+		{
+			iconP1.angle = 8;
+			iconP2.angle = -8;
+		}
 
 		if (gf != null
 			&& curBeat % Math.round(gfSpeed * gf.danceEveryNumBeats) == 0

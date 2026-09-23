@@ -13,6 +13,21 @@ class ClientPrefs
 	public static var opponentStrums:Bool = true;
 	public static var showFPS:Bool = true;
 	public static var flashing:Bool = true;
+
+	/** Master switch for the menu/substate entrance and selection animations. */
+	public static var uiAnimations:Bool = true;
+
+	/**
+	 * Keeps held (sustain) notes drawn as one continuous trail.
+	 *
+	 * The modchart's scale modifier restores each sustain piece to its "natural" scale each frame,
+	 * which replaces the stretch that makes the pieces meet. That is why sustains turn into a row of
+	 * separate chunks as soon as the modchart is enabled. With this on, each piece records its own
+	 * stretched scale as its natural one, so the trail stays solid and modchart scaling still layers
+	 * on top of it. Independent of the modchart toggle.
+	 */
+	public static var sustainTrail:Bool = true;
+
 	public static var globalAntialiasing:Bool = true;
 	public static var noteSplashes:Bool = true;
 	public static var noteSplashesOpponent:Bool = false;
@@ -28,8 +43,10 @@ class ClientPrefs
 	public static var noteOffset:Int = 0;
 	public static var arrowHSV:Array<Array<Int>> = [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]];
 	public static var vibration:Bool = false;
+
 	/** Draws the note keys plus their hit beams in the bottom-left corner (off by default). */
 	public static var keystrokesUI:Bool = false;
+
 	public static var ghostTapping:Bool = true;
 	public static var timeBarType:String = 'Time Left';
 	public static var scoreZoom:Bool = true;
@@ -114,6 +131,8 @@ class ClientPrefs
 		FlxG.save.data.showFPS = showFPS;
 		FlxG.save.data.cacheOnGPU = cacheOnGPU;
 		FlxG.save.data.flashing = flashing;
+		FlxG.save.data.uiAnimations = uiAnimations;
+		FlxG.save.data.sustainTrail = sustainTrail;
 		FlxG.save.data.globalAntialiasing = globalAntialiasing;
 		FlxG.save.data.noteSplashes = noteSplashes;
 		FlxG.save.data.noteSplashesOpponent = noteSplashesOpponent;
@@ -189,6 +208,14 @@ class ClientPrefs
 		if (FlxG.save.data.flashing != null)
 		{
 			flashing = FlxG.save.data.flashing;
+		}
+		if (FlxG.save.data.uiAnimations != null)
+		{
+			uiAnimations = FlxG.save.data.uiAnimations;
+		}
+		if (FlxG.save.data.sustainTrail != null)
+		{
+			sustainTrail = FlxG.save.data.sustainTrail;
 		}
 		if (FlxG.save.data.globalAntialiasing != null)
 		{

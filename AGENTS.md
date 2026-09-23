@@ -22,6 +22,7 @@ Fork-specific features you will not find in upstream Psych Engine:
 - PowerPuff-Girl themed loading/idle/intro screen and transitions (`backend/PowerPuffGirl.hx`, `PowerPuffTrail.hx`, `PowerPuffTransition.hx`, `obj/PowerPuffGirl.hx`), driven by data in `assets/preload/images/loading/loading.json`.
 - Custom screen transitions: `backend/CustomFadeTransition.hx`, `backend/CustomTilesTransition.hx` (sparrow `ui/diaTrans`) instead of stock `FlxTransitionSprite`.
 - `backend/ChartParser.hx` — builds charts out of image tiles (`data/<song>/<song>_sectionN.png`); currently only referenced from a commented-out line in PlayState.
+- `backend/UIAnim.hx` — the shared UI tween helper (`flyInX`/`flyInY`, `popIn`/`popText`, `breathe`, `beatBump`, `selectItem`, `syncConductor`). Every helper is a no-op while `ClientPrefs.uiAnimations` is off. See §5 for the menu beat-sync caveat it exists to fix.
 - `backend/FlxCompat.hx` — flixel 5.x/6.x compatibility shim; `source/flixel/`, `source/openfl/` shadow haxelib classes on the classpath.
 - Android extras in `source/android/`: touch controls/virtual pads, hitbox skins, `StorageUtil` (scoped storage), `Hardware` (JNI), `CopyState` (first-run asset provisioning).
 - `source/psych/` re-homes Psych classes under `psych.*` — including the legacy 132 KB `psych/script/FunkinLua.hx` and `CallbackHandler.hx` (declares `package;`, i.e. compiled into the root package).
@@ -154,6 +155,7 @@ State base classes (`backend/`):
 - `MusicBeatState extends flixel.addons.ui.FlxUIState` — step/beat/section hooks, static `switchState(next)`, Android touch-pad helpers. Its constructor arg `canBeScripted` (default `true`) enables script overrides; `MusicBeatSubstate extends FlxSubState` is the substate twin.
 - Override `create()` / `update(elapsed)` / `stepHit()` / `beatHit()` / `sectionHit()` and always call `super`.
 - Timing comes from `backend/songs/Conductor.hx`; `PlayState` drives `curStep`/`curBeat`/`curDecStep`.
+- **Outside `PlayState` nothing advances `Conductor.songPosition`**, so a menu state's `curStep` never changes and its `stepHit()`/`beatHit()` never fire. Any beat-driven menu animation must first point the conductor at the menu track by calling `UIAnim.syncConductor()` at the top of `update()` (it only writes while `FlxG.sound.music.playing`). Do **not** move this into `MusicBeatState.update()`: `PlayState` self-manages `songPosition` (`songPosition += elapsed * 1000 * playbackRate`) and `setSongTime()`, and a base-class write would break both.
 
 `PlayState` owns: `instance:PlayState`, `modManager:ModManager` (created when `ClientPrefs.getGameplaySetting('modchart')` is on), the four script registries (`luaArray`, `lscriptArray`, `pscriptArray`, `hscriptArray`), and every gameplay callback dispatch through `callOnScripts(event, args…)` / `callOnLuas(…)`.
 
@@ -186,6 +188,34 @@ Rules this creates:
 - `PlayState` gates the whole application on `songIsModcharted`
   (`ClientPrefs.getGameplaySetting('modchart', true)`), so a tween on an arrow works today either way — the
   composition layer is what makes it work *with* the modchart on.
+
+### Sustains, the modchart's scale modifier, and `defScale`
+
+`ScaleModifier.shouldExecute()` returns `true` unconditionally, so it is **always** in `activeMods` and runs
+every frame even on a chart that sets no modchart values at all. For a sustain piece it restores
+`scale.y = defScale.y` (`modifiers/ScaleModifier.hx`), which means `defScale` — not `scale` — is what
+decides how long a held note draws.
+
+That is why `source/obj/Note.hx` must record the **piece's own stretched** scale as its natural one
+(`prevNote.defScale.copyFrom(prevNote.scale)`), not the neighbouring note's un-stretched scale: the old
+`copyFrom(scale)` handed the modifier one unstretched frame height, it shrank every piece back to
+`frameHeight`, and the trail broke into one chunk per step. `ClientPrefs.sustainTrail` (Visuals & UI,
+default on) selects between the two — on keeps the trail continuous, off restores the chunked look. The
+same bookkeeping is repeated in `resizeByRatio()` and `reloadNote()`; skip either and a mid-song speed
+change or a note-type reload is undone on the next frame.
+
+`ClientPrefs` gates are independent of the modchart toggle: `sustainTrail` works with the modchart on or off.
+
+### Where a note splash actually goes
+
+`NoteSplash.setupNoteSplash()`'s `x`/`y` is the point the burst is **centred** on, and it aligns that
+centre per frame from the frame's real content rect (`frame.offset + frame.frame/2`, i.e. the negated
+`frameX`/`frameY` plus the atlas trim), because the shipped splash art sits well off its own declared
+canvas centre. Callers therefore pass the receptor's own midpoint
+(`strum.getMidpoint()` — see `PlayState.spawnNoteSplashOnNote` / `spawnNoteSplashOnOpponentNote` and the
+twin in `EditorPlayState`), **not** its `x`/`y`. Do not "simplify" this back to `frameWidth/2`
+centring, and do not pass `strum.x`/`strum.y` again: that reintroduces a ~13 px offset that also jumps
+between the two splash animations.
 
 ## 6. Assets and paths
 
