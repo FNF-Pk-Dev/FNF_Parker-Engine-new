@@ -110,6 +110,8 @@ class AndroidControlsMenu extends MusicBeatState
 		tipText.scrollFactor.set();
 		add(tipText);
 
+		addTouchPad("NONE", "B")
+
 		changeSelection();
 	}
 
@@ -135,7 +137,7 @@ class AndroidControlsMenu extends MusicBeatState
 		}
 
 		#if android
-		if (FlxG.android.justReleased.BACK)
+		if (FlxG.android.justReleased.BACK || controls.BACK)
 		{
 			save();
 			FlxTransitionableState.skipNextTransIn = true;
