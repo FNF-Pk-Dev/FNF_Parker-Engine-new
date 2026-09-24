@@ -110,8 +110,8 @@ class ESFreeplaySong
  */
 class ESState
 {
-	/** Steps already fired by stepEvent() */
-	public var firedSteps:Map<Int, Bool> = new Map<Int, Bool>();
+	/** Tracks dispatches rather than consuming a step after its first handler. */
+	public var stepEvents:psych.script.ESStepEvents = new psych.script.ESStepEvents();
 
 	/** makeShader() tags */
 	public var shaders:Map<String, Dynamic> = new Map<String, Dynamic>();
@@ -627,16 +627,18 @@ class ESCompat
 			});
 
 		funk.set('videoPlay', function(tag:String):Void
+
 		{
-			var video:FlxSprite = state.videos.get(tag);
-			if (video == null)
+			#if VIDEOS_ALLOWED
+			// Stages create videos that song scripts start later (for example Neuroses' explosion).
+			var video:Dynamic = getESObject(funk, tag);
+			if (video == null || !Std.isOfType(video, PsychVideoSprite))
 			{
 				warn(funk, 'videoPlay', 'Couldn\'t find video: $tag');
 				return;
 			}
-
-			#if VIDEOS_ALLOWED
 			var videoSprite:PsychVideoSprite = cast video;
+
 			videoSprite.play();
 			#end
 		});
@@ -1074,23 +1076,20 @@ class ESCompat
 		funk.set('stepEvent', function(stepOrTable:Dynamic, ?func:Dynamic):Void
 		{
 			var steps:Array<Int> = toIntArray(stepOrTable);
-			if (steps.length < 1 || func == null)
-				return;
 
-			var current:Int = funk.lastEventSetStep;
+			if (steps.length < 1 || func == null)
+			{
+				disposeLuaFunction(func);
+
+				return;
+			}
 			for (step in steps)
 			{
-				if (state.firedSteps.exists(step))
+				if (!state.stepEvents.shouldFire(step))
 					continue;
-
-				if (current < step)
-					continue;
-
-				state.firedSteps.set(step, true);
 				callLuaFunction(funk, func, []);
 				return; // the callback was consumed
 			}
-
 			// Nothing fired, drop the Lua function reference so it doesn't pile up
 			disposeLuaFunction(func);
 		});

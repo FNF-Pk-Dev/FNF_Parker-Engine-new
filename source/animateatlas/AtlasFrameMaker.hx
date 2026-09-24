@@ -19,6 +19,18 @@ using StringTools;
 
 class AtlasFrameMaker extends FlxFramesCollection
 {
+	/** Translation introduced solely to fit negative symbol coordinates into the baked canvas. */
+	public var symbolX:Float = 0;
+
+	public var symbolY:Float = 0;
+	public var pivotX:Float = 0;
+	public var pivotY:Float = 0;
+
+	public function new(graphic:FlxGraphic)
+	{
+		super(graphic, FlxFrameCollectionType.IMAGE);
+	}
+
 	// public static var widthoffset:Int = 0;
 	// public static var heightoffset:Int = 0;
 	// public static var excludeArray:Array<String>;
@@ -165,7 +177,17 @@ class AtlasFrameMaker extends FlxFramesCollection
 			frameArray.push(buildPagedFrames(x, shotsByAnimation.get(x), minX, minY, canvasW, canvasH));
 		}
 
-		frameCollection = new FlxFramesCollection(graphic, FlxFrameCollectionType.IMAGE);
+		var baked = new AtlasFrameMaker(graphic);
+		baked.symbolX = minX;
+		baked.symbolY = minY;
+		// FlxAnimate uses the stage instance's transformation point, not the canvas centre.
+		var stageInstance:Dynamic = shortFormat ? rawAnimation.AN.STI : null;
+		if (stageInstance != null && stageInstance.SI != null && stageInstance.SI.TRP != null)
+		{
+			baked.pivotX = stageInstance.SI.TRP.x;
+			baked.pivotY = stageInstance.SI.TRP.y;
+		}
+		frameCollection = baked;
 		for (x in frameArray)
 		{
 			for (y in x)

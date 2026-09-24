@@ -13,6 +13,7 @@ import flixel.addons.effects.FlxTrail;
 import flixel.animation.FlxBaseAnimation;
 import flixel.graphics.frames.FlxAtlasFrames;
 import flixel.graphics.frames.FlxFrame.FlxFrameAngle;
+import flixel.math.FlxRect;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxSort;
 import openfl.utils.Assets;
@@ -98,6 +99,9 @@ class Character extends FlxSprite
 	public var jsonAngle:Float = 0;
 	public var noAntialiasing:Bool = false;
 	public var originalFlipX:Bool = false;
+
+	var animateAtlas:AtlasFrameMaker;
+
 	public var healthColorArray:Array<Int> = [255, 0, 0];
 	public var dataType:DataType;
 	public var vocalsFile:String = '';
@@ -313,13 +317,38 @@ class Character extends FlxSprite
 		}
 	}
 
+	override public function graphicLoaded():Void
+	{
+		super.graphicLoaded();
+		animateAtlas = Std.isOfType(frames, AtlasFrameMaker) ? cast frames : null;
+		if (animateAtlas != null)
+			origin.set(animateAtlas.pivotX, animateAtlas.pivotY);
+	}
+
+	override public function updateHitbox():Void
+	{
+		super.updateHitbox();
+		if (animateAtlas != null)
+			origin.set(animateAtlas.pivotX, animateAtlas.pivotY);
+	}
+
+	override public function getMidpoint(?point:FlxPoint):FlxPoint
+	{
+		if (animateAtlas == null || frame == null)
+			return super.getMidpoint(point);
+		if (point == null)
+			point = FlxPoint.get();
+		// FlxAnimate's hitbox follows the current pose, not the union of every baked pose.
+		return point.set(x + frame.frame.width * Math.abs(scale.x) * 0.5, y + frame.frame.height * Math.abs(scale.y) * 0.5);
+	}
+
 	/**
 	 * A skewed character has to render through the complex (matrix) path even where the sprite
 	 * would otherwise qualify for `drawSimple()`, which cannot shear at all.
 	 */
 	override public function isSimpleRender(?camera:FlxCamera):Bool
 	{
-		if (jsonSkewX != 0 || jsonSkewY != 0)
+		if (animateAtlas != null || jsonSkewX != 0 || jsonSkewY != 0)
 			return false;
 
 		return super.isSimpleRender(camera);
@@ -337,13 +366,37 @@ class Character extends FlxSprite
 	 */
 	override function drawComplex(camera:FlxCamera):Void
 	{
-		if (jsonSkewX == 0 && jsonSkewY == 0)
+		if (animateAtlas == null && jsonSkewX == 0 && jsonSkewY == 0)
 		{
 			super.drawComplex(camera);
 			return;
 		}
 
-		_frame.prepareMatrix(_matrix, FlxFrameAngle.ANGLE_0, checkFlipX(), checkFlipY());
+		prepareCharacterMatrix(camera);
+		camera.drawPixels(_frame, framePixels, _matrix, colorTransform, blend, antialiasing, shader);
+	}
+
+	function prepareCharacterMatrix(camera:FlxCamera):Void
+	{
+		if (animateAtlas == null)
+			_frame.prepareMatrix(_matrix, FlxFrameAngle.ANGLE_0, checkFlipX(), checkFlipY());
+		else
+		{
+			_frame.prepareMatrix(_matrix, FlxFrameAngle.ANGLE_0, false, false);
+			_matrix.translate(animateAtlas.symbolX, animateAtlas.symbolY);
+			if (checkFlipX())
+			{
+				_matrix.a = -_matrix.a;
+				_matrix.c = -_matrix.c;
+				_matrix.tx = frame.frame.width * Math.abs(scale.x) - _matrix.tx;
+			}
+			if (checkFlipY())
+			{
+				_matrix.b = -_matrix.b;
+				_matrix.d = -_matrix.d;
+				_matrix.ty = frame.frame.height * Math.abs(scale.y) - _matrix.ty;
+			}
+		}
 		_matrix.translate(-origin.x, -origin.y);
 		_matrix.scale(scale.x, scale.y);
 
@@ -379,8 +432,22 @@ class Character extends FlxSprite
 			_matrix.tx = Math.floor(_matrix.tx);
 			_matrix.ty = Math.floor(_matrix.ty);
 		}
+	}
 
-		camera.drawPixels(_frame, framePixels, _matrix, colorTransform, blend, antialiasing, shader);
+	override public function getScreenBounds(?newRect:FlxRect, ?camera:FlxCamera):FlxRect
+	{
+		if (animateAtlas == null || _frame == null)
+			return super.getScreenBounds(newRect, camera);
+		if (newRect == null)
+			newRect = FlxRect.get();
+		if (camera == null)
+			camera = FlxG.camera;
+		prepareCharacterMatrix(camera);
+		var w:Float = _frame.frame.width;
+		var h:Float = _frame.frame.height;
+		var left = Math.min(0, _matrix.a * w) + Math.min(0, _matrix.c * h) + _matrix.tx;
+		var top = Math.min(0, _matrix.b * w) + Math.min(0, _matrix.d * h) + _matrix.ty;
+		return newRect.set(left, top, Math.abs(_matrix.a * w) + Math.abs(_matrix.c * h), Math.abs(_matrix.b * w) + Math.abs(_matrix.d * h));
 	}
 
 	override function update(elapsed:Float)

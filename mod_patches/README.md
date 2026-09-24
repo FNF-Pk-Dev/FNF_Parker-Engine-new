@@ -5,9 +5,11 @@
 本机已安装位置为 `export/release/windows/bin/mods/LockedDestiny/`。此处保留可提交的补丁，因为 `export/` 是被 Git 忽略的构建目录。
 
 - `scripts/NeurosesCharacters.lua`：仅在 `tvN` 舞台启用。在 `onUpdatePost` 同步 BF/SBF 与各自影子的动画和帧，保留影子的翻转、变形、位置和透明度；独立的吉他叠层 `SBFG` 也跟随 dad。影子不再由 `PlayState` 或 `ESCompat` 自动驱动。
-- 镜头使用初始角色画面的尺寸作为跟随参考，不再使用包含所有姿势留白的大画布。`cameraZoom.lua` 在开场剪影期间让谱面控制缩放。
-- `characters/SBFneurosesR.json`、`SBFneurosesRG.json`：补偿 Animate 图集烘焙的画布平移。SBF 的原始边界为 `(-145, -212)`，SBFG 为 `(-148, -225)`，因此将对应量加到各动画 offset；不改变人物逻辑坐标或漂浮轨迹。替换图集后应重新校准这些数值。
-- `Functions.lua`：初始即隐藏特效，中央角色、电视和花屏、影子在 `goodapple` 关闭时（第 288 步 / 21.6 秒）才显示。保留后续谱面透明度变化。
+- Animate 角色的原点、负坐标和当前姿势镜头尺寸由引擎统一处理，脚本不再改角色宽高。`cameraZoom.lua` 在开场剪影期间让谱面控制缩放。
+- `characters/SBFneurosesR.json`、`SBFneurosesRG.json`：恢复原版动画 offset，覆盖旧补丁的手工补偿，避免与引擎修正重复叠加。必须和新版引擎一起更新。
+- `Functions.lua` 与 `NeurosesCharacters.lua`：初始即隐藏特效；`goodapple` 开启期间隐藏整个中央角色组，切换角色也不会漏出。第 288 步关闭效果后显示，后续透明度仍由谱面控制。
+- `tvN.lua`：后段红色隧道、分屏、黄色背景及黑幕放在电视/中央角色之上、主角之下，防止旧舞台穿透后段场景。
+- 引擎允许同一步内所有 `stepEvent` 回调执行，第 1567 步能同时开启镜头摇晃和关闭花屏；`videoPlay` 可播放舞台脚本创建的视频，修复后段爆炸视频的跨脚本调用。
 - `Fly.lua`：切换角色时不再将已经叠加的漂浮量重复记入影子和吉他角色的基准位置。
 - `scripts/NeurosesIntro.lua`：沿用谱面 1650 ms 的 `Play Video` 事件，在视频末尾淡出。视频名区分大小写，使用 `IntroN`。
 

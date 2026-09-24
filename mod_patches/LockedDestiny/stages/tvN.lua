@@ -10,6 +10,12 @@ local eyesUpdateTimer = 0
 local eyesUpdateRate = 0.05
 
 function onCreatePost()
+	-- add(..., false) inserts behind gfGroup. TVS is above that group, so the
+	-- later scene backgrounds must be lifted above TVS before the song starts.
+	for _, tag in ipairs({'effRed', 'faces', 'bgs', 'effYell', 'floor2', 'void2', 'void'}) do
+		setOrder(tag, math.min(getOrder('dadGroup'), getOrder('boyfriendGroup')) - 1)
+	end
+
 	--set("scoreTxt.visible", false)
 	set('camZooming', true)
 

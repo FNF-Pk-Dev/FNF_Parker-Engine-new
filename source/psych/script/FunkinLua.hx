@@ -4915,7 +4915,10 @@ class FunkinLua extends GlobalScript
 
 			// ES dialect: onEventSet receives the current step, stepEvent() needs to know it
 			if (func == 'onEventSet' && args.length > 0 && args[0] != null)
+			{
 				lastEventSetStep = Std.int(cast args[0]);
+				ESCompat.getState(this).stepEvents.beginDispatch(lastEventSetStep);
+			}
 
 			var status:Int = Lua.pcall(lua, args.length, 1, 0);
 
