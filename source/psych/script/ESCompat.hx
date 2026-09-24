@@ -332,8 +332,21 @@ class ESCompat
 			spr.velocity.set(x, y);
 		});
 
-		funk.set('doTweenScale', function(tag:String, obj:String, x:Float, y:Float, duration:Float, ?ease:String):Void
+		funk.set('doTweenScale', function(tag:String, obj:String, x:Float, yOrDuration:Float, durationOrEase:Dynamic = null, ?ease:String):Void
 		{
+			// ES accepts both (scale, duration, ease) and (scaleX, scaleY, duration, ease).
+			// Keeping the fifth argument Dynamic lets Lua pass the uniform form's ease string.
+			var uniform:Bool = durationOrEase == null || Std.isOfType(durationOrEase, String);
+			var y:Float = uniform ? x : yOrDuration;
+			var duration:Float = uniform ? yOrDuration : durationOrEase;
+			if (uniform && durationOrEase != null)
+				ease = Std.string(durationOrEase);
+			if (Math.isNaN(duration) || duration < 0)
+			{
+				warn(funk, 'doTweenScale', 'Duration must be a non-negative number');
+				return;
+			}
+
 			var target:Dynamic = FunkinLua.getObjectDirectly(obj);
 			if (target == null || target.scale == null)
 			{

@@ -3491,7 +3491,8 @@ class PlayState extends MusicBeatState
 		{
 			var ret:Dynamic = callOnLuas('onGameOver', [], false);
 			var retH:Dynamic = callOnScripts("onGameOver", []);
-			if (ret != GlobalScript.Function_Stop || retH != GlobalScript.Function_Stop)
+			// Either scripting runtime may own the death sequence by cancelling the default.
+			if (ret != GlobalScript.Function_Stop && retH != GlobalScript.Function_Stop)
 			{
 				boyfriend.stunned = true;
 				deathCounter++;

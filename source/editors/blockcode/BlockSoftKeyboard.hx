@@ -73,7 +73,7 @@ class BlockSoftKeyboard
 	static var _frameListener:Void->Void = null;
 	static var _switchListener:Void->Void = null;
 
-	/** Resolved once: `Paths.fontName()` registers the font file on every call. */
+	/** Resolved once for these fields; Paths also caches the native font registration. */
 	static var _fontName:String = null;
 
 	/** True while a field is attached and text is being collected. */

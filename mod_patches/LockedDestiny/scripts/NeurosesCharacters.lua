@@ -37,6 +37,12 @@ end
 
 function onUpdatePost(elapsed)
 	if not enabled then return end
+	-- Keep the hand-drawn HUD icons smooth and upright, as in this mod's layout.
+	-- PlayState adds its own beat tilt before this callback, including after character swaps.
+	for _, tag in ipairs({'iconP1', 'iconP2'}) do
+		setProperty(tag..'.antialiasing', true)
+		setProperty(tag..'.angle', 0)
+	end
 	-- Gate the group as well: a Change Character event replaces the gf sprite.
 	-- Alpha remains under the song's control for its later fades.
 	setProperty('gfGroup.visible', getVar('goodapple') ~= true)

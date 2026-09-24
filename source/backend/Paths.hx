@@ -472,6 +472,7 @@ class Paths
 	}
 
 	static final FONT_EXTENSIONS:Array<String> = ['.ttf', '.otf'];
+	static var registeredFontNames:Map<String, String> = [];
 
 	static function hasFontExtension(key:String):Bool
 	{
@@ -499,9 +500,18 @@ class Paths
 		#if sys
 		if (path != null && FileSystem.exists(path))
 		{
+			var cacheKey:String = FileSystem.fullPath(path);
+			if (registeredFontNames.exists(cacheKey))
+				return registeredFontNames.get(cacheKey);
 			var loaded:openfl.text.Font = openfl.text.Font.fromFile(path);
 			if (loaded != null && loaded.fontName != null)
+			{
+				// fromFile() only decodes the file. TextField cannot resolve the returned
+				// family name until the Font instance is registered with OpenFL.
+				openfl.text.Font.registerFont(loaded);
+				registeredFontNames.set(cacheKey, loaded.fontName);
 				return loaded.fontName;
+			}
 		}
 		#end
 

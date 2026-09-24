@@ -39,14 +39,14 @@ function onUpdate(elapsed)
 end
 
 function onEvent(name, value1, value2)
-	if name == 'Change Character' and value1 == '1' then
-		runTimer('refreshDadBase', 0.01)
-	end
-end
-
-function onTimerCompleted(tag)
-	if tag == 'refreshDadBase' then
-		refreshBases()
+	if name == 'Change Character' and (value1 == '1' or value1 == 'dad' or value1 == 'opponent') then
+		-- Character instances are cached. SBF still holds the split-screen position when
+		-- returning from the guitar, so recover the authored stage + character position.
+		-- Do this before the next update: a timer lets the old base overwrite the new one.
+		dadBaseY = get('dadGroup.y') + get('dad.positionArray[1]')
+		set('dad.x', get('dadGroup.x') + get('dad.positionArray[0]'))
+		local fly = flying and math.sin(angle) * radius or 0
+		set('dad.y', dadBaseY + dadOffsetY + fly)
 	end
 end
 
