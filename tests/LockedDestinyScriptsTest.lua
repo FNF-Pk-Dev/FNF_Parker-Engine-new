@@ -11,7 +11,13 @@ local function host(path)
 	local e = setmetatable({Function_Stop = 'FUNC_STOP', defaultBoyfriendX = 780, defaultBoyfriendY = 60}, {__index = _G})
 	e.get = function(key) return h.properties[key] end
 	e.set = function(key, value) h.properties[key] = value end
-	e.getVar = function(key) return h.vars[key] end
+	e.getVar = function(key)
+		-- The native Convert.anon_function bridge turns null callback results into 0.
+		-- Lua treats 0 as true; do not make missing flags behave like nil in this host.
+		local value = h.vars[key]
+		if value == nil then return 0 end
+		return value
+	end
 	e.setVar = function(key, value) h.vars[key] = value end
 	e.stepEvent = function(step, callback)
 		if type(step) == 'table' then
@@ -99,9 +105,22 @@ assert(next(h.timers) == nil, 'Character rebasing must not depend on a timer')
 e, h = host('data/NeurosesH-mix/AutoText.lua')
 e.onLoad()
 assert(h.properties['TX.font'] == 'SBF.ttf' and h.properties['TX2.font'] == 'corrup.otf')
+assert(h.vars.autoTextDisabled == false, 'Entering the song must enable subtitles')
+-- An absent flag is returned as 0 by the actual bridge, never a request to hide text.
+h.vars.autoTextDisabled = nil
+e.onUpdate(0.1)
+assert(h.properties['TX.speed'] == 0.05 and h.properties['TX2.speed'] == 0.05, 'Missing flags must not stop typing')
 h.step = 255
 e.onEventSet()
 assert(h.properties['TX.alpha'] == 1 and h.timers.hideText ~= nil)
+h.vars.autoTextDisabled = false
+h.step = 546
+e.onEventSet()
+assert(h.properties['TX.text'] == "I'm better.")
+h.vars.autoTextDisabled = 0
+h.step = 836
+e.onEventSet()
+assert(h.properties['TX.text'] == 'Not again.', 'Only boolean true may disable subtitles')
 h.vars.autoTextDisabled = true
 e.onUpdate(0.1)
 for _, tag in ipairs({'TXscreen', 'TX', 'TX2'}) do assert(h.properties[tag..'.alpha'] == 0) end
@@ -109,6 +128,13 @@ assert(h.properties['TX.speed'] == 0 and h.properties['TX2.speed'] == 0 and h.ti
 h.step = 1784
 e.onEventSet()
 assert(h.properties['TX.alpha'] == 0, 'Death must prevent later subtitle events')
+
+e, h = host('data/NeurosesH-mix/AutoText.lua')
+h.vars.autoTextDisabled = true
+e.onLoad()
+h.step = 255
+e.onEventSet()
+assert(h.vars.autoTextDisabled == false and h.properties['TX.alpha'] == 1, 'A new song must clear the old death flag')
 
 for _, song in ipairs({'NeurosesH-mix', 'raices'}) do
 	for _, action in ipairs({'retry', 'exit'}) do
@@ -138,4 +164,4 @@ for _, song in ipairs({'NeurosesH-mix', 'raices'}) do
 		end
 	end
 end
-print('PASS: cached SBF/guitar return, stable shadows, subtitle cancellation, and both death retry/exit callback flows')
+print('PASS: cached SBF/guitar return, stable shadows, subtitle triggers with native zero/false flags, death cancellation/reset, and both death retry/exit callback flows')

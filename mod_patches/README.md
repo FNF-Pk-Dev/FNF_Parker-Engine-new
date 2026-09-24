@@ -13,6 +13,7 @@
 - 引擎允许同一步内所有 `stepEvent` 回调执行，第 1567 步能同时开启镜头摇晃和关闭花屏；`videoPlay` 可播放舞台脚本创建的视频，修复后段爆炸视频的跨脚本调用。
 - `Fly.lua`：切换对手当帧按舞台位置加角色 JSON 偏移恢复坐标，避免复用角色时保留分屏/吉他段的位置，也避免延迟计时器采到旧漂浮基准；影子基准不重复累加。
 - `AutoText.lua`：明确使用 `SBF.ttf` 和 `corrup.otf`，引擎注册实际字体后再交给文字渲染器；死亡时停止打字、缩放及淡入淡出。引擎同时兼容单值和双轴 `doTweenScale`，让转场文字在 0.2 秒内从 29 倍缩回正常大小，隧道缩放也能执行。
+- `AutoText.lua` 的字幕开关在加载歌曲时初始化为 `false`，只在明确收到 `true` 时禁用。当前 Lua 桥接会将未设置的变量返回为 `0`，而 Lua 中 `0` 也是真值；普通真假判断会在开场误关掉全部字幕。
 - `scripts/NeurosesCharacters.lua`：图标保留抗锯齿，去掉引擎额外加入的每拍旋转。像素图标变体由引擎正确识别，避免平滑采样使像素边缘模糊。
 - `data/NeurosesH-mix/customDeath.lua` 和 `data/raices/customDeath.lua`：使用有效的 Conductor 类路径，死亡时暂停歌曲及人声、阻止游戏输入，保留自定义动画和重试/退出流程。引擎尊重 Lua 的 `Function_Stop`，不再用默认死亡界面覆盖它。
 - `scripts/NeurosesIntro.lua`：沿用谱面 1650 ms 的 `Play Video` 事件，在视频末尾淡出。视频名区分大小写，使用 `IntroN`。

@@ -9,6 +9,8 @@ local textVisible = false
 local disabled = false
 
 function onLoad()
+	-- A missing getVar() result is 0 in Parker's Lua bridge, and 0 is truthy in Lua.
+	setVar('autoTextDisabled', false)
 	makeColorBox('TXscreen', -1050, -750, 1, 1, '000000')
 	scaleObject('TXscreen', 9.9, 9.9)
 	setCam('TXscreen', 'other')
@@ -55,7 +57,7 @@ local function showText(text)
 end
 
 function onEventSet()
-	if getVar('autoTextDisabled') then return end
+	if getVar('autoTextDisabled') == true then return end
 	stepEvent(255, function()
 		showText("Can you handle this?")
 	end)
@@ -121,7 +123,7 @@ end
 
 -- FLOAT
 function onUpdate(elapsed)
-	if getVar('autoTextDisabled') then
+	if getVar('autoTextDisabled') == true then
 		if not disabled then
 			disabled = true
 			canTypeSound = false
