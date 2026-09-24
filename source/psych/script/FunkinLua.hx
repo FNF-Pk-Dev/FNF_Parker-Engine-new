@@ -1564,6 +1564,9 @@ class FunkinLua extends GlobalScript
 		});
 		set("doTweenZoom", function(tag:String, vars:String, value:Dynamic, duration:Float, ease:String)
 		{
+			if (tryTweenZoomVariable(tag, vars, value, duration, ease))
+				return;
+
 			var penisExam:Dynamic = tweenShit(tag, vars);
 			if (penisExam != null)
 			{
@@ -4605,6 +4608,50 @@ class FunkinLua extends GlobalScript
 		return sexyProp;
 	}
 
+	/**
+	 * ES dialect: `doTweenZoom('cam1', 'DefaultCamZoom', …)` names the PlayState field the camera
+	 * lerps back to, not an object carrying a `zoom` property — tweening that Float would make
+	 * VarTween throw on its first update, so those two names get a numeric tween that writes the
+	 * field directly instead.
+	 *
+	 * @return true when it created the tween, so the caller skips the object-property path.
+	 */
+	function tryTweenZoomVariable(tag:String, vars:String, value:Dynamic, duration:Float, ease:String):Bool
+	{
+		if (menuMode || PlayState.instance == null)
+			return false;
+
+		var isHUD:Bool = vars == 'DefaultCamHUDZoom';
+		if (!isHUD && vars != 'DefaultCamZoom')
+			return false;
+
+		var playState:PlayState = PlayState.instance;
+		var startValue:Float = isHUD ? playState.defaultCamHUDZoom : playState.defaultCamZoom;
+		var endValue:Float = value;
+
+		cancelTween(tag);
+		getTweenMap().set(tag, FlxTween.num(startValue, endValue, duration, {
+			ease: getFlxEaseByString(ease),
+			onComplete: function(twn:FlxTween)
+			{
+				if (isHUD)
+					playState.defaultCamHUDZoom = endValue;
+				else
+					playState.defaultCamZoom = endValue;
+
+				dispatchCall('onTweenCompleted', [tag]);
+				getTweenMap().remove(tag);
+			}
+		}, function(num:Float)
+		{
+			if (isHUD)
+				playState.defaultCamHUDZoom = num;
+			else
+				playState.defaultCamZoom = num;
+		}));
+		return true;
+	}
+
 	function cancelTimer(tag:String)
 	{
 		if (getTimerMap().exists(tag))
@@ -4849,6 +4896,11 @@ class FunkinLua extends GlobalScript
 			// makes Lua.LUA_TFUNCTION unreliable. Ask the linked VM for the type name instead.
 			var typeName:String = Lua.typename(lua, type);
 
+			// ES dialect: per frame housekeeping (onPlayAnim emulation, camera rules).
+			// Kept before the function check so scripts that define no onUpdate still get it.
+			if (func == 'onUpdate')
+				ESCompat.tick(this);
+
 			if (typeName != 'function')
 			{
 				if (type > Lua.LUA_TNIL)
@@ -4864,10 +4916,6 @@ class FunkinLua extends GlobalScript
 			// ES dialect: onEventSet receives the current step, stepEvent() needs to know it
 			if (func == 'onEventSet' && args.length > 0 && args[0] != null)
 				lastEventSetStep = Std.int(cast args[0]);
-
-			// ES dialect: per frame housekeeping (onPlayAnim emulation, camera rules)
-			if (func == 'onUpdate')
-				ESCompat.tick(this);
 
 			var status:Int = Lua.pcall(lua, args.length, 1, 0);
 

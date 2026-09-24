@@ -102,19 +102,14 @@ class ESState
 	/** MoveCamOnAnim() rules per character index */
 	public var camRules:Map<Int, Map<String, Array<Float>>> = new Map<Int, Map<String, Array<Float>>>();
 
+	/** Last animation each MoveCamOnAnim() character was seen playing, per character index */
+	public var camRuleAnims:Map<Int, String> = new Map<Int, String>();
+
 	/** Characters created with makeChar(), used to emulate onPlayAnim() */
 	public var characters:Map<String, Character> = new Map<String, Character>();
 
 	/** Last animation name seen by the onPlayAnim() emulation, per character tag */
 	public var lastAnims:Map<String, String> = new Map<String, String>();
-
-	/** Camera offset currently applied by MoveCamOnAnim() */
-	public var camOffset:Array<Float> = [0, 0];
-
-	/** Camera follow position without our offset */
-	public var camBase:Array<Float> = [0, 0];
-
-	public var camBaseValid:Bool = false;
 
 	public function new()
 	{
@@ -134,6 +129,7 @@ class ESState
 		healthBars.clear();
 		videos.clear();
 		camRules.clear();
+		camRuleAnims.clear();
 		characters.clear();
 		lastAnims.clear();
 	}
@@ -504,12 +500,6 @@ class ESCompat
 				state.camRules.set(charIdx, rules);
 			}
 			rules.set(anim, [x, y]);
-
-			var char:Character = getCharacterByIdx(playState, charIdx);
-			if (char == null || char.animation.curAnim == null || char.animation.curAnim.name != anim)
-				return;
-
-			applyCamOffset(state, playState, x, y);
 		});
 
 		funk.set('makeHealthBar', function(tag:String, x:Float = 0, y:Float = 0):Void
@@ -1208,7 +1198,7 @@ class ESCompat
 
 	/**
 	 * Per frame housekeeping, called before every Lua `onUpdate` of this script.
-	 * Emulates the ES `onPlayAnim` callback and keeps MoveCamOnAnim() rules applied.
+	 * Emulates the ES `onPlayAnim` callback and re-anchors the camera for MoveCamOnAnim().
 	 */
 	public static function tick(funk:FunkinLua):Void
 	{
@@ -1225,19 +1215,71 @@ class ESCompat
 		for (tag => char in state.characters)
 			checkPlayAnim(funk, state, playState, tag, char);
 
-		// Apply the MoveCamOnAnim() rules of the animation each character is playing
-		for (charIdx => rules in state.camRules)
+		// A character that switches to a registered animation takes the camera with it,
+		// so the last one to change animation owns it
+		var indices:Array<Int> = [for (charIdx in state.camRules.keys()) charIdx];
+		indices.sort(function(a:Int, b:Int):Int return a - b);
+		for (charIdx in indices)
 		{
+			var rules:Map<String, Array<Float>> = state.camRules.get(charIdx);
 			var char:Character = getCharacterByIdx(playState, charIdx);
-			if (char == null || char.animation.curAnim == null)
+			if (rules == null || char == null || char.animation.curAnim == null)
 				continue;
 
-			var rule:Array<Float> = rules.get(char.animation.curAnim.name);
+			var anim:String = char.animation.curAnim.name;
+			if (state.camRuleAnims.get(charIdx) == anim)
+				continue;
+
+			state.camRuleAnims.set(charIdx, anim);
+
+			var rule:Array<Float> = rules.get(anim);
 			if (rule == null)
 				continue;
 
-			applyCamOffset(state, playState, rule[0], rule[1]);
+			// "Camera Follow Pos" rides own the camera while they last
+			if (playState.isCameraOnForcedPos)
+				continue;
+
+			anchorCamera(playState, charIdx, char);
+			playState.camFollow.x += rule[0];
+			playState.camFollow.y += rule[1];
 		}
+	}
+
+	/**
+	 * Moves `camFollow` onto a character the same way `PlayState.moveCamera()` does,
+	 * including the character's own camera position and the stage's camera offsets.
+	 */
+	static function anchorCamera(playState:PlayState, charIdx:Int, char:Character):Void
+	{
+		var camFollow:FlxPoint = playState.camFollow;
+		if (camFollow == null)
+			return;
+
+		var midpoint:FlxPoint = char.getMidpoint();
+		var camPos:Array<Float> = char.cameraPosition;
+
+		switch (charIdx)
+		{
+			case 0:
+				camFollow.set(midpoint.x + 150, midpoint.y - 100);
+				camFollow.x += getAxis(camPos, 0) + getAxis(playState.opponentCameraOffset, 0);
+				camFollow.y += getAxis(camPos, 1) + getAxis(playState.opponentCameraOffset, 1);
+			case 1:
+				camFollow.set(midpoint.x - 100, midpoint.y - 100);
+				camFollow.x -= getAxis(camPos, 0) - getAxis(playState.boyfriendCameraOffset, 0);
+				camFollow.y += getAxis(camPos, 1) + getAxis(playState.boyfriendCameraOffset, 1);
+			case 2:
+				camFollow.set(midpoint.x, midpoint.y);
+				camFollow.x += getAxis(camPos, 0) + getAxis(playState.girlfriendCameraOffset, 0);
+				camFollow.y += getAxis(camPos, 1) + getAxis(playState.girlfriendCameraOffset, 1);
+		}
+	}
+
+	/** Character and stage data may leave these arrays out, in which case they count as zero */
+	static function getAxis(values:Array<Float>, index:Int):Float
+	{
+		return (values == null || values.length <= index) ? 0 : values[index];
 	}
 
 	static function checkPlayAnim(funk:FunkinLua, state:ESState, playState:PlayState, tag:String, char:Character):Void
@@ -1553,30 +1595,6 @@ class ESCompat
 			return cast obj;
 
 		return null;
-	}
-
-	static function applyCamOffset(state:ESState, playState:PlayState, x:Float, y:Float):Void
-	{
-		var target = playState.camFollow;
-		if (target == null)
-			return;
-
-		// If the game recentered the camera target, our previous offset is gone
-		if (state.camBaseValid)
-		{
-			if (Math.abs(target.x - state.camOffset[0] - state.camBase[0]) > 0.5)
-				state.camOffset[0] = 0;
-			if (Math.abs(target.y - state.camOffset[1] - state.camBase[1]) > 0.5)
-				state.camOffset[1] = 0;
-		}
-
-		target.x += x - state.camOffset[0];
-		target.y += y - state.camOffset[1];
-		state.camOffset[0] = x;
-		state.camOffset[1] = y;
-		state.camBase[0] = target.x - x;
-		state.camBase[1] = target.y - y;
-		state.camBaseValid = true;
 	}
 
 	static function getStrum(funk:FunkinLua, note:Int):StrumNote
