@@ -1,0 +1,79 @@
+{
+	"animations": [
+		{
+			"offsets": [
+				148,
+				211
+			],
+			"loop": false,
+			"fps": 24,
+			"anim": "idle",
+			"indices": [],
+			"name": "IdleSBF"
+		},
+		{
+			"loop": false,
+			"offsets": [
+				119,
+				205
+			],
+			"anim": "singLEFT",
+			"fps": 17,
+			"name": "LeftSBF",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				148,
+				157
+			],
+			"anim": "singDOWN",
+			"fps": 17,
+			"name": "DownSBF",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				163,
+				203
+			],
+			"anim": "singUP",
+			"fps": 17,
+			"name": "UPSBF",
+			"indices": []
+		},
+		{
+			"loop": false,
+			"offsets": [
+				171,
+				202
+			],
+			"anim": "singRIGHT",
+			"fps": 17,
+			"name": "RightSBF",
+			"indices": []
+		}
+	],
+	"no_antialiasing": false,
+	"image": "NeurosesH-Mix/SBF",
+	"position": [
+		-100,
+		-120
+	],
+	"healthicon": "WaosSoul",
+	"flip_x": false,
+	"flip_y": false,
+	"healthbar_colors": [
+		0,
+		255,
+		0
+	],
+	"camera_position": [
+		210,
+		290
+	],
+	"sing_duration": 4,
+	"scale": 1
+}

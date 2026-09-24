@@ -1395,10 +1395,6 @@ class ESCompat
 		for (tag => char in state.characters)
 			checkPlayAnim(funk, state, playState, tag, char);
 
-		// `dadCopyFrames` / `bfCopyFrames`: the shadows declared with makeChar() follow the
-		// character on their own side
-		copyCharacterFrames(state, playState);
-
 		// A character that switches to a registered animation takes the camera with it,
 		// so the last one to change animation owns it
 		var indices:Array<Int> = [for (charIdx in state.camRules.keys()) charIdx];
@@ -1486,45 +1482,6 @@ class ESCompat
 
 		state.lastAnims.set(tag, anim);
 		funk.dispatchCall('onPlayAnim', [tag, anim]);
-	}
-
-	/**
-	 * ES `dadCopyFrames` / `bfCopyFrames`: every makeChar() character of this script follows the
-	 * animation of the character on its own side, frame included.
-	 *
-	 * Only the animation is copied: the shadows are squashed/sheared floor variants that keep
-	 * their own transform, so copying x/y/flipX/offset would destroy their look.
-	 */
-	static function copyCharacterFrames(state:ESState, playState:PlayState):Void
-	{
-		for (tag => char in state.characters)
-		{
-			if (char == null || char.animation == null)
-				continue;
-
-			var copiesFrames:Bool = char.isPlayer ? playState.bfCopyFrames : playState.dadCopyFrames;
-			if (!copiesFrames)
-				continue;
-
-			var source:Character = char.isPlayer ? playState.boyfriend : playState.dad;
-			if (source == null || source.animation == null || source.animation.curAnim == null)
-				continue;
-
-			var anim:String = source.animation.curAnim.name;
-			var frame:Int = source.animation.curAnim.curFrame;
-			if (char.animation.curAnim == null || char.animation.curAnim.name != anim)
-			{
-				// A shadow JSON does not have to carry every animation of the character it copies
-				// (SBFG is a guitar variant of SBF), a missing one is not an error
-				if (char.animation.getByName(anim) == null)
-					continue;
-
-				char.playAnim(anim, true);
-			}
-
-			if (char.animation.curAnim != null && char.animation.curAnim.name == anim && char.animation.curAnim.curFrame != frame)
-				char.animation.curAnim.curFrame = frame;
-		}
 	}
 
 	/** Runtime shader of an ES `makeShader()` tag, used by setShaderFloat() & co. */

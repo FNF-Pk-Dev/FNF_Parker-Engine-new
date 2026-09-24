@@ -12,6 +12,7 @@ class VideoSprite extends FlxSpriteGroup
 	#if VIDEOS_ALLOWED
 	public var finishCallback:Void->Void = null;
 	public var onSkip:Void->Void = null;
+	public var scriptTag:String = null;
 
 	final _timeToSkip:Float = 1;
 
@@ -32,7 +33,10 @@ class VideoSprite extends FlxSpriteGroup
 
 		this.videoName = videoName;
 		scrollFactor.set();
-		cameras = [FlxG.cameras.list[FlxG.cameras.list.length - 1]];
+		// Debug overlays may append cameras. Video opacity belongs to camVideo,
+		// independently of HUD/debug opacity and the group's own alpha tween.
+		if (PlayState.instance != null && PlayState.instance.camVideo != null)
+			cameras = [PlayState.instance.camVideo];
 
 		waiting = isWaiting;
 		if (!waiting)
@@ -59,29 +63,14 @@ class VideoSprite extends FlxSpriteGroup
 				if (alreadyDestroyed)
 					return;
 
-				trace('Video destroyed');
-				if (cover != null)
-				{
-					remove(cover);
-					cover.destroy();
-				}
-
-				PlayState.instance.remove(this);
 				destroy();
-				alreadyDestroyed = true;
 			});
 		}
 
 		videoSprite.bitmap.onFormatSetup.add(function()
 		{
-			/*
-				#if hxvlc
-				var wd:Int = videoSprite.bitmap.formatWidth;
-				var hg:Int = videoSprite.bitmap.formatHeight;
-				trace('Video Resolution: ${wd}x${hg}');
-				videoSprite.scale.set(FlxG.width / wd, FlxG.height / hg);
-				#end
-			 */
+			if (alreadyDestroyed || videoSprite == null)
+				return;
 			videoSprite.setGraphicSize(FlxG.width);
 			videoSprite.updateHitbox();
 			videoSprite.screenCenter();
@@ -96,24 +85,31 @@ class VideoSprite extends FlxSpriteGroup
 	override function destroy()
 	{
 		if (alreadyDestroyed)
-		{
-			super.destroy();
 			return;
-		}
+		alreadyDestroyed = true;
 
-		trace('Video destroyed');
-		if (cover != null)
+		FlxTween.cancelTweensOf(this);
+		if (videoSprite != null)
+			FlxTween.cancelTweensOf(videoSprite);
+		var playState:PlayState = PlayState.instance;
+		if (playState != null)
 		{
-			remove(cover);
-			cover.destroy();
+			if (scriptTag != null && playState.variables.get(scriptTag) == this)
+				playState.variables.remove(scriptTag);
+			if (playState.videoCutscene == this)
+				playState.videoCutscene = null;
+			playState.remove(this);
 		}
 
-		if (finishCallback != null)
-			finishCallback();
+		var callback:Void->Void = finishCallback;
+		finishCallback = null;
 		onSkip = null;
-
-		PlayState.instance.remove(this);
 		super.destroy();
+		cover = null;
+		videoSprite = null;
+		skipSprite = null;
+		if (callback != null)
+			callback();
 	}
 
 	override function update(elapsed:Float)
@@ -135,9 +131,7 @@ class VideoSprite extends FlxSpriteGroup
 				if (onSkip != null)
 					onSkip();
 				finishCallback = null;
-				videoSprite.bitmap.onEndReached.dispatch();
-				PlayState.instance.remove(this);
-				trace('Skipped video');
+				destroy();
 				return;
 			}
 		}
@@ -174,7 +168,7 @@ class VideoSprite extends FlxSpriteGroup
 			return;
 
 		skipSprite.amount = Math.min(1, Math.max(0, (holdingTime / _timeToSkip) * 1.025));
-		skipSprite.alpha = FlxMath.remapToRange(skipSprite.amount, 0.025, 1, 0, 1);
+		skipSprite.alpha = alpha * FlxMath.bound(FlxMath.remapToRange(skipSprite.amount, 0.025, 1, 0, 1), 0, 1);
 	}
 
 	public function resume()
