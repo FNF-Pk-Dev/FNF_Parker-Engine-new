@@ -155,9 +155,12 @@ class PlayState extends MusicBeatState
 
 	// ES script dialect: while these are on, the shadow characters a script declares with
 	// makeChar() mirror the animation of the character on their own side (ESCompat.copyCharacterFrames).
-	// gf/extra have no consumer here, they exist because ES scripts are allowed to write them.
+	// The player side is on by default: ES dialects only ask for the dad side explicitly
+	// (`set('dadCopyFrames', true)` in Locked Destiny) while their BF-side shadows still follow BF,
+	// and `set('bfCopyFrames', false)` is the way to opt out. gf/extra have no consumer here, they
+	// exist because ES scripts are allowed to write them.
 	public var dadCopyFrames:Bool = false;
-	public var bfCopyFrames:Bool = false;
+	public var bfCopyFrames:Bool = true;
 	public var gfCopyFrames:Bool = false;
 	public var extraCopyFrames:Bool = false;
 
