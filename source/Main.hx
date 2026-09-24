@@ -59,11 +59,7 @@ class Main extends Sprite
 	public static function main():Void
 	{
 		Lib.current.addChild(new Main());
-		#if cpp
-		cpp.NativeGc.enable(true);
-		cpp.NativeGc.run(true);
-		cpp.NativeGc.enterGCFreeZone();
-		#end
+		// OpenFL keeps allocating after main returns; leave this thread managed by hxcpp's GC.
 	}
 
 	public function new()

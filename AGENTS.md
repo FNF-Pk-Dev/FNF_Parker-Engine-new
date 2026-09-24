@@ -178,6 +178,8 @@ Naming: classes `PascalCase`, fields/functions `camelCase`, constants `UPPER_SNA
 
 `Main` (a `Sprite`) creates `FNFGame(width=1280, height=720, initState: StartupState, 60 fps)`; on Android it may insert `CopyState` when first-run assets still need copying, and it re-binds the working directory to storage. `StartupState` forwards to `states.TitleState`. Crash reports (`#if CRASH_HANDLER`) are written to `./crash/PkEngine_<date>.txt`.
 
+`Main.main()` must return with the main thread still managed by hxcpp's GC. Never leave it in `cpp.NativeGc.enterGCFreeZone()`: OpenFL allocates its next event immediately after `Main.main()` returns, and hxcpp aborts in `LocalAllocator::CallAlloc` / `CriticalGCError` if the thread is in a GC-free zone. This native crash bypasses the Haxe crash handler; use Windows Error Reporting dumps and the matching executable/PDB to diagnose it. GC-free zones belong only around non-allocating native/blocking work and must be exited before returning to Haxe.
+
 State base classes (`backend/`):
 
 - `MusicBeatState extends flixel.addons.ui.FlxUIState` — step/beat/section hooks, static `switchState(next)`, Android touch-pad helpers. Its constructor arg `canBeScripted` (default `true`) enables script overrides; `MusicBeatSubstate extends FlxSubState` is the substate twin.
