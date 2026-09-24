@@ -449,6 +449,18 @@ class Note extends FlxSprite implements modchart.ModchartComposed
 	{
 		super.update(elapsed);
 
+		if (isSustainNote && ClientPrefs.sustainEndCap && prevNote != null && prevNote != this)
+		{
+			// The rounded cap has to sit at the far end of the tail, and the `holdend` frame draws it
+			// along the bottom. So the cap's flip is really the question "does the tail leave this
+			// piece going up?" - which is answered by where the previous piece sits. Deriving it from
+			// the live layout keeps the cap right for downscroll, for a modchart that mirrors the
+			// chain (`reverse`), and for a scroll flip mid-song; the old build-time flag could only
+			// ever be right for the direction the note was constructed in. Flipping happens around
+			// the centred origin, so changing it never shifts the piece.
+			flipY = prevNote.y > y;
+		}
+
 		if (mustPress)
 		{
 			// ok river

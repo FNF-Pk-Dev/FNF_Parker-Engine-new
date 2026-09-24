@@ -42,6 +42,11 @@ class VisualsUISubState extends BaseOptionsMenu
 			"Keeps held notes drawn as one unbroken trail.\nUncheck for the older chunked look (a separate piece per step).", 'sustainTrail', 'bool', true);
 		addOption(option);
 
+		var option:Option = new Option('Sustain End Cap',
+			"Points the rounded cap at the far end of a held note away from its arrow.\nTurn off if a modchart moves the tail and the cap ends up backwards.",
+			'sustainEndCap', 'bool', true);
+		addOption(option);
+
 		var option:Option = new Option('Hide HUD', 'If checked, hides most HUD elements.', 'hideHud', 'bool', false);
 		addOption(option);
 

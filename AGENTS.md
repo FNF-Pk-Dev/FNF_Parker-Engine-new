@@ -233,6 +233,32 @@ change or a note-type reload is undone on the next frame.
 
 `ClientPrefs` gates are independent of the modchart toggle: `sustainTrail` works with the modchart on or off.
 
+### The sustain end cap's `flipY`
+
+The `holdend` artwork carries its rounded cap along the **bottom** of its frame (`NOTE_assets.png`:
+`red hold end` is 51x64 with a flat top and an arc that narrows to 13 px on the last row; `hold piece` is a
+plain 51x44 rectangle). Only the last piece of a chain keeps the `holdend` animation; every earlier piece is
+switched to `hold`. So the cap ends up at the far end of the tail only when the frame's bottom is the end
+away from the arrow.
+
+`Note`'s constructor used to answer that once, from the direction the note was built in
+(`if (ClientPrefs.downScroll) flipY = true;`). That is wrong the moment something moves the tail after
+construction — the `reverse` modchart modifier mirrors the whole chain to the other end of the screen
+(`modifiers/ReverseModifier.hx`) while `flipY` stays as built, so the cap pointed back at the arrow.
+
+`Note.update()` now derives it from the live layout instead:
+
+```haxe
+if (isSustainNote && ClientPrefs.sustainEndCap && prevNote != null && prevNote != this)
+	flipY = prevNote.y > y;
+```
+
+"the tail leaves this piece going up" is exactly the question the cap has to answer, and the previous
+piece's y answers it for downscroll, upscroll, a mid-song scroll flip and a mirrored modchart alike.
+`ClientPrefs.sustainEndCap` (Visuals & UI, default on) is the escape hatch, and like `sustainTrail` it is
+independent of the modchart toggle. Flipping happens around the centred origin (`updateHitbox()` calls
+`centerOrigin()`), so changing it mid-flight never shifts the piece sideways or vertically.
+
 ### Where a note splash actually goes
 
 `NoteSplash.setupNoteSplash()`'s `x`/`y` is the point the burst is **centred** on, and it aligns that
@@ -374,6 +400,7 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 - **Never hand a null/absent source to a script loader.** `Paths.getContent()` returns `null` for a missing file, and `LuaL.luau_loadsource()` in the `linc_luau` haxelib ends in `strlen(source)` with no null check (`linc/linc_lua.cpp`, `load_source`), so a null source is a `strlen(nullptr)` — the process dies instantly with no Haxe exception to catch (reproduced: a standalone hxcpp program calling `luau_loadsource(state, "chunk", null)` exits with code 139/SIGSEGV). Check the file exists first, and treat a null/empty chunk as a reported, survivable failure (`FunkinLua` and `FunkinLScript` do this in their constructors now). `llua/LuaRequire.hx` in the fork passes that same possibly-null source for a `require()` of a missing module, so a mod's `require` can still kill the app until the fork guards it.
 - `loadGlobalScripts()` in `PlayState` only scans `scripts/` for `.lua`/`.lscript`/`.py` — a mod's HScript global only loads as `mods/<mod>/global.hx` through `Main`.
 - The block editor's keybind is `debug_3` (`NINE`), declared in `ClientPrefs.keyBinds` and surfaced in `source/options/ControlsSubState.hx` — add both when adding a new debug key.
+- **A note's `flipY` is not safe to decide once in the constructor** when a modchart can move the note afterwards. `Note.update()` re-derives the sustain end cap's `flipY` from `prevNote.y > y` (see §5, "The sustain end cap's `flipY`"); keep positional state that a modifier can invalidate out of the constructor, or a `reverse`/scroll-flip modchart will leave the rendering mirrored.
 - **A splash's `x`/`y` is its centre, and callers must pass the receptor's midpoint.** `NoteSplash.setupNoteSplash()` aligns from the frame's real content rect because the shipped splash art is far off its own declared canvas centre; handing it `strum.x`/`strum.y` (the receptor's top-left) offsets the burst by up to ~13 px and makes it jump between the two animations. See §5, "Where a note splash actually goes".
 - **Sustain length is driven by `defScale`, not `scale`.** `ScaleModifier` runs unconditionally and restores `scale.y = defScale.y` on every hold piece, so anything that stretches a sustain (`Note.hx`'s constructor, `resizeByRatio()`, `reloadNote()`) has to update `defScale` too or the trail breaks into chunks under the modchart. See §5, "Sustains, the modchart's scale modifier, and `defScale`".
 - **Never use `Reflect.setField` to stash state on an engine object.** On hxcpp it is not a permissive dynamic write: `Reflect.field(o, name)` returns `null` for a field the class does not declare, but `Reflect.setField(o, name, v)` **throws** `Invalid field: <name>` (via `o.__SetField(...)`, `std/cpp/_std/Reflect.hx`). A read-then-write memo therefore looks safe in review and crashes at runtime the first time it takes the write branch. Reproduced standalone: `READ missing -> null` / `WRITE missing -> THREW: Invalid field:nope`. Declare the field on the class, or keep the state in a static `Map`. This is what broke `UIAnim.popText` — it threw `Invalid field:uiAnimRestX` from `StoryMenuState.create()` / `FreeplayState.create()` the first time either menu opened.

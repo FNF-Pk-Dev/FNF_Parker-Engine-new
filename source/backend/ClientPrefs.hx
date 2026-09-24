@@ -28,6 +28,18 @@ class ClientPrefs
 	 */
 	public static var sustainTrail:Bool = true;
 
+	/**
+	 * Keeps the rounded cap at the END of a held note at the far end of the tail.
+	 *
+	 * The `holdend` artwork carries its round cap along the bottom of the frame, and the note is
+	 * built with that already flipped for downscroll. A modchart that mirrors the chain (the
+	 * `reverse` modifier, a scroll flip) turns the whole tail around on screen without rebuilding
+	 * the notes, so the cap stayed on the frame edge it was born on and ended up pointing back at
+	 * the arrow. With this on, the cap is re-derived from where the tail actually sits, so it
+	 * points away from the arrow whatever moved it. Independent of the modchart toggle.
+	 */
+	public static var sustainEndCap:Bool = true;
+
 	public static var globalAntialiasing:Bool = true;
 	public static var noteSplashes:Bool = true;
 	public static var noteSplashesOpponent:Bool = false;
@@ -133,6 +145,7 @@ class ClientPrefs
 		FlxG.save.data.flashing = flashing;
 		FlxG.save.data.uiAnimations = uiAnimations;
 		FlxG.save.data.sustainTrail = sustainTrail;
+		FlxG.save.data.sustainEndCap = sustainEndCap;
 		FlxG.save.data.globalAntialiasing = globalAntialiasing;
 		FlxG.save.data.noteSplashes = noteSplashes;
 		FlxG.save.data.noteSplashesOpponent = noteSplashesOpponent;
@@ -216,6 +229,10 @@ class ClientPrefs
 		if (FlxG.save.data.sustainTrail != null)
 		{
 			sustainTrail = FlxG.save.data.sustainTrail;
+		}
+		if (FlxG.save.data.sustainEndCap != null)
+		{
+			sustainEndCap = FlxG.save.data.sustainEndCap;
 		}
 		if (FlxG.save.data.globalAntialiasing != null)
 		{
