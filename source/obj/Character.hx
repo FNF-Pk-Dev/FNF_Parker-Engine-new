@@ -334,12 +334,15 @@ class Character extends FlxSprite
 
 	override public function getMidpoint(?point:FlxPoint):FlxPoint
 	{
-		if (animateAtlas == null || frame == null)
+		if (animateAtlas == null)
 			return super.getMidpoint(point);
 		if (point == null)
 			point = FlxPoint.get();
-		// FlxAnimate's hitbox follows the current pose, not the union of every baked pose.
-		return point.set(x + frame.frame.width * Math.abs(scale.x) * 0.5, y + frame.frame.height * Math.abs(scale.y) * 0.5);
+		// Psych/ES draws FlxAnimate through a separate atlas. Its Character wrapper has no
+		// graphic or hitbox, so camera_position is authored relative to (x, y). Neither
+		// the atlas's rendered pose nor our storage canvas belongs in that camera anchor.
+		// Keep the real drawing bounds in getScreenBounds() for culling instead.
+		return point.set(x, y);
 	}
 
 	/**

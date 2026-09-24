@@ -5,7 +5,8 @@
 本机已安装位置为 `export/release/windows/bin/mods/LockedDestiny/`。此处保留可提交的补丁，因为 `export/` 是被 Git 忽略的构建目录。
 
 - `scripts/NeurosesCharacters.lua`：仅在 `tvN` 舞台启用。在 `onUpdatePost` 同步 BF/SBF 与各自影子的动画和帧，保留影子的翻转、变形、位置和透明度；独立的吉他叠层 `SBFG` 也跟随 dad。影子不再由 `PlayState` 或 `ESCompat` 自动驱动。
-- Animate 角色的原点、负坐标和当前姿势镜头尺寸由引擎统一处理，脚本不再改角色宽高。`cameraZoom.lua` 在开场剪影期间让谱面控制缩放。
+- Animate 角色的绘制原点、负坐标由引擎统一处理。镜头使用原版 Character 包装对象的 `(x, y)` 锚点，不叠加烘焙画布或动作尺寸；切换动作和缩放不会改变此锚点。普通 Sparrow 角色仍使用原有中点。`cameraZoom.lua` 在开场剪影期间让谱面控制缩放。
+- `states/MainMenuState.lua`：选中背景、选中文字和未选中文字统一使用实际创建的三组选项，修复 `selectedOp3`、`selected3`、`noSelected*` 对象不存在的报错。
 - `characters/SBFneurosesR.json`、`SBFneurosesRG.json`：恢复原版动画 offset，覆盖旧补丁的手工补偿，避免与引擎修正重复叠加。必须和新版引擎一起更新。
 - `Functions.lua` 与 `NeurosesCharacters.lua`：初始即隐藏特效；`goodapple` 开启期间隐藏整个中央角色组，切换角色也不会漏出。第 288 步关闭效果后显示，后续透明度仍由谱面控制。
 - `tvN.lua`：后段红色隧道、分屏、黄色背景及黑幕放在电视/中央角色之上、主角之下，防止旧舞台穿透后段场景。
