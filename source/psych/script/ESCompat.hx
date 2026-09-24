@@ -8,7 +8,6 @@ import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.FlxState;
 import flixel.addons.display.FlxBackdrop;
-import flixel.addons.effects.FlxTrail;
 import flixel.text.FlxText;
 import flixel.tweens.FlxTween;
 import flixel.ui.FlxBar;
@@ -55,6 +54,39 @@ class ESTyping
 }
 
 /**
+ * `setTextGradient()` colours of a single Lua text.
+ */
+class ESTextGradient
+{
+	public var color1:FlxColor;
+	public var color2:FlxColor;
+	public var angle:Float;
+
+	public function new(color1:FlxColor, color2:FlxColor, angle:Float)
+	{
+		this.color1 = color1;
+		this.color2 = color2;
+		this.angle = angle;
+	}
+}
+
+/**
+ * Box a Lua text was created with. ES aligns the text on that box, so `setTextWidth()`
+ * can grow the wrap width of a centred text without dragging it across the screen.
+ */
+class ESTextBox
+{
+	public var x:Float = 0;
+	public var width:Float = 0;
+
+	public function new(x:Float, width:Float)
+	{
+		this.x = x;
+		this.width = width;
+	}
+}
+
+/**
  * Song of the freeplay list, mirrors what FreeplayState builds out of WeekData.
  */
 class ESFreeplaySong
@@ -91,10 +123,16 @@ class ESState
 	public var videos:Map<String, FlxSprite> = new Map<String, FlxSprite>();
 
 	/** makeTrailSpirit() tags */
-	public var trails:Map<String, FlxTrail> = new Map<String, FlxTrail>();
+	public var trails:Map<String, GhostTrailSpirit> = new Map<String, GhostTrailSpirit>();
 
 	/** setTextSpeed() typewriters */
 	public var typing:Map<String, ESTyping> = new Map<String, ESTyping>();
+
+	/** makeLuaText() creation boxes, used as the anchor of ES text alignment */
+	public var textBoxes:Map<String, ESTextBox> = new Map<String, ESTextBox>();
+
+	/** setTextGradient() colours */
+	public var gradients:Map<String, ESTextGradient> = new Map<String, ESTextGradient>();
 
 	/** Original singDuration of every character touched by setLongSing() */
 	public var originalSingDuration:Map<String, Float> = new Map<String, Float>();
@@ -132,6 +170,8 @@ class ESState
 		camRuleAnims.clear();
 		characters.clear();
 		lastAnims.clear();
+		textBoxes.clear();
+		gradients.clear();
 	}
 }
 
@@ -461,6 +501,15 @@ class ESCompat
 
 			tag = tag.replace('.', '');
 			var char:Character = new Character(x, y, character, isPlayer);
+			// PlayState.startCharacterPos() applies the character's own JSON `position` offset to
+			// every character it spawns; a makeChar()'d one has to get the same treatment or it
+			// ends up displaced by exactly that vector. A JSON without `position` has none.
+			if (char.positionArray != null && char.positionArray.length > 1)
+			{
+				char.x += char.positionArray[0];
+				char.y += char.positionArray[1];
+			}
+
 			state.characters.set(tag, char);
 			FunkinLua.setESObject(tag, char);
 		});
@@ -512,13 +561,17 @@ class ESCompat
 			var ref:FlxBar = playState.healthBar;
 			var width:Int = ref != null ? Std.int(ref.width) : 600;
 			var height:Int = ref != null ? Std.int(ref.height) : 20;
-			var isOpponent:Bool = tag.toLowerCase().indexOf('dad') > -1 || tag.toLowerCase().indexOf('opponent') > -1;
 
-			// ES positions custom bars relative to the engine's own health bar
+			// ES positions custom bars the way it positions its own: same x as that bar (the
+			// frame a script draws for it is centred the same way in both engines) and its own
+			// y, which is NOT the y `healthBar` has here (see esHealthBarY).
 			var barX:Float = (ref != null ? ref.x : (FlxG.width - width) / 2) + x;
-			var barY:Float = (ref != null ? ref.y : 0) + y;
+			var barY:Float = esHealthBarY() + y;
 
-			var bar:FlxBar = new FlxBar(barX, barY, isOpponent ? RIGHT_TO_LEFT : LEFT_TO_RIGHT, width, height, playState, 'health', 0, 2);
+			// ES ignores the tag: every custom bar fills from the right like the engine's own,
+			// only `setHealthBarColors` colours differ between them. Deciding the direction by
+			// a 'dad'-ish name mirrors the mirror image of the bar a script asked for.
+			var bar:FlxBar = new FlxBar(barX, barY, RIGHT_TO_LEFT, width, height, playState, 'health', 0, 2);
 			bar.createFilledBar(0xFFFF0000, 0xFF00FF00);
 			bar.scrollFactor.set();
 			if (playState.camHUD != null)
@@ -599,77 +652,85 @@ class ESCompat
 				return;
 			}
 
-			var targetSprite:FlxSprite = getSpriteSafe(funk, target);
+			var targetSprite:FlxSprite = getTrailTarget(funk, target);
 			if (targetSprite == null)
 				return;
 
 			tag = tag.replace('.', '');
-			var trail:FlxTrail = new FlxTrail(targetSprite, null, 10, 3, 0.2, 0.05);
+			var trail:GhostTrailSpirit = new GhostTrailSpirit(targetSprite);
+			trail.ghostColor = trail.parseColorHex(color);
 			state.trails.set(tag, trail);
 			FunkinLua.setESObject(tag, trail);
 		});
 
 		funk.set('trailDirection', function(tag:String, direction:String):Void
 		{
-			var trail:FlxTrail = state.trails.get(tag);
+			var trail:GhostTrailSpirit = state.trails.get(tag);
 			if (trail == null || direction == null)
 				return;
 
-			switch (direction.toLowerCase().trim())
-			{
-				case 'x':
-					trail.xEnabled = true;
-					trail.yEnabled = false;
-				case 'y':
-					trail.xEnabled = false;
-					trail.yEnabled = true;
-				case 'none' | 'static':
-					trail.xEnabled = false;
-					trail.yEnabled = false;
-				default: // 'follow'
-					trail.xEnabled = true;
-					trail.yEnabled = true;
-			}
+			trail.parseDirection(direction);
 		});
 
 		funk.set('trailSpeed', function(tag:String, speed:Float):Void
 		{
-			// FlxTrail has no speed setting, the trail follows the target's own movement
-			var trail:FlxTrail = state.trails.get(tag);
+			var trail:GhostTrailSpirit = state.trails.get(tag);
 			if (trail == null)
 				return;
 
-			@:privateAccess trail._difference = Math.max(0.001, speed / 1000);
+			trail.dirSpeed = speed;
 		});
 
 		funk.set('trailDelay', function(tag:String, delay:Float):Void
 		{
-			var trail:FlxTrail = state.trails.get(tag);
+			var trail:GhostTrailSpirit = state.trails.get(tag);
 			if (trail == null)
 				return;
 
-			trail.delay = Std.int(Math.max(1, Math.round(delay * 60)));
+			trail.stepInterval = delay;
 		});
 
 		funk.set('trailAlpha', function(tag:String, alpha:Float):Void
 		{
-			var trail:FlxTrail = state.trails.get(tag);
+			var trail:GhostTrailSpirit = state.trails.get(tag);
 			if (trail == null)
 				return;
 
-			@:privateAccess trail._transp = alpha;
+			trail.startAlpha = alpha;
 		});
 
 		funk.set('trailLife', function(tag:String, life:Float):Void
 		{
-			var trail:FlxTrail = state.trails.get(tag);
+			var trail:GhostTrailSpirit = state.trails.get(tag);
 			if (trail == null)
 				return;
 
-			// The trail lasts (length * delay) frames, keep the delay we were given
-			var delay:Float = Math.max(1, trail.delay) / 60;
-			var wanted:Int = Std.int(Math.max(1, Math.round(life / delay)));
-			@:privateAccess trail.increaseLength(wanted - trail._trailLength);
+			trail.life = life;
+		});
+
+		/** Extra ES trail calls, thin wrappers around the ghost trail itself. */
+		funk.set('trailActive', function(tag:String, active:Bool = true):Void
+		{
+			var trail:GhostTrailSpirit = state.trails.get(tag);
+			if (trail == null)
+			{
+				warn(funk, 'trailActive', 'Couldn\'t find trail: $tag');
+				return;
+			}
+
+			trail.activeTrail = active;
+		});
+
+		funk.set('clearTrail', function(tag:String):Void
+		{
+			var trail:GhostTrailSpirit = state.trails.get(tag);
+			if (trail == null)
+			{
+				warn(funk, 'clearTrail', 'Couldn\'t find trail: $tag');
+				return;
+			}
+
+			trail.clearGhosts();
 		});
 	}
 
@@ -773,9 +834,38 @@ class ESCompat
 		});
 	}
 
-	/** Typewriter texts and gradients. */
+	/** Typewriter texts, gradients and the text box ES aligns on. */
 	static function registerTexts(funk:FunkinLua, state:ESState):Void
 	{
+		// ES dialect: makeLuaText(tag, text, size, x, y, width). Psych keeps its own
+		// (tag, text, width, x, y) for the five argument calls this dialect is layered over.
+		funk.set('makeLuaText', function(tag:String, text:String, third:Float = 0, fourth:Float = 0, fifth:Float = 0, sixth:Null<Float> = null):Void
+		{
+			if (tag == null)
+				return;
+
+			tag = tag.replace('.', '');
+			var leText:ModchartText = null;
+			if (sixth == null)
+			{
+				leText = new ModchartText(fourth, fifth, text, third);
+				state.textBoxes.remove(tag);
+			}
+			else
+			{
+				leText = new ModchartText(fourth, fifth, text, sixth);
+				if (third > 0)
+					leText.size = Std.int(third);
+				if (sixth > 0)
+					state.textBoxes.set(tag, new ESTextBox(fourth, sixth));
+				else
+					state.textBoxes.remove(tag);
+			}
+
+			@:privateAccess funk.resetTextTag(tag);
+			funk.textMap().set(tag, leText);
+		});
+
 		funk.set('setText', function(tag:String, text:String):Bool
 		{
 			var obj:FlxText = getTextSafe(funk, tag);
@@ -790,6 +880,7 @@ class ESCompat
 			}
 
 			obj.text = text;
+			refreshTextGradient(state, tag, obj);
 			return true;
 		});
 
@@ -807,6 +898,18 @@ class ESCompat
 				case 'center':
 					obj.alignment = CENTER;
 			}
+			anchorText(state, tag, obj);
+			return true;
+		});
+
+		funk.set('setTextWidth', function(tag:String, width:Float):Bool
+		{
+			var obj:FlxText = getTextSafe(funk, tag);
+			if (obj == null)
+				return false;
+
+			obj.fieldWidth = width;
+			anchorText(state, tag, obj);
 			return true;
 		});
 
@@ -827,14 +930,29 @@ class ESCompat
 				typingState.stop();
 		});
 
-		funk.set('setTextGradient', function(tag:String, color1:String, color2:String = null, angle:Float = 0):Void
+		// ES argument order: setTextGradient(tag, color1, color2, angle), angle 90 = top to bottom
+		funk.set('setTextGradient', function(tag:String, color1:String = 'FFFFFF', color2:String = null, angle:Float = 0):Void
 		{
 			var obj:FlxText = getTextSafe(funk, tag);
-			if (obj == null || color1 == null)
+			if (obj == null)
 				return;
 
-			// FlxText has no gradient support, approximate it with the top color
-			obj.color = FlxColor.fromString('#' + color1.replace('#', '').replace('0x', ''));
+			var grad:ESTextGradient = state.gradients.get(tag);
+			if (grad == null)
+			{
+				grad = new ESTextGradient(parseColor(color1), parseColor(color2), angle);
+				state.gradients.set(tag, grad);
+			}
+			else
+			{
+				grad.color1 = parseColor(color1);
+				grad.color2 = parseColor(color2);
+				grad.angle = angle;
+			}
+
+			// FlxText cannot paint a gradient itself: refreshTextGradient tints the glyphs with a
+			// runtime shader, or with the flat top colour where shaders are unavailable
+			refreshTextGradient(state, tag, obj);
 		});
 	}
 
@@ -1166,6 +1284,22 @@ class ESCompat
 	// Shared helpers
 	// ------------------------------------------------------------------------
 
+	/**
+	 * y `makeHealthBar()` has to offset its bars from, i.e. the y of the engine's own health bar in ES.
+	 *
+	 * ES keeps that bar at 0.9 of the screen height (0.1 with downscroll, as `healthBarBG` here)
+	 * and puts its fill 4px inside the frame, the same inset this engine uses. It is *not* the
+	 * value of `PlayState.healthBar.y` here: this engine keeps that bar at 0.89 / 0.11, so a
+	 * script that positions its own frame and offsets the bars against the engine's bar — the
+	 * usual way ES mods draw a replacement health bar — would end up ~7px below it in
+	 * downscroll and ~7px above it in upscroll. A script that moves the default bar itself
+	 * (`set('healthBar.y', …)`) is not tracked, exactly as it is not in ES.
+	 */
+	static function esHealthBarY():Float
+	{
+		return (ClientPrefs.downScroll ? 0.1 : 0.9) * FlxG.height + 4;
+	}
+
 	/** ES dialect: setHealthBarColors(barTag, leftHex, rightHex) */
 	public static function setHealthBarColors(funk:FunkinLua, tag:String, leftHex:String, rightHex:String):Void
 	{
@@ -1243,6 +1377,15 @@ class ESCompat
 			anchorCamera(playState, charIdx, char);
 			playState.camFollow.x += rule[0];
 			playState.camFollow.y += rule[1];
+		}
+
+		// Gradients ramp over the font box, which the regenerated text bitmap only settles
+		// on the frame after a text or size change
+		for (tag in state.gradients.keys())
+		{
+			var text:ModchartText = funk.textMap().get(tag);
+			if (text != null)
+				refreshTextGradient(state, tag, text);
 		}
 	}
 
@@ -1482,6 +1625,8 @@ class ESCompat
 			esState.trails.remove(tag);
 			esState.videos.remove(tag);
 			esState.healthBars.remove(tag);
+			esState.textBoxes.remove(tag);
+			esState.gradients.remove(tag);
 		}
 
 		basic.destroy();
@@ -1514,6 +1659,16 @@ class ESCompat
 			return null;
 		}
 		return cast obj;
+	}
+
+	/** Trail targets accept the character aliases ('dad', 'opponent', ...) as well as any tagged sprite. */
+	static function getTrailTarget(funk:FunkinLua, tag:String):FlxSprite
+	{
+		var char:Character = findCharacter(funk, tag);
+		if (char != null)
+			return char;
+
+		return getSpriteSafe(funk, tag);
 	}
 
 	static function getBasicSafe(funk:FunkinLua, tag:String):FlxBasic
@@ -1662,9 +1817,110 @@ class ESCompat
 
 			typingState.index++;
 			obj.text = full.substr(0, typingState.index);
+			refreshTextGradient(state, tag, obj);
 			funk.dispatchCall('onTyping', [tag]);
 		}, 0);
 	}
+
+	/**
+	 * ES centres and right-aligns a Lua text on the box `makeLuaText()` was given, so a later
+	 * `setTextWidth()` grows the wrap width without moving the text. Texts created through the
+	 * Psych path have no box here and keep Psych's behaviour.
+	 */
+	static function anchorText(state:ESState, tag:String, obj:FlxText):Void
+	{
+		var box:ESTextBox = state.textBoxes.get(tag);
+		if (box == null || box.width <= 0 || obj.alignment != CENTER)
+			return;
+
+		obj.x = box.x + (box.width - obj.fieldWidth) / 2;
+	}
+
+	/**
+	 * Applies `setTextGradient()` through a runtime shader: `flixel_texture2D()` already carries
+	 * the sprite alpha, so multiplying its rgb keeps the glyph ramp and the black border intact.
+	 *
+	 * The ramp runs over the font box inside the text bitmap (from the top of the em box down
+	 * `size` pixels), which is where ES measures it. Without shaders the text stays on `color1`,
+	 * the same flat approximation the ES dialect used before.
+	 */
+	static function refreshTextGradient(state:ESState, tag:String, obj:FlxText):Void
+	{
+		if (obj == null)
+			return;
+
+		var grad:ESTextGradient = state.gradients.get(tag);
+		if (grad == null)
+			return;
+
+		#if (!flash && sys)
+		if (!ClientPrefs.shaders)
+		{
+			obj.color = grad.color1;
+			return;
+		}
+
+		var shader:FlxRuntimeShader = Std.isOfType(obj.shader, FlxRuntimeShader) ? cast obj.shader : null;
+		var fresh:Bool = shader == null;
+		if (fresh)
+		{
+			shader = new FlxRuntimeShader(TEXT_GRADIENT_FRAG);
+			obj.shader = shader;
+		}
+		// The shader owns the colours, so the glyphs only carry their coverage
+		obj.color = FlxColor.WHITE;
+
+		// ES ramps over the font box (the font size), not over the whole text bitmap
+		var length:Float = obj.size > 0 ? obj.size : 1;
+		var halfExtent:Float = length / 2;
+		var radians:Float = grad.angle * Math.PI / 180;
+		var dirX:Float = Math.cos(radians);
+		var dirY:Float = Math.sin(radians);
+		var axisLength:Float = Math.abs(dirX) + Math.abs(dirY);
+		if (axisLength > 0.001)
+			halfExtent = length / 2 * axisLength;
+
+		var centerX:Float = length / 2;
+		var centerY:Float = length / 2;
+		var span:Float = halfExtent * 2;
+		if (span < 0.001)
+			span = 1;
+
+		shader.setFloatArray('gradColor1', [grad.color1.redFloat, grad.color1.greenFloat, grad.color1.blueFloat]);
+		shader.setFloatArray('gradColor2', [grad.color2.redFloat, grad.color2.greenFloat, grad.color2.blueFloat]);
+		shader.setFloatArray('gradTexSize', [obj.frameWidth, obj.frameHeight]);
+		shader.setFloatArray('gradStart', [centerX - dirX * halfExtent, centerY - dirY * halfExtent]);
+		shader.setFloatArray('gradVector', [dirX / span, dirY / span]);
+
+		if (fresh && Reflect.field(shader.data, 'gradColor1') == null)
+		{
+			// This renderer never registered the shader's uniforms, so it cannot paint the
+			// ramp: fall back to the flat top colour instead of drawing a black text
+			obj.shader = null;
+			obj.color = grad.color1;
+			state.gradients.remove(tag);
+		}
+		#else
+		obj.color = grad.color1;
+		#end
+	}
+
+	/** GLSL of the text gradient: two colours ramped along an angle over the glyph pixels. */
+	static final TEXT_GRADIENT_FRAG:String = '#pragma header
+
+uniform vec3 gradColor1;
+uniform vec3 gradColor2;
+uniform vec2 gradTexSize;
+uniform vec2 gradStart;
+uniform vec2 gradVector;
+
+void main(void)
+{
+	vec4 color = flixel_texture2D(bitmap, openfl_TextureCoordv);
+	vec2 pixel = openfl_TextureCoordv * gradTexSize;
+	float ramp = clamp(dot(pixel - gradStart, gradVector), 0.0, 1.0);
+	gl_FragColor = vec4(color.rgb * mix(gradColor1, gradColor2, ramp), color.a);
+}';
 
 	static function registerTween(funk:FunkinLua, tag:String, tween:FlxTween):Void
 	{

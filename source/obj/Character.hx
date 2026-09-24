@@ -12,6 +12,7 @@ import flixel.FlxSprite;
 import flixel.addons.effects.FlxTrail;
 import flixel.animation.FlxBaseAnimation;
 import flixel.graphics.frames.FlxAtlasFrames;
+import flixel.graphics.frames.FlxFrame.FlxFrameAngle;
 import flixel.tweens.FlxTween;
 import flixel.util.FlxSort;
 import openfl.utils.Assets;
@@ -38,6 +39,14 @@ typedef CharacterFile =
 	var no_antialiasing:Bool;
 	var healthbar_colors:Array<Int>;
 	var vocals_file:String;
+
+	// Optional per-axis transform keys of the "Engine Custom ES" character format. Stock Psych
+	// characters never write them, so they are null unless a mod asks for them.
+	var scale_x:Null<Float>;
+	var scale_y:Null<Float>;
+	var skew_x:Null<Float>;
+	var skew_y:Null<Float>;
+	var angle:Null<Float>;
 }
 
 typedef AnimArray =
@@ -82,6 +91,11 @@ class Character extends FlxSprite
 	// Used on Character Editor
 	public var imageFile:String = '';
 	public var jsonScale:Float = 1;
+	public var jsonScaleX:Float = 1;
+	public var jsonScaleY:Float = 1;
+	public var jsonSkewX:Float = 0;
+	public var jsonSkewY:Float = 0;
+	public var jsonAngle:Float = 0;
 	public var noAntialiasing:Bool = false;
 	public var originalFlipX:Bool = false;
 	public var healthColorArray:Array<Int> = [255, 0, 0];
@@ -171,10 +185,35 @@ class Character extends FlxSprite
 				}
 
 				if (json.scale != 1)
-				{
 					jsonScale = json.scale;
+
+				if (json.scale_x != null || json.scale_y != null)
+				{
+					// ES per-axis scale: an explicit scale_x/scale_y is the ABSOLUTE axis scale,
+					// not a multiplier of `scale` (a shadow character has to land on the footprint
+					// of its real counterpart at its own scale_x, not at scale_x * scale).
+					jsonScaleX = (json.scale_x != null ? json.scale_x : jsonScale);
+					jsonScaleY = (json.scale_y != null ? json.scale_y : jsonScale);
+					// setGraphicSize + updateHitbox keep width/height/offset/origin coherent for the
+					// engine's offset math, so the non-uniform case goes through them as well
+					setGraphicSize(Std.int(width * jsonScaleX), Std.int(height * jsonScaleY));
+					updateHitbox();
+				}
+				else if (jsonScale != 1)
+				{
 					setGraphicSize(Std.int(width * jsonScale));
 					updateHitbox();
+				}
+
+				if (json.skew_x != null)
+					jsonSkewX = json.skew_x;
+				if (json.skew_y != null)
+					jsonSkewY = json.skew_y;
+
+				if (json.angle != null && json.angle != 0)
+				{
+					jsonAngle = json.angle;
+					angle = jsonAngle;
 				}
 
 				positionArray = json.position;
@@ -272,6 +311,76 @@ class Character extends FlxSprite
 				loadMappedAnims();
 				playAnim("shoot1");
 		}
+	}
+
+	/**
+	 * A skewed character has to render through the complex (matrix) path even where the sprite
+	 * would otherwise qualify for `drawSimple()`, which cannot shear at all.
+	 */
+	override public function isSimpleRender(?camera:FlxCamera):Bool
+	{
+		if (jsonSkewX != 0 || jsonSkewY != 0)
+			return false;
+
+		return super.isSimpleRender(camera);
+	}
+
+	/**
+	 * HaxeFlixel has no skew, so `jsonSkewX`/`jsonSkewY` are applied as a shear on top of the matrix
+	 * `FlxSprite.drawComplex()` builds. The shear is premultiplied between the scale and the rotation,
+	 * which puts it in the same origin-pivot space as those two and leaves the pivot itself untouched;
+	 * it is a full affine product (translation column included) so it also stays right for trimmed or
+	 * rotated atlas frames, where `a`/`b`/`c`/`d` are not a plain scale. `skewX` shears x by y and
+	 * `skewY` shears y by x (the CSS convention).
+	 *
+	 * Everything after the shear mirrors `flixel.FlxSprite.drawComplex()` unchanged.
+	 */
+	override function drawComplex(camera:FlxCamera):Void
+	{
+		if (jsonSkewX == 0 && jsonSkewY == 0)
+		{
+			super.drawComplex(camera);
+			return;
+		}
+
+		_frame.prepareMatrix(_matrix, FlxFrameAngle.ANGLE_0, checkFlipX(), checkFlipY());
+		_matrix.translate(-origin.x, -origin.y);
+		_matrix.scale(scale.x, scale.y);
+
+		var shearX:Float = Math.tan(jsonSkewX * Math.PI / 180);
+		var shearY:Float = Math.tan(jsonSkewY * Math.PI / 180);
+		var a:Float = _matrix.a;
+		var b:Float = _matrix.b;
+		var c:Float = _matrix.c;
+		var d:Float = _matrix.d;
+		var tx:Float = _matrix.tx;
+		var ty:Float = _matrix.ty;
+		_matrix.a = a + shearX * b;
+		_matrix.c = c + shearX * d;
+		_matrix.b = b + shearY * a;
+		_matrix.d = d + shearY * c;
+		_matrix.tx = tx + shearX * ty;
+		_matrix.ty = ty + shearY * tx;
+
+		if (bakedRotationAngle <= 0)
+		{
+			updateTrig();
+
+			if (angle != 0)
+				_matrix.rotateWithTrig(_cosAngle, _sinAngle);
+		}
+
+		getScreenPosition(_point, camera).subtractPoint(offset);
+		_point.add(origin.x, origin.y);
+		_matrix.translate(_point.x, _point.y);
+
+		if (isPixelPerfectRender(camera))
+		{
+			_matrix.tx = Math.floor(_matrix.tx);
+			_matrix.ty = Math.floor(_matrix.ty);
+		}
+
+		camera.drawPixels(_frame, framePixels, _matrix, colorTransform, blend, antialiasing, shader);
 	}
 
 	override function update(elapsed:Float)
