@@ -16,6 +16,7 @@
 - `AutoText.lua` 的字幕开关在加载歌曲时初始化为 `false`，只在明确收到 `true` 时禁用。当前 Lua 桥接会将未设置的变量返回为 `0`，而 Lua 中 `0` 也是真值；普通真假判断会在开场误关掉全部字幕。
 - `scripts/NeurosesCharacters.lua`：图标保留抗锯齿，去掉引擎额外加入的每拍旋转。像素图标变体由引擎正确识别，避免平滑采样使像素边缘模糊。
 - `data/NeurosesH-mix/customDeath.lua` 和 `data/raices/customDeath.lua`：使用有效的 Conductor 类路径，死亡时暂停歌曲及人声、阻止游戏输入，保留自定义动画和重试/退出流程。引擎尊重 Lua 的 `Function_Stop`，不再用默认死亡界面覆盖它。
+- 引擎的 `playSound` 先查 `sounds`，再查 `music`，死亡音乐仍在独立的带标签声道播放；找不到资源时报告名称并安全返回，避免复用已销毁声音时发生空引用。`scripts/Pause Menu.lua` 只响应自己的音乐结束事件，原包缺失 `lullabyPause` 时使用设置中的暂停音乐，选择 `None` 时保持静音。
 - `scripts/NeurosesIntro.lua`：沿用谱面 1650 ms 的 `Play Video` 事件，在视频末尾淡出。视频名区分大小写，使用 `IntroN`。
 
 视频现在固定使用 `camVideo`，并能直接控制整个视频对象的透明度：
@@ -35,3 +36,5 @@ if (introN != null)
 自然结束或跳过时会释放视频名称、取消视频对象 Tween，避免再次进入歌曲时留下旧引用。修改 `camVideo.alpha` 也会作用于视频画面。
 
 在仓库根目录执行 `lua tests/LockedDestinyScriptsTest.lua`，可检查角色切换、字幕关闭及两首歌的死亡重试/退出回调；这个离线检查不启动游戏，也不代替运行画面的最终对照。运行画面由用户试玩确认。
+
+`tests/check-lua-sound.ps1` 离线检查引擎的音频查找、缺失资源处理和声音结束回调归属；Lua 检查也包含暂停音乐的回退和循环隔离。

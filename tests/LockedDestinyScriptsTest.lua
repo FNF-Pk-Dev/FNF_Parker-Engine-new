@@ -7,7 +7,7 @@ local function near(actual, expected)
 end
 
 local function host(path)
-	local h = {properties = {}, vars = {}, timers = {}, keys = {}, sounds = {}, haxe = {}, step = -1, opens = 0, restarts = 0}
+	local h = {properties = {}, vars = {}, timers = {}, keys = {}, sounds = {}, soundPlays = 0, files = {}, haxe = {}, step = -1, opens = 0, restarts = 0}
 	local e = setmetatable({Function_Stop = 'FUNC_STOP', defaultBoyfriendX = 780, defaultBoyfriendY = 60}, {__index = _G})
 	e.get = function(key) return h.properties[key] end
 	e.set = function(key, value) h.properties[key] = value end
@@ -38,12 +38,13 @@ local function host(path)
 	end
 	e.makeAnimatedLuaSprite = e.makeLuaSprite
 	e.luaSpriteExists = function(tag) return e.get(tag..'.x') ~= nil end
+	e.checkFileExists = function(path) return h.files[path] == true end
 	e.makeLuaText = function(tag, text) e.set(tag..'.text', text) end
 	e.setText = function(tag, text) e.set(tag..'.text', text) end
 	e.setTextSpeed = function(tag, value) e.set(tag..'.speed', value) end
 	e.setTextFont = function(tag, value) e.set(tag..'.font', value) end
 	for _, name in ipairs({'makeGraphic', 'add', 'setObjectCamera', 'addAnimationByPrefix', 'addOffset', 'makeColorBox',
-		'scaleObject', 'setCam', 'setTextSize', 'setTextWidth', 'setTextBorder', 'setTextAlign', 'setTextGradient', 'setTextColor'}) do
+		'scaleObject', 'setCam', 'addAnim', 'setTextSize', 'setTextWidth', 'setTextBorder', 'setTextAlign', 'setTextGradient', 'setTextColor'}) do
 		e[name] = function() end
 	end
 	e.playAnim = function(tag, name) e.set(tag..'.anim', name) end
@@ -53,6 +54,7 @@ local function host(path)
 		assert(class ~= 'Conductor', 'Unqualified Conductor class is not available in Parker')
 		if class == 'backend.songs.Conductor' then return 123456 end
 		if field == 'camera.zoom' then return 0.7 end
+		if class == 'backend.ClientPrefs' and field == 'pauseMusic' then return h.pauseMusic or 'Tea Time' end
 	end
 	e.setPropertyFromClass = function(class, field, value)
 		assert(class ~= 'Conductor' and value ~= nil)
@@ -63,7 +65,10 @@ local function host(path)
 		assert(name == 'death' and not pauseGame)
 		h.opens = h.opens + 1
 	end
-	e.playSound = function(name, volume, tag) h.sounds[tag or name] = name end
+	e.playSound = function(name, volume, tag)
+		h.sounds[tag or name] = name
+		h.soundPlays = h.soundPlays + 1
+	end
 	e.stopSound = function(tag) h.sounds[tag] = nil end
 	e.playMusic = function(name) h.music = name end
 	e.keyboardJustPressed = function(key) return h.keys[key] == true end
@@ -164,4 +169,31 @@ for _, song in ipairs({'NeurosesH-mix', 'raices'}) do
 		end
 	end
 end
-print('PASS: cached SBF/guitar return, stable shadows, subtitle triggers with native zero/false flags, death cancellation/reset, and both death retry/exit callback flows')
+
+e, h = host('scripts/Pause Menu.lua')
+e.onCreatePost()
+e.onSoundFinished('losssfx')
+assert(h.soundPlays == 0, 'Death sounds must not start pause music')
+e.onCustomSubstateCreate('lullabyPause')
+assert(h.sounds.pauseMusic == 'tea-time', 'Missing custom pause audio must use the selected pause music')
+e.onSoundFinished('gameoverSound')
+assert(h.soundPlays == 1, 'Unrelated completions must not restart pause music')
+e.onSoundFinished('pauseMusic')
+assert(h.soundPlays == 2, 'Only the pause track should loop')
+e.onCustomSubstateDestroy('lullabyPause')
+e.onSoundFinished('pauseMusic')
+assert(h.sounds.pauseMusic == nil and h.soundPlays == 2, 'Closing pause must stop its music loop')
+for _, folder in ipairs({'sounds', 'music'}) do
+	e, h = host('scripts/Pause Menu.lua')
+	h.files[folder..'/lullabyPause.ogg'] = true
+	e.onCreatePost()
+	e.onCustomSubstateCreate('lullabyPause')
+	assert(h.sounds.pauseMusic == 'lullabyPause', 'An installed custom pause track takes precedence')
+end
+e, h = host('scripts/Pause Menu.lua')
+h.pauseMusic = 'None'
+e.onCreatePost()
+e.onCustomSubstateCreate('lullabyPause')
+e.onSoundFinished('pauseMusic')
+assert(h.soundPlays == 0, 'The None pause music preference must stay silent')
+print('PASS: SBF return, subtitle flags, death retry/exit, and isolated pause audio with missing/custom/None tracks')

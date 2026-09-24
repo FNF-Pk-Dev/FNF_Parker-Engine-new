@@ -3148,21 +3148,40 @@ class FunkinLua extends GlobalScript
 		});
 		set("playSound", function(sound:String, volume:Float = 1, ?tag:String = null)
 		{
+			// ES scripts also play music assets on tagged, independent sound channels.
+			var audio = Paths.sound(sound);
+			if (audio == null)
+				audio = Paths.music(sound);
+			if (audio == null)
+			{
+				// loadEmbedded(null) leaves a recycled sound's transform uninitialized.
+				luaTrace('playSound: Missing audio "$sound" in sounds/ or music/.', true, false, FlxColor.RED);
+				return;
+			}
+
 			if (tag != null && tag.length > 0)
 			{
 				tag = tag.replace('.', '');
-				if (getSoundMap().exists(tag))
+				var sounds:Map<String, FlxSound> = getSoundMap();
+				var previous:FlxSound = sounds.get(tag);
+				if (previous != null)
 				{
-					getSoundMap().get(tag).stop();
+					previous.onComplete = null;
+					previous.stop();
 				}
-				getSoundMap().set(tag, FlxG.sound.play(Paths.sound(sound), volume, false, function()
+				var playing:FlxSound = null;
+				playing = FlxG.sound.play(audio, volume, false, null, true, function()
 				{
-					getSoundMap().remove(tag);
+					// Completion belongs to this registry and instance, even if script context changed.
+					if (sounds.get(tag) != playing)
+						return;
+					sounds.remove(tag);
 					dispatchCall('onSoundFinished', [tag]);
-				}));
+				});
+				sounds.set(tag, playing);
 				return;
 			}
-			FlxG.sound.play(Paths.sound(sound), volume);
+			FlxG.sound.play(audio, volume);
 		});
 		set("stopSound", function(tag:String)
 		{
