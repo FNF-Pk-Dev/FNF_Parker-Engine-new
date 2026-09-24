@@ -406,6 +406,7 @@ Script errors must still be visible without a PlayState: `source/script/ScriptDe
 - Never add a second root `class Main`: `source/animateatlas/Main.hx` already declares one and is dead demo code — do not copy that pattern.
 - New dependencies must be added to **both** `hmm.json` and `Project.xml`, and ideally to `.github/workflows/*.yml` so CI keeps working.
 - Guard platform-specific code with the existing defines; do not delete `#if desktop` / `#if android` / `#if CRASH_HANDLER` guards.
+- Desktop shader compilation uses `backend/ShaderVersionMacro.hx` (registered in `Project.xml`) to add an explicit GLSL 110 header to unversioned OpenGL shaders via `ShaderSource`. This preserves their implicit dialect and prevents drivers from dumping `#version directive missing` warnings. Existing version directives, including mod runtime shaders, are preserved; GLES/ANGLE is excluded. Keep the hook at `Shader.__createGLShader`, after OpenFL adds precision headers, so the version remains first. When using an older generated hxml, also pass `--macro backend.ShaderVersionMacro.install()` or regenerate it first.
 - Null-check `FlxG.cameras`, `FlxG.sound`, `FlxG.state` and platforms before use — several states run on all three targets.
 - `source/psych/script/FunkinLua.hx` is a legacy monolith still in use; prefer adding features in `source/script/` and keep Lua API changes backward-compatible.
 - `mods/` and `modsList.txt` do not exist until the game creates them; always guard filesystem access.
