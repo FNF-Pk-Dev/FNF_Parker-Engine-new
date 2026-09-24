@@ -781,6 +781,52 @@ class ESCompat
 			cam.setFilters(filters);
 			return true;
 		});
+
+		// ES passes the tag it registered with makeShader(), Psych resolves a shader file name;
+		// try the ES tag first and fall back to Psych's runtimeShaders/initLuaShader lookup
+		#if MODS_ALLOWED
+		funk.set('setSpriteShader', function(obj:String, shader:String):Bool
+		{
+			if (!ClientPrefs.shaders)
+				return false;
+
+			if (obj == null || shader == null)
+				return warn(funk, 'setSpriteShader', 'Missing sprite/shader!');
+
+			var playState:PlayState = PlayState.instance;
+			if (playState == null || funk.menuMode)
+				return warn(funk, 'setSpriteShader', 'Runtime shaders are only available while a song is playing!');
+
+			// Same object resolution as Psych's own setSpriteShader()
+			var killMe:Array<String> = obj.split('.');
+			var leObj:FlxSprite = FunkinLua.getObjectDirectly(killMe[0]);
+			if (killMe.length > 1)
+				leObj = FunkinLua.getVarInArray(FunkinLua.getPropertyLoopThingWhatever(killMe), killMe[killMe.length - 1]);
+
+			if (leObj == null)
+				return warn(funk, 'setSpriteShader', 'Couldn\'t find object: $obj');
+
+			var esShader:Dynamic = state.shaders.get(shader);
+			if (esShader != null)
+			{
+				leObj.shader = cast esShader;
+				return true;
+			}
+
+			var arr:Array<String> = playState.runtimeShaders.get(shader);
+			if (arr == null)
+			{
+				arr = loadShaderSources(shader);
+				if (arr == null)
+					return warn(funk, 'setSpriteShader', 'Shader $shader is missing!');
+
+				playState.runtimeShaders.set(shader, arr);
+			}
+
+			leObj.shader = new FlxRuntimeShader(arr[0], arr[1]);
+			return true;
+		});
+		#end
 		#end
 
 		funk.set('doTweenFloatArray', function(tag:String, names:Dynamic, values:Dynamic, duration:Float, ?ease:String):Void
@@ -1349,6 +1395,10 @@ class ESCompat
 		for (tag => char in state.characters)
 			checkPlayAnim(funk, state, playState, tag, char);
 
+		// `dadCopyFrames` / `bfCopyFrames`: the shadows declared with makeChar() follow the
+		// character on their own side
+		copyCharacterFrames(state, playState);
+
 		// A character that switches to a registered animation takes the camera with it,
 		// so the last one to change animation owns it
 		var indices:Array<Int> = [for (charIdx in state.camRules.keys()) charIdx];
@@ -1436,6 +1486,45 @@ class ESCompat
 
 		state.lastAnims.set(tag, anim);
 		funk.dispatchCall('onPlayAnim', [tag, anim]);
+	}
+
+	/**
+	 * ES `dadCopyFrames` / `bfCopyFrames`: every makeChar() character of this script follows the
+	 * animation of the character on its own side, frame included.
+	 *
+	 * Only the animation is copied: the shadows are squashed/sheared floor variants that keep
+	 * their own transform, so copying x/y/flipX/offset would destroy their look.
+	 */
+	static function copyCharacterFrames(state:ESState, playState:PlayState):Void
+	{
+		for (tag => char in state.characters)
+		{
+			if (char == null || char.animation == null)
+				continue;
+
+			var copiesFrames:Bool = char.isPlayer ? playState.bfCopyFrames : playState.dadCopyFrames;
+			if (!copiesFrames)
+				continue;
+
+			var source:Character = char.isPlayer ? playState.boyfriend : playState.dad;
+			if (source == null || source.animation == null || source.animation.curAnim == null)
+				continue;
+
+			var anim:String = source.animation.curAnim.name;
+			var frame:Int = source.animation.curAnim.curFrame;
+			if (char.animation.curAnim == null || char.animation.curAnim.name != anim)
+			{
+				// A shadow JSON does not have to carry every animation of the character it copies
+				// (SBFG is a guitar variant of SBF), a missing one is not an error
+				if (char.animation.getByName(anim) == null)
+					continue;
+
+				char.playAnim(anim, true);
+			}
+
+			if (char.animation.curAnim != null && char.animation.curAnim.name == anim && char.animation.curAnim.curFrame != frame)
+				char.animation.curAnim.curFrame = frame;
+		}
 	}
 
 	/** Runtime shader of an ES `makeShader()` tag, used by setShaderFloat() & co. */

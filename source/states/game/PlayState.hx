@@ -153,6 +153,14 @@ class PlayState extends MusicBeatState
 	public var gf:Character = null;
 	public var boyfriend:Boyfriend = null;
 
+	// ES script dialect: while these are on, the shadow characters a script declares with
+	// makeChar() mirror the animation of the character on their own side (ESCompat.copyCharacterFrames).
+	// gf/extra have no consumer here, they exist because ES scripts are allowed to write them.
+	public var dadCopyFrames:Bool = false;
+	public var bfCopyFrames:Bool = false;
+	public var gfCopyFrames:Bool = false;
+	public var extraCopyFrames:Bool = false;
+
 	public var notes:FlxTypedGroup<Note>;
 	public var unspawnNotes:Array<Note> = [];
 	public var eventNotes:Array<EventNote> = [];
@@ -3822,6 +3830,13 @@ class PlayState extends MusicBeatState
 						camFollow.x = val1;
 						camFollow.y = val2;
 						isCameraOnForcedPos = true;
+					}
+					else
+					{
+						// Releasing the forced position re-anchors the camera right away: waiting for
+						// the next section leaves camFollow, and the zoom onMoveCamera scripts apply,
+						// on the pre-forced target for a whole section
+						moveCameraSection();
 					}
 				}
 
