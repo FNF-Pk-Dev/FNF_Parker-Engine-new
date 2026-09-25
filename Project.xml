@@ -59,6 +59,14 @@
 	<define name="CRASH_HANDLER" if="desktop release || android" />
 	
 	<section if="android">
+		<!-- Lime merges its default architectures, so explicitly exclude every non-ARM64 target. -->
+		<architecture name="arm64" />
+		<architecture exclude="armv5" />
+		<architecture exclude="armv6" />
+		<architecture exclude="armv7" />
+		<architecture exclude="x86" />
+		<architecture exclude="x64" />
+
 		<assets path="moblie"         rename="assets/moblie"        exclude="*.ogg" if="web"/>
 		<assets path="moblie"         rename="assets/moblie"        exclude="*.mp3" unless="web"/>
 	</section>

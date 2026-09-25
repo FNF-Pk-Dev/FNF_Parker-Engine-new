@@ -37,11 +37,13 @@ haxelib install hmm && haxelib run hmm install
 haxelib run lime build windows            # Windows release
 haxelib run lime build windows -debug     # Windows debug
 haxelib run lime test    windows          # build + launch
-haxelib run lime build android -final     # Android release (needs JDK 17 + NDK)
+haxelib run lime build android -final     # Android ARM64 release (needs JDK 17 + NDK)
 haxelib run lime build html5
 ```
 
 Convenience wrappers that also open the output folder: `art/build_x64.bat`, `art/build_x64-debug.bat`, `art/build_x32.bat`, `art/build_html.bat`, `art/build_html-debug.bat`, `art/test_x64-debug.bat`.
+
+Android builds are **ARM64-only (`arm64-v8a`)**. The Android section in `Project.xml` selects `arm64` and explicitly excludes `armv5`, `armv6`, `armv7`, `x86` and `x64`. Keep the exclusions: Lime merges its default ARMv7 + ARM64 list with the project, so selecting ARM64 alone still builds and packages 32-bit libraries. This applies to local and CI builds, including debug builds; desktop architectures are configured separately.
 
 Output directories (set by `BUILD_DIR` in `Project.xml`):
 
