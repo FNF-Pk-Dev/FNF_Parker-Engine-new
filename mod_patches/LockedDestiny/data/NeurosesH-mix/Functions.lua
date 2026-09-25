@@ -27,20 +27,19 @@ local function showNotes()
 	set('numScoreY', 105)
 end
 
-local function resetCharactersColor()
-	set('boyfriend.colorTransform.redOffset', 0)
-	set('boyfriend.colorTransform.greenOffset', 0)
-	set('boyfriend.colorTransform.blueOffset', 0)
-	set('boyfriend.colorTransform.redMultiplier', 1)
-	set('boyfriend.colorTransform.greenMultiplier', 1)
-	set('boyfriend.colorTransform.blueMultiplier', 1)
+local function resetCharacterColor(tag)
+	set(tag..'.color', getColorFromHex('FFFFFF'))
+	set(tag..'.colorTransform.redOffset', 0)
+	set(tag..'.colorTransform.greenOffset', 0)
+	set(tag..'.colorTransform.blueOffset', 0)
+	set(tag..'.colorTransform.redMultiplier', 1)
+	set(tag..'.colorTransform.greenMultiplier', 1)
+	set(tag..'.colorTransform.blueMultiplier', 1)
+end
 
-	set('dad.colorTransform.redOffset', 0)
-	set('dad.colorTransform.greenOffset', 0)
-	set('dad.colorTransform.blueOffset', 0)
-	set('dad.colorTransform.redMultiplier', 1)
-	set('dad.colorTransform.greenMultiplier', 1)
-	set('dad.colorTransform.blueMultiplier', 1)
+local function resetCharactersColor()
+	resetCharacterColor('boyfriend')
+	resetCharacterColor('dad')
 end
 
 function onCreate()
@@ -106,6 +105,16 @@ function onCreate()
 	set('ShadowSBF.visible', false)
 	setVar('goodapple', true)
 
+end
+
+function onEvent(name, value1, value2)
+	if name == 'Change Character' and (value1 == '0' or value1 == 'bf' or value1 == 'boyfriend')
+		and getVar('goodapple') ~= true then
+		-- BF2 is cached while black at step 1560. The step-1568 reset reaches BFCR
+		-- after the chart swaps characters, so restore BF2 as soon as it returns.
+		-- Leave the scene shader and dad's deliberate ending fade under their scripts.
+		resetCharacterColor('boyfriend')
+	end
 end
 
 function onEventSet()

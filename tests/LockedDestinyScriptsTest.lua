@@ -31,6 +31,10 @@ local function host(path)
 	e.doTweenX = function(tag, object, value) e.set(object..'.x', value) end
 	e.doTweenY = function(tag, object, value) e.set(object..'.y', value) end
 	e.doTweenAlpha = function(tag, object, value) e.set(object..'.alpha', value) end
+	e.doTweenZoom = function(tag, object, value) e.set(object..'.zoom', value) end
+	e.getColorFromHex = function(value) return tonumber(value, 16) end
+	e.doTweenColor = function(tag, object, value) e.set(object..'.color', e.getColorFromHex(value)) end
+	e.callOnLuas = function() end
 	e.cancelTween = function() end
 	e.makeLuaSprite = function(tag, image, x, y)
 		e.set(tag..'.x', x)
@@ -106,6 +110,56 @@ e.onUpdate(0.1)
 near(p['dad.y'], -20 + math.sin(0.6) * 35)
 near(p['ShadowSBF.y'], 435 - math.sin(0.6) * 35)
 assert(next(h.timers) == nil, 'Character rebasing must not depend on a timer')
+
+e, h = host('data/NeurosesH-mix/Functions.lua')
+p = h.properties
+p['boyfriend.curCharacter'] = 'BFneurosesR'
+local cachedBoyfriends = {}
+local defaultColors = {
+	color = 0xFFFFFF,
+	['colorTransform.redMultiplier'] = 1, ['colorTransform.greenMultiplier'] = 1, ['colorTransform.blueMultiplier'] = 1,
+	['colorTransform.redOffset'] = 0, ['colorTransform.greenOffset'] = 0, ['colorTransform.blueOffset'] = 0,
+	shader = 'sceneColorShader'
+}
+local function changeBoyfriend(name)
+	local outgoing = {}
+	for field in pairs(defaultColors) do outgoing[field] = p['boyfriend.'..field] end
+	cachedBoyfriends[p['boyfriend.curCharacter']] = outgoing
+	local incoming = cachedBoyfriends[name] or defaultColors
+	for field, value in pairs(incoming) do p['boyfriend.'..field] = value end
+	p['boyfriend.curCharacter'] = name
+	if e.onEvent then e.onEvent('Change Character', '0', name) end
+end
+e.onCreate()
+if e.onEvent then e.onEvent('Change Character', '0', 'BFneurosesR') end
+assert(p['boyfriend.colorTransform.redOffset'] == 255 and p['boyfriend.colorTransform.redMultiplier'] == 0,
+	'The opening goodapple silhouette must stay intact')
+h.step = 288
+e.onEventSet()
+changeBoyfriend('BFneurosesR2')
+h.step = 1560
+e.onEventSet()
+assert(p['boyfriend.color'] == 0, 'The transition must still turn BF into a black silhouette')
+-- PlayState advances songPosition and dispatches chart events before the next step callback.
+-- The 117600 ms swap therefore precedes the step-1568 color reset on the following update.
+changeBoyfriend('BFneurosesCR')
+h.step = 1568
+e.onEventSet()
+h.step = 1569
+e.onEventSet()
+changeBoyfriend('BFneurosesRP')
+changeBoyfriend('BFneurosesR')
+-- The ending brings the cached BF2 back at 155958.75 ms, just before step 2080.
+changeBoyfriend('BFneurosesR2')
+assert(p['boyfriend.color'] == 0xFFFFFF, 'Returning BF must not retain the earlier black transition tint')
+for field, value in pairs(defaultColors) do
+	assert(p['boyfriend.'..field] == value, 'BF color reset must clear RGB transforms and preserve the scene shader: '..field)
+end
+h.step = 2080
+e.onEventSet()
+assert(p['dad.color'] == 0 and p['boyfriend.color'] == 0xFFFFFF, 'The ending must darken only the opponent')
+changeBoyfriend('BFneurosesR3')
+assert(p['dad.color'] == 0 and p['boyfriend.color'] == 0xFFFFFF, 'The sad BF swap must preserve the opponent fade')
 
 e, h = host('data/NeurosesH-mix/AutoText.lua')
 e.onLoad()
@@ -196,4 +250,4 @@ e.onCreatePost()
 e.onCustomSubstateCreate('lullabyPause')
 e.onSoundFinished('pauseMusic')
 assert(h.soundPlays == 0, 'The None pause music preference must stay silent')
-print('PASS: SBF return, subtitle flags, death retry/exit, and isolated pause audio with missing/custom/None tracks')
+print('PASS: SBF return, cached BF ending colors, subtitle flags, death retry/exit, and isolated pause audio with missing/custom/None tracks')
