@@ -404,6 +404,17 @@ Global variables/functions exposed to HScript come from `script/FunkinHScript.hx
 
 ### Animate character coordinates
 
+Animate baking needs CPU pixels even when `Paths.image(..., false)` resolves an ASTC-only asset or
+an already GPU-cached PNG. `backend/BitmapReadback.hx` renders that texture to an ordinary RGBA
+target before reading it back; compressed textures cannot be attached directly to a framebuffer.
+It returns the original bitmap when already readable, otherwise a temporary copy. `AtlasFrameMaker`
+releases only that temporary copy after collecting shots, leaving the shared GPU source alive.
+Never pass a texture-only bitmap straight to the baker's `copyPixels()` calls: they silently produce
+blank art. Packed pages have one owner and do not need a bitmap clone; each frame uses the same typed
+coordinates as its pixel copy. Run `tests/check-animate-atlas.ps1` with the installed haxelibs and
+Neko to check real pixel baking, negative origins, pagination and GPU readback (a hidden OpenGL
+window is created; this is not an Android playtest).
+
 `AtlasFrameMaker.construct()` returns an `AtlasFrameMaker` collection carrying the baked canvas's signed `symbolX`/`symbolY` and the Animate stage instance pivot (zero when absent). The packed frames keep a common positive canvas for storage, but `Character.prepareCharacterMatrix()` restores the symbol coordinates **before** flipping/scaling/rotation. `graphicLoaded()` and `updateHitbox()` preserve the Animate pivot instead of centering on the padded canvas. **Animate camera anchors are `(x, y)`**, matching Psych/ES's graphicless Character wrapper around its separately drawn FlxAnimate atlas. `getMidpoint()` must not add half the baked canvas or current pose dimensions: both displace the camera, and pose dimensions also change with each singing animation. `getScreenBounds()` independently uses the actual render matrix for culling. This also applies to cached atlases and ES-spawned shadow characters. Never bake compensating offsets into character JSON; that would double-apply the correction and shift animations with negative coordinates. Sparrow characters retain the normal FlxSprite midpoint.
 
 ### Engine Custom ES dialect

@@ -107,48 +107,53 @@ class AtlasFrameMaker extends FlxFramesCollection
 		if (animationData == null || atlasData == null)
 			throw 'Missing or invalid Animate atlas data for images/$key (Animation.json / $spritemapKey.json)';
 
-		var ss:SpriteAnimationLibrary = new SpriteAnimationLibrary(animationData, atlasData, graphic.bitmap);
-		var t:SpriteMovieClip = ss.createAnimation(noAntialiasing);
-
-		var labels:Array<String> = t.getFrameLabels();
-		if (_excludeArray == null)
-		{
-			_excludeArray = labels;
-			// trace('creating all anims');
-
-			// Short-key atlases usually have no frame labels on the main timeline;
-			// each animation is a dictionary symbol of its own instead
-			if (_excludeArray.length == 0 && shortFormat)
-			{
-				_excludeArray = getMainTimelineSymbols(animationData, ss);
-			}
-		}
-
-		// Frame labels are collected from every layer of a symbol, so the same animation can be listed
-		// twice; baking it twice would place shots which the first bake has already disposed
-		var uniqueAnimations:Array<String> = [];
-		for (x in _excludeArray)
-		{
-			if (uniqueAnimations.indexOf(x) == -1)
-				uniqueAnimations.push(x);
-		}
-		_excludeArray = uniqueAnimations;
-		trace('Creating: ' + _excludeArray);
-
-		// Bake every animation into loose shots first; they are packed into atlas pages below, once the
-		// character-wide canvas is known
+		// allowGPU=false prefers PNG, but a stripped APK may only contain ASTC.
+		// Read its pixels once for the CPU baker without replacing the cached GPU texture.
+		var pixels = BitmapReadback.readable(graphic.bitmap);
 		var shotsByAnimation:Map<String, Array<{bitmap:BitmapData, originX:Float, originY:Float}>> = [];
-		for (x in _excludeArray)
+		try
 		{
-			if (labels.indexOf(x) == -1 && ss.hasAnimation(x))
+			var ss:SpriteAnimationLibrary = new SpriteAnimationLibrary(animationData, atlasData, pixels);
+			var t:SpriteMovieClip = ss.createAnimation(noAntialiasing);
+			var labels:Array<String> = t.getFrameLabels();
+			if (_excludeArray == null)
 			{
-				shotsByAnimation.set(x, getSymbolFramesArray(ss.createAnimation(noAntialiasing, x), x));
+				_excludeArray = labels;
+				// Short-key atlases usually store each animation in a dictionary symbol.
+				if (_excludeArray.length == 0 && shortFormat)
+					_excludeArray = getMainTimelineSymbols(animationData, ss);
 			}
-			else
+
+			// Labels may occur on multiple layers; never pack already disposed shots twice.
+			var uniqueAnimations:Array<String> = [];
+			for (x in _excludeArray)
 			{
-				shotsByAnimation.set(x, getFramesArray(t, x));
+				if (uniqueAnimations.indexOf(x) == -1)
+					uniqueAnimations.push(x);
+			}
+			_excludeArray = uniqueAnimations;
+			trace('Creating: ' + _excludeArray);
+
+			// Keep tight shots until the character-wide logical canvas is known.
+			for (x in _excludeArray)
+			{
+				if (labels.indexOf(x) == -1 && ss.hasAnimation(x))
+					shotsByAnimation.set(x, getSymbolFramesArray(ss.createAnimation(noAntialiasing, x), x));
+				else
+					shotsByAnimation.set(x, getFramesArray(t, x));
 			}
 		}
+		catch (error:Dynamic)
+		{
+			if (pixels != graphic.bitmap)
+				pixels.dispose();
+			for (shots in shotsByAnimation)
+				for (shot in shots)
+					shot.bitmap.dispose();
+			throw 'Cannot bake Animate atlas images/$key: ' + Std.string(error);
+		}
+		if (pixels != graphic.bitmap)
+			pixels.dispose();
 
 		// flixel derives a sprite's origin from the first frame's sourceSize and keeps it for every
 		// other frame, so one canvas per animation made the sprite jump on every animation change
@@ -318,7 +323,8 @@ class AtlasFrameMaker extends FlxFramesCollection
 			var pageW:Int = Std.int(Math.min(maxCols, count)) * cellSizeW;
 			var pageH:Int = Std.int(Math.ceil(count / maxCols)) * cellSizeH;
 			var page:BitmapData = new BitmapData(pageW, pageH, true, 0);
-			var cells:Array<PackedCell> = [];
+			// This fresh page has a single owner; cloning doubles peak memory on mobile.
+			var pageGraphic:FlxGraphic = FlxGraphic.fromBitmapData(page, false, null, false);
 
 			for (j in 0...count)
 			{
@@ -330,27 +336,11 @@ class AtlasFrameMaker extends FlxFramesCollection
 
 				page.copyPixels(shot.bitmap, new Rectangle(0, 0, shotW, shotH), new openfl.geom.Point(cellX, cellY));
 				shot.bitmap.dispose();
-				cells.push({
-					x: cellX,
-					y: cellY,
-					w: shotW,
-					h: shotH
-				});
-			}
-
-			// A unique graphic clones the page, so the page itself is released right after
-			var pageGraphic:FlxGraphic = FlxGraphic.fromBitmapData(page, true, null, false);
-			if (pageGraphic.bitmap != page)
-				page.dispose();
-
-			for (j in 0...count)
-			{
-				var cell = cells[j];
-				var shot = shots[i + j];
+				// Build from the same typed coordinates used by copyPixels, before moving on.
 				var theFrame = new FlxFrame(pageGraphic);
 				theFrame.name = animation + '_' + (i + j);
 				theFrame.sourceSize.set(canvasW, canvasH);
-				theFrame.frame = new FlxRect(cell.x, cell.y, cell.w, cell.h);
+				theFrame.frame = new FlxRect(cellX, cellY, shotW, shotH);
 				theFrame.offset.set(shot.originX - minX, shot.originY - minY);
 				daFramez.push(theFrame);
 			}
@@ -408,12 +398,3 @@ class AtlasFrameMaker extends FlxFramesCollection
 		return names;
 	}
 }
-
-/** Position and size of one shot inside the atlas page it was packed into. */
-private typedef PackedCell =
-{
-	x:Int,
-	y:Int,
-	w:Int,
-	h:Int
-};
