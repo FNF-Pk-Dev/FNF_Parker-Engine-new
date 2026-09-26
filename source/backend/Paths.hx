@@ -249,10 +249,11 @@ class Paths
 		var file:String = modsVideo(key);
 		if (FileSystem.exists(file))
 		{
-			return file;
+			return #if ASSET_MODS AssetFiles.materialize(file) #else file #end;
 		}
 		#end
-		return SUtil.getPath() + 'assets/videos/$key.$VIDEO_EXT';
+		var path = SUtil.getPath() + 'assets/videos/$key.$VIDEO_EXT';
+		return #if ASSET_MODS AssetFiles.materialize(path) #else path #end;
 	}
 
 	static public function sound(key:String, ?library:String):Sound
@@ -327,40 +328,96 @@ class Paths
 		#end
 	}
 
+	/** Resolve each mod/library before choosing a format, preserving override priority. */
+	static function imageCandidates(key:String, ?library:String):Array<String>
+	{
+		var bases:Array<String> = [];
+		#if MODS_ALLOWED
+		if (currentModDirectory != null && currentModDirectory.length > 0)
+			bases.push(mods(currentModDirectory + '/images/' + key));
+		for (mod in getGlobalMods())
+			bases.push(mods(mod + '/images/' + key));
+		bases.push(mods('images/' + key));
+		#end
+		if (library != null)
+			bases.push(getLibraryPath('images/' + key, library));
+		else
+		{
+			if (currentLevel != null)
+			{
+				if (currentLevel != 'shared')
+					bases.push(getLibraryPathForce('images/' + key, currentLevel));
+				bases.push(getLibraryPathForce('images/' + key, 'shared'));
+			}
+			bases.push(getPreloadPath('images/' + key));
+		}
+		return bases;
+	}
+
+	static function imageFileExists(path:String):Bool
+	{
+		#if sys
+		if (FileSystem.exists(path))
+			return true;
+		#end
+		return Assets.exists(path);
+	}
+
+	public static function loadBitmap(path:String):BitmapData
+	{
+		if (path.toLowerCase().endsWith('.ktx') || path.toLowerCase().endsWith('.astc'))
+		{
+			var bytes:Bytes = null;
+			#if sys
+			if (FileSystem.exists(path))
+				bytes = File.getBytes(path);
+			else
+			#end
+			bytes = Assets.getBytes(path);
+			return ASTCBitmapData.fromBytes(bytes);
+		}
+		#if sys
+		if (FileSystem.exists(path))
+			return BitmapData.fromFile(path);
+		#end
+		return OpenFlAssets.getBitmapData(path);
+	}
+
 	static public function image(key:String, ?library:String = null, ?allowGPU:Bool = true):FlxGraphic
 	{
-		var bitmap:BitmapData = null;
-		var file:String = null;
-
-		#if MODS_ALLOWED
-		file = modsImages(key);
-		if (currentTrackedAssets.exists(file))
+		// Existing scripts still request extensionless PNG names.
+		for (base in imageCandidates(key, library))
 		{
-			localTrackedAssets.push(file);
-			return currentTrackedAssets.get(file);
-		}
-		else if (FileSystem.exists(file))
-			bitmap = BitmapData.fromFile(file);
-		else
-		#end
-		{
-			file = getPath('images/$key.png', IMAGE, library);
-			if (currentTrackedAssets.exists(file))
+			var extensions = allowGPU && ASTCBitmapData.supported() ? ['.astc.ktx', '.astc', '.png'] : ['.png', '.astc.ktx', '.astc'];
+			var found = false;
+			var errors:Array<String> = [];
+			for (extension in extensions)
 			{
-				localTrackedAssets.push(file);
-				return currentTrackedAssets.get(file);
+				var file = base + extension;
+				if (currentTrackedAssets.exists(file))
+				{
+					localTrackedAssets.push(file);
+					return currentTrackedAssets.get(file);
+				}
+				if (!imageFileExists(file))
+					continue;
+				found = true;
+				try
+				{
+					var bitmap = loadBitmap(file);
+					if (bitmap != null)
+						return cacheBitmap(file, bitmap, allowGPU);
+					errors.push(file + ': decoder returned null');
+				}
+				catch (error:Dynamic)
+				{
+					errors.push(file + ': ' + Std.string(error));
+				}
 			}
-			else if (OpenFlAssets.exists(file, IMAGE))
-				bitmap = OpenFlAssets.getBitmapData(file);
+			// Do not substitute another mod's image when this mod owns the asset.
+			if (found)
+				throw 'Cannot load image: ' + errors.join('\n');
 		}
-
-		if (bitmap != null)
-		{
-			var retVal = cacheBitmap(file, bitmap, allowGPU);
-			if (retVal != null)
-				return retVal;
-		}
-
 		return null;
 	}
 
@@ -368,22 +425,15 @@ class Paths
 	{
 		if (bitmap == null)
 		{
-			#if MODS_ALLOWED
-			if (FileSystem.exists(file))
-				bitmap = BitmapData.fromFile(file);
-			else
-			#end
-			{
-				if (OpenFlAssets.exists(file, IMAGE))
-					bitmap = OpenFlAssets.getBitmapData(file);
-			}
-
+			if (!imageFileExists(file))
+				return null;
+			bitmap = loadBitmap(file);
 			if (bitmap == null)
 				return null;
 		}
 
 		localTrackedAssets.push(file);
-		if (allowGPU && ClientPrefs.cacheOnGPU)
+		if (allowGPU && ClientPrefs.cacheOnGPU && bitmap.image != null)
 		{
 			var texture:RectangleTexture = FlxG.stage.context3D.createRectangleTexture(bitmap.width, bitmap.height, BGRA, true);
 			texture.uploadFromBitmapData(bitmap);
@@ -456,13 +506,13 @@ class Paths
 		}
 		#end
 
-		var defaultPath:String = SUtil.getPath() + 'assets/fonts/$key';
+		var defaultPath:String = #if ASSET_MODS 'assets/fonts/$key' #else SUtil.getPath() + 'assets/fonts/$key' #end;
 		#if MODS_ALLOWED
 		if (!FileSystem.exists(defaultPath) && !hasFontExtension(key))
 		{
 			for (ext in FONT_EXTENSIONS)
 			{
-				var withExtension:String = SUtil.getPath() + 'assets/fonts/$key$ext';
+				var withExtension:String = defaultPath + ext;
 				if (FileSystem.exists(withExtension))
 					return withExtension;
 			}
@@ -525,8 +575,16 @@ class Paths
 		return key;
 	}
 
-	inline static public function fileExists(key:String, type:AssetType, ?ignoreMods:Bool = false, ?library:String)
+	static public function fileExists(key:String, type:AssetType, ?ignoreMods:Bool = false, ?library:String)
 	{
+		if (type == IMAGE && key.startsWith('images/') && key.endsWith('.png') && !ignoreMods)
+		{
+			for (base in imageCandidates(key.substr(7, key.length - 11), library))
+				for (extension in ['.png', '.astc.ktx', '.astc'])
+					if (imageFileExists(base + extension))
+						return true;
+		}
+
 		#if MODS_ALLOWED
 		if (FileSystem.exists(mods(currentModDirectory + '/' + key)) || FileSystem.exists(mods(key)))
 		{
@@ -656,18 +714,19 @@ class Paths
 		{
 			#if lime_vorbis
 			if (stream)
-				sound = Sound.fromAudioBuffer(AudioBuffer.fromVorbisFile(VorbisFile.fromFile(file)));
+				sound = Sound.fromAudioBuffer(AudioBuffer.fromVorbisFile(VorbisFile.fromFile(#if ASSET_MODS AssetFiles.materialize(file) #else file #end)));
 			else
 			#end
 			try
 			{
-				final header:Bytes = File.getBytes(file).sub(0, 4);
+				final bytes:Bytes = File.getBytes(file);
+				final header:Bytes = bytes.sub(0, Std.int(Math.min(4, bytes.length)));
 				if (header.toString() != "OggS" && file != null)
 				{
 					throw 'The file "$file" is not a valid OGG file (missing OggS header). It may have been renamed from another format like MP3.';
 				}
 
-				sound = Sound.fromFile(file);
+				sound = #if ASSET_MODS Sound.fromAudioBuffer(AudioBuffer.fromBytes(bytes)) #else Sound.fromFile(file) #end;
 			}
 			catch (e)
 			{
@@ -711,7 +770,7 @@ class Paths
 	#if MODS_ALLOWED
 	inline static public function mods(key:String = '')
 	{
-		return SUtil.getPath() + 'mods/' + key;
+		return #if ASSET_MODS 'assets/mods/' + key #else SUtil.getPath() + 'mods/' + key #end;
 	}
 
 	inline static public function modsFont(key:String)
@@ -831,7 +890,7 @@ class Paths
 			if (FileSystem.exists(fileToCheck))
 				return fileToCheck;
 		}
-		return SUtil.getPath() + 'mods/' + key;
+		return mods(key);
 	}
 
 	public static var globalMods:Array<String> = [];
@@ -843,6 +902,16 @@ class Paths
 	{
 		globalMods = [];
 		var path:String = SUtil.getPath() + 'modsList.txt';
+		#if ASSET_MODS
+		// No external mod scan/copy runs in packaged mode. Seed the writable load-order file once.
+		if (!FileSystem.exists(path))
+		{
+			var bundledList = getPreloadPath('modsList.txt');
+			var folders = getModDirectories();
+			folders.sort(Reflect.compare);
+			File.saveContent(path, FileSystem.exists(bundledList) ? File.getContent(bundledList) : [for (folder in folders) folder + '|1'].join('\n'));
+		}
+		#end
 		if (FileSystem.exists(path))
 		{
 			var list:Array<String> = CoolUtil.coolTextFile(path);

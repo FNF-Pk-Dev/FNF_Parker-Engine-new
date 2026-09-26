@@ -310,6 +310,34 @@ Resolution rules worth remembering:
 
 `ClientPrefs` (`source/backend/ClientPrefs.hx`) holds all saved settings as plain `public static var` fields plus a `gameplaySettings:Map<String, Dynamic>` read via `ClientPrefs.getGameplaySetting(name, default)`. It is saved by `saveSettings()` and restored by `loadPrefs()` against `FlxG.save.bind('funkin', CoolUtil.getSavePath())` (bound in `states/TitleState.hx`; keybinds live in a second `controls_v2` save as `customControls`). There is **no** `getPref`/`savePrefs` helper: to add a setting, add the field, write it in `saveSettings()`, read it in `loadPrefs()` with a null guard, and surface it in the relevant `source/options/` sub-state.
 
+### Packaged mods and ASTC textures
+
+`Project.xml` has a commented-out `ASSET_MODS` define (off by default). Uncomment it to package
+`assets/mods/<mod>/...` and resolve `Paths.mods()` to `assets/mods/`. This mode replaces the
+external `example_mods` packaging and skips Android CopyState. Rebuild after changing packaged files.
+On first launch it seeds native `modsList.txt` from `assets/preload/modsList.txt` if supplied, otherwise
+from the packaged mod directories (sorted, enabled); subsequent user choices are preserved.
+`backend/AssetFilesMacro.hx` routes sys existence/directory/stat/text/byte/file-stream reads in the
+`assets/` and legacy `mods/` namespaces through `backend/AssetFiles.hx`, including cwd-prefixed
+paths. Other filesystem paths, saves and `modsList.txt` remain native/writable. Packaged assets
+are read-only: editors must export to an external destination. AssetFiles indexes library-qualified
+IDs and caches direct directory children. It bypasses its own hooks while Lime reads bytes, avoiding
+recursive IO. Font/video/native FileInput consumers materialize files on demand in application storage;
+regular script/JSON/image/audio reads do not extract the whole mod. Lua VM `io.open` is native Lua IO,
+not Haxe sys IO, and is not redirected by this macro.
+
+`Paths.image('foo')` accepts `foo.astc.ktx` (KTX 1, linear RGBA ASTC) or raw `foo.astc` beside the
+usual `foo.png`. `backend/ASTCData.hx` validates the container and exact block payload size;
+`ASTCBitmapData.hx` uploads the base mip directly and owns/disposes the GPU texture. Use premultiplied
+alpha and top-left orientation (`S=r,T=d`), matching the supplied Troll Engine converter. Conversion
+is external; this feature does not replace Lime or automatically compress PNGs. Keep PNGs for devices
+without ASTC and CPU pixel-processing code (`allowGPU=false` prefers PNG). ASTC is tried within each
+mod/library in override order; it must never bypass a higher-priority PNG. ASTC bitmaps have no CPU
+image: do not re-upload them through the `cacheOnGPU` uncompressed-image path. KTX 2, arrays, cube maps
+and sRGB ASTC are not supported. Run `tests/check-asset-loading.ps1` (Haxe + Neko) for parser and actual
+sys-routing regression tests. Older generated HXMLs need `-D ASSET_MODS --macro backend.AssetFilesMacro.install()`
+to typecheck this mode; normal Lime builds get both from Project.xml.
+
 ## 7. Mods
 
 - `example_mods/` is the shipped template and is renamed to `mods/` by the build (`<assets path='example_mods' rename='mods'/>`, `MODS_ALLOWED` only). The runtime `mods/` folder does not exist in the source tree — create it next to the executable when testing.

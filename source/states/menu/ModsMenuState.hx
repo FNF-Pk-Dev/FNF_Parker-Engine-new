@@ -112,7 +112,7 @@ class ModsMenuState extends MusicBeatState
 
 		// FIND MOD FOLDERS
 		var boolshit = true;
-		if (FileSystem.exists(SUtil.getPath() + "modsList.txt"))
+		if (#if ASSET_MODS true #else FileSystem.exists(SUtil.getPath() + "modsList.txt") #end)
 		{
 			for (folder in Paths.getModDirectories())
 			{
