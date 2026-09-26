@@ -66,6 +66,9 @@ class ScriptDebugOverlay extends FlxTypedGroup<DebugScriptText>
 	 */
 	public static function attach(owner:FlxState):ScriptDebugOverlay
 	{
+		#if DISABLE_LOGS
+		return null;
+		#else
 		if (instance != null && instance.owner == owner)
 			return instance;
 
@@ -77,6 +80,7 @@ class ScriptDebugOverlay extends FlxTypedGroup<DebugScriptText>
 		instance.flush();
 
 		return instance;
+		#end
 	}
 
 	/**
@@ -85,6 +89,7 @@ class ScriptDebugOverlay extends FlxTypedGroup<DebugScriptText>
 	 */
 	public static function report(text:String, color:FlxColor = FlxColor.WHITE):Void
 	{
+		#if !DISABLE_LOGS
 		final playState:PlayState = PlayState.instance;
 		if (playState != null)
 		{
@@ -102,6 +107,7 @@ class ScriptDebugOverlay extends FlxTypedGroup<DebugScriptText>
 		// in the log in the meantime.
 		queue(text, color);
 		FlxG.log.error(text);
+		#end
 	}
 
 	/**
@@ -135,10 +141,12 @@ class ScriptDebugOverlay extends FlxTypedGroup<DebugScriptText>
 	/** Formats an Iris message the way `FunkinHScript.InitLogger()` does, minus its PlayState. */
 	static function log(level:String, x:Dynamic, ?pos:haxe.PosInfos, color:FlxColor = FlxColor.WHITE):Void
 	{
+		#if !DISABLE_LOGS
 		final message:String = (pos == null || pos.fileName == null) ? '$level: $x' : '[${pos.fileName}]: $level: ${pos.lineNumber} -> $x';
 
 		report(message, color);
 		FlxG.log.error(message);
+		#end
 	}
 
 	/** Adds a message to the queue, which never grows past what the overlay could show anyway. */

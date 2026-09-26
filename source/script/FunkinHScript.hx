@@ -426,6 +426,10 @@ class HScript extends Script
 
 	public function InitLogger()
 	{
+		#if DISABLE_LOGS
+		// Use the shared silent handlers even while no PlayState exists.
+		ScriptDebugOverlay.hookScriptLog();
+		#else
 		Iris.warn = (x, ?pos) ->
 		{
 			final message:String = '[${pos.fileName}]: WARN: ${pos.lineNumber} -> $x';
@@ -460,6 +464,7 @@ class HScript extends Script
 
 			Iris.logLevel(NONE, x, pos);
 		}
+		#end
 	}
 
 	public function new(?script:String, ?names:String = "Script", ?additionalVars:Map<String, Any>)
@@ -551,7 +556,7 @@ class HScript extends Script
 				catch (e:haxe.Exception)
 				{
 					error(e.message, '${scriptName}: Script Execution Error');
-					#if sys
+					#if (sys && !DISABLE_LOGS)
 					Sys.println(e.message);
 					#end
 				}

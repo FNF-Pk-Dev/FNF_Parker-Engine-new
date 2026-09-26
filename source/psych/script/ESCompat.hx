@@ -93,13 +93,15 @@ class ESFreeplaySong
 {
 	public var songName:String = '';
 	public var week:Int = 0;
+	public var weekID:String = '';
 	public var folder:String = '';
 	public var difficulties:String = null;
 
-	public function new(songName:String, week:Int, folder:String, ?difficulties:String)
+	public function new(songName:String, week:Int, folder:String, ?difficulties:String, weekID:String = '')
 	{
 		this.songName = songName;
 		this.week = week;
+		this.weekID = weekID;
 		this.folder = folder;
 		this.difficulties = difficulties;
 	}
@@ -1196,6 +1198,12 @@ class ESCompat
 			return song != null ? song.songName : null;
 		});
 
+		funk.set('getFreeplaySongWeek', function(index:Int):String
+		{
+			var song:ESFreeplaySong = getFreeplaySong(index);
+			return song != null ? song.weekID : null;
+		});
+
 		funk.set('getFreeplayDiffCount', function(index:Int):Int
 		{
 			var song:ESFreeplaySong = getFreeplaySong(index);
@@ -2263,7 +2271,7 @@ void main(void)
 						continue;
 
 					for (song in (parsed.songs : Array<Dynamic>))
-						songs.push(new ESFreeplaySong(Std.string(song[0]), i, activeMod, parsed.difficulties));
+						songs.push(new ESFreeplaySong(Std.string(song[0]), i, activeMod, parsed.difficulties, names[i]));
 				}
 			}
 
@@ -2287,7 +2295,7 @@ void main(void)
 				var folder:String = Paths.currentModDirectory;
 				if (folder == null)
 					folder = '';
-				songs.push(new ESFreeplaySong(song[0], i, folder, leWeek.difficulties));
+				songs.push(new ESFreeplaySong(song[0], i, folder, leWeek.difficulties, weekName));
 			}
 		}
 
@@ -2354,6 +2362,10 @@ void main(void)
 			difficulty = diffs.length - 1;
 
 		var songLowercase:String = Paths.formatToSongPath(song.songName);
+		var previousMod = Paths.currentModDirectory;
+		var previousDifficulties = CoolUtil.difficulties;
+		// Resolve charts against the selected song's mod, including cached freeplay entries.
+		Paths.currentModDirectory = song.folder;
 		CoolUtil.difficulties = diffs.copy();
 
 		var poop:String = Highscore.formatSong(songLowercase, difficulty);
@@ -2364,11 +2376,26 @@ void main(void)
 		var chartExists:Bool = OpenFlAssets.exists(Paths.json(songLowercase + '/' + poop));
 		#end
 		if (!chartExists)
+		{
+			Paths.currentModDirectory = previousMod;
+			CoolUtil.difficulties = previousDifficulties;
 			return warn(funk, 'startFreeplaySongIndex', 'Chart file not found: ' + poop + '.json');
+		}
 
-		Paths.currentModDirectory = song.folder;
+		var chart:backend.songs.Song.SwagSong;
+		try
+		{
+			chart = Song.loadFromJson(poop, songLowercase);
+		}
+		catch (error:Dynamic)
+		{
+			Paths.currentModDirectory = previousMod;
+			CoolUtil.difficulties = previousDifficulties;
+			return warn(funk, 'startFreeplaySongIndex', 'Could not load ' + poop + '.json: ' + Std.string(error));
+		}
+
 		PlayState.storyWeek = song.week;
-		PlayState.SONG = Song.loadFromJson(poop, songLowercase);
+		PlayState.SONG = chart;
 		PlayState.isStoryMode = false;
 		PlayState.storyDifficulty = difficulty;
 

@@ -145,6 +145,12 @@ class FunkinLua extends GlobalScript
 		LuaL.openlibs(lua);
 		Lua_helper.register_hxtrace(lua);
 		Lua.init_callbacks(lua);
+		#if DISABLE_LOGS
+		// Luau's native print does not go through Haxe trace/no-traces.
+		set('print', Reflect.makeVarArgs(function(_:Array<Dynamic>):Void
+		{
+		}));
+		#end
 
 		// trace('Lua version: ' + Lua.version());
 		// trace("LuaJIT version: " + Lua.versionJIT());
@@ -4849,7 +4855,7 @@ class FunkinLua extends GlobalScript
 
 	public function luaTrace(text:String, ignoreCheck:Bool = false, deprecated:Bool = false, color:FlxColor = FlxColor.WHITE)
 	{
-		#if LUA_ALLOWED
+		#if (LUA_ALLOWED && !DISABLE_LOGS)
 		if (ignoreCheck || getBool('luaDebugMode'))
 		{
 			if (deprecated && !getBool('luaDeprecatedWarnings'))

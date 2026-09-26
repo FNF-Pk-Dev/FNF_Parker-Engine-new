@@ -32,7 +32,16 @@ class StorageUtil
 	public static function getStorageDirectory(?force:Bool = false):String
 	{
 		var daPath:String = '';
-		#if android
+		#if (android && ASSET_MODS)
+		// Packaged assets need no external-storage permission. The working directory
+		// still has to exist and be writable for modsList.txt, saves and crash reports.
+		// Ignore storagetype.txt here: it may contain EXTERNAL from an earlier build.
+		if (rootDir == null || rootDir.length == 0)
+			throw 'Application storage directory is unavailable';
+		if (!FileSystem.exists(rootDir))
+			FileSystem.createDirectory(rootDir);
+		daPath = Path.addTrailingSlash(rootDir);
+		#elseif android
 		if (!FileSystem.exists(rootDir + 'storagetype.txt'))
 			File.saveContent(rootDir + 'storagetype.txt', "EXTERNAL");
 		var curStorageType:String = File.getContent(rootDir + 'storagetype.txt');

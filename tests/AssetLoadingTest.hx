@@ -1,6 +1,7 @@
 import backend.ASTCData;
 import backend.AssetFiles;
 import haxe.io.Bytes;
+import openfl.text.Font;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -80,6 +81,7 @@ class AssetLoadingTest
 		raw.set(13, 1);
 		check(new ASTCData(raw).length == 16, 'Raw ASTC');
 
+		check(File.getContent('mods/demo/pack.json') == '{"name":"demo"}', 'First read initializes the index');
 		check(FileSystem.exists('mods/demo/pack.json'), 'Legacy mod alias');
 		check(FileSystem.isDirectory('assets/mods/demo'), 'Virtual directory');
 		check(FileSystem.readDirectory('assets/mods').join(',') == 'demo', 'Direct children only');
@@ -103,7 +105,24 @@ class AssetLoadingTest
 		check(input.readAll().toString() == '{"name":"demo"}', 'Native FileInput extraction');
 		input.close();
 		check(FileSystem.stat('mods/demo/pack.json').size == 15, 'Asset stat');
+		check(FileSystem.exists('mods/demo/data/neurosesh-mix/neurosesh-mix-safe.json'), 'Lowercase chart lookup');
+		check(File.getContent('mods/demo/data/neurosesh-mix/neurosesh-mix-safe.json') == 'safe chart', 'Safe chart casing');
+		check(File.getContent('mods/demo/data/neurosesh-mix/neurosesh-mix-canon.json') == 'canon chart', 'Canon chart casing');
+		check(FileSystem.isDirectory('mods/demo/data/neurosesh-mix'), 'Lowercase song directory');
+		check(FileSystem.readDirectory('mods/demo/data/neurosesh-mix').length == 2, 'Song directory listing casing');
+		check(File.getContent('mods/demo/Case.txt') == 'upper' && File.getContent('mods/demo/case.txt') == 'lower', 'Exact case wins');
+		check(!FileSystem.exists('mods/demo/CASE.txt'), 'Ambiguous casing must not select an arbitrary file');
+		check(Font.fromFile('mods/demo/fonts/other.ttf').fontName == 'Unityped Regular', 'Packaged TTF font');
+		check(Font.fromFile(Sys.getCwd() + '/assets/mods/demo/fonts/info.otf').fontName == 'Info Font', 'Packaged OTF font');
+		check(Font.fromFile('assets/shared/fonts/library.ttf').fontName == 'Library Font', 'Qualified font library lookup');
+		check(Font.nativeLoadCount == 0, 'Typed fonts should not be extracted as Bytes');
+		check(Font.fromFile('assets/mods/demo/fonts/binary.ttf').fontName == 'Binary Font', 'Binary font extraction');
+		check(Font.nativeLoadCount == 1 && AssetFiles.resolve(Font.lastNativePath) == null, 'Extracted font uses native path');
+		File.saveContent('native-font.ttf', 'Native Font');
+		check(Font.fromFile('native-font.ttf').fontName == 'Native Font', 'Native font loading');
+		check(Font.nativeLoadCount == 2 && Font.lastNativePath == 'native-font.ttf', 'Native font path unchanged');
+		FileSystem.deleteFile('native-font.ttf');
 		FileSystem.deleteFile('native-test.txt');
-		trace('PASS: ASTC/KTX validation and actual sys macro routing');
+		trace('PASS: ASTC/KTX validation, actual sys macro routing and packaged font loading');
 	}
 }

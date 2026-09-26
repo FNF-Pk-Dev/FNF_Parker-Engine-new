@@ -55,6 +55,12 @@ CI (`.github/workflows/`): `main.yml` builds Android on `ubuntu-24.04` with Haxe
 
 Version pins are loose in practice: `Project.xml` asks for `openfl 9.2.2` / `lime 7.7.0`, while `hmm.json` pins `lime 8.0.2` / `openfl 9.2.2`, and the reference machine runs lime 8.1.3 / openfl 9.3.4. Lime only warns about this (`Warning: Ignoring unknown fps=""` is also harmless), so do not "fix" the pins without being asked.
 
+`DISABLE_LOGS` in `Project.xml` is enabled by default. It adds Haxe's `no-traces`, silences direct
+runtime trace/Lua print calls, and disables script debug text in both PlayState and scripted menus.
+Comment out the `DISABLE_LOGS` define and rebuild to restore logs. FPS remains controlled by
+`ClientPrefs.showFPS`; crash files and crash alerts still work. This controls engine runtime logs,
+not compiler/Gradle output or Android system/native driver messages.
+
 ### Verifying a change when `lime build` is unavailable
 
 On some machines `haxelib run lime build windows` fails before compiling anything with
@@ -315,16 +321,30 @@ Resolution rules worth remembering:
 `Project.xml` has a commented-out `ASSET_MODS` define (off by default). Uncomment it to package
 `assets/mods/<mod>/...` and resolve `Paths.mods()` to `assets/mods/`. This mode replaces the
 external `example_mods` packaging and skips Android CopyState. Rebuild after changing packaged files.
+On Android, `StorageUtil.getStorageDirectory()` creates/returns the app-private application storage
+directory in this mode, ignoring any old external `storagetype.txt` choice. `Main.new()` skips external
+permission requests. Never skip the permission call while retaining the external working directory:
+that call also used to create the directory, and `Sys.setCwd()` can fail when it is missing.
+`Main.new()` attaches the crash handler immediately after `super()`, before storage setup or game
+construction, so synchronous startup failures are reported too. Run `tests/check-mobile-storage.ps1`
+for the packaged/private and legacy/external directory regression checks.
 On first launch it seeds native `modsList.txt` from `assets/preload/modsList.txt` if supplied, otherwise
 from the packaged mod directories (sorted, enabled); subsequent user choices are preserved.
 `backend/AssetFilesMacro.hx` routes sys existence/directory/stat/text/byte/file-stream reads in the
 `assets/` and legacy `mods/` namespaces through `backend/AssetFiles.hx`, including cwd-prefixed
 paths. Other filesystem paths, saves and `modsList.txt` remain native/writable. Packaged assets
 are read-only: editors must export to an external destination. AssetFiles indexes library-qualified
-IDs and caches direct directory children. It bypasses its own hooks while Lime reads bytes, avoiding
-recursive IO. Font/video/native FileInput consumers materialize files on demand in application storage;
-regular script/JSON/image/audio reads do not extract the whole mod. Lua VM `io.open` is native Lua IO,
-not Haxe sys IO, and is not redirected by this macro.
+IDs and caches direct directory children. Exact casing wins; a unique case-insensitive fallback also
+matches normalized song paths against Windows-authored names such as `data/NeurosesH-mix`. Both
+file reads and directory scans use that index; case-colliding names require an exact spelling.
+It bypasses its own hooks while Lime reads bytes, avoiding
+recursive IO. Video/native FileInput consumers materialize files on demand in application storage;
+regular script/JSON/image/audio reads do not extract the whole mod. Packaged `Font.fromFile()` calls
+resolve the owning library ID and use `openfl.utils.Assets.getFont()` for FONT entries. Never extract
+these through `getBytes()`: Lime may store a generated Font subclass there, causing `Invalid Cast`
+when it is cast to Bytes. Fonts declared as BINARY still materialize on demand; `Paths.fontName()`
+still registers the font family. Lua VM `io.open` is native Lua IO, not Haxe sys IO, and is not
+redirected by this macro.
 
 `Paths.image('foo')` accepts `foo.astc.ktx` (KTX 1, linear RGBA ASTC) or raw `foo.astc` beside the
 usual `foo.png`. `backend/ASTCData.hx` validates the container and exact block payload size;
@@ -334,9 +354,17 @@ is external; this feature does not replace Lime or automatically compress PNGs. 
 without ASTC and CPU pixel-processing code (`allowGPU=false` prefers PNG). ASTC is tried within each
 mod/library in override order; it must never bypass a higher-priority PNG. ASTC bitmaps have no CPU
 image: do not re-upload them through the `cacheOnGPU` uncompressed-image path. KTX 2, arrays, cube maps
-and sRGB ASTC are not supported. Run `tests/check-asset-loading.ps1` (Haxe + Neko) for parser and actual
-sys-routing regression tests. Older generated HXMLs need `-D ASSET_MODS --macro backend.AssetFilesMacro.install()`
+and sRGB ASTC are not supported. Run `tests/check-asset-loading.ps1` (Haxe + Neko) for parser, actual
+sys-routing and packaged-font regression tests. Older generated HXMLs need `-D ASSET_MODS --macro backend.AssetFilesMacro.install()`
 to typecheck this mode; normal Lime builds get both from Project.xml.
+
+`BitmapAssetMacro` (desktop/Android) also patches OpenFL's `Assets.getBitmapData()`/`exists()` so
+library callers that bypass `Paths.image()` can resolve compressed textures. When a Lime fork strips
+PNGs after ASTC conversion, Flixel UI still needs CPU-readable pixels for tooltips, buttons and
+nine-slice controls: this macro embeds the small original library PNGs as Haxe resources, and
+`BitmapAssetCompat` loads/caches them before trying compressed assets. Do not substitute GPU-only
+bitmaps for these controls. Run `tests/check-bitmap-assets.ps1`; older generated HXMLs need
+`--macro backend.BitmapAssetMacro.install()`.
 
 ## 7. Mods
 
@@ -379,6 +407,15 @@ Global variables/functions exposed to HScript come from `script/FunkinHScript.hx
 `AtlasFrameMaker.construct()` returns an `AtlasFrameMaker` collection carrying the baked canvas's signed `symbolX`/`symbolY` and the Animate stage instance pivot (zero when absent). The packed frames keep a common positive canvas for storage, but `Character.prepareCharacterMatrix()` restores the symbol coordinates **before** flipping/scaling/rotation. `graphicLoaded()` and `updateHitbox()` preserve the Animate pivot instead of centering on the padded canvas. **Animate camera anchors are `(x, y)`**, matching Psych/ES's graphicless Character wrapper around its separately drawn FlxAnimate atlas. `getMidpoint()` must not add half the baked canvas or current pose dimensions: both displace the camera, and pose dimensions also change with each singing animation. `getScreenBounds()` independently uses the actual render matrix for culling. This also applies to cached atlases and ES-spawned shadow characters. Never bake compensating offsets into character JSON; that would double-apply the correction and shift animations with negative coordinates. Sparrow characters retain the normal FlxSprite midpoint.
 
 ### Engine Custom ES dialect
+
+`getFreeplaySongWeek(index)` returns the source week filename without `.json` (for example `week2`),
+independent of the week's display name. Locked Destiny's `states/FreeplayState.lua` filters on this
+ID to show only `week2.json`, retains each song's original engine index for difficulty/start calls,
+and selects cover art by song name instead of the filtered row number. Song launches select the
+entry's mod before looking up the chart, restore the previous mod/difficulties on lookup or parse
+failure, and leave the menu interactive on failure. Never schedule the menu's `exitMenu` timer when
+starting a song: that timer returns to MainMenu rather than entering gameplay. Run
+`lua tests/LockedDestinyFreeplayTest.lua` for filtering, cover and launch-index regression checks.
 
 `source/psych/script/ESCompat.hx` is registered at the end of `FunkinLua`'s constructor and adds the ~70 callbacks the "Engine Custom ES" engine provides (`set`/`get`/`add`/`remove`/`scale`/`scroll`/`setCam`/`setOrder`, `setArray`/`addArray`/`setVarArray`, `stepEvent`, `switchLuaMenu`/`switchSourceMenu`, freeplay queries, `makeShader`/`setCameraShader`/`doTweenFloatArray`, `makeChar`/`setLongSing`/`MoveCamOnAnim`/`getAnimName`, `makeHealthBar`, `makeTrailSpirit`, `BGSprite`/`FlxBackdrop`/`ColorBox`, window helpers, strum/note helpers, typewriter texts). It never replaces a Psych callback, so Psych scripts keep their behaviour.
 

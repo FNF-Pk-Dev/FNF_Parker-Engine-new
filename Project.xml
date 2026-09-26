@@ -47,6 +47,7 @@
 
 	<classpath name="source" />
 	<haxeflag name="--macro" value="backend.ShaderVersionMacro.install()" if="desktop" />
+	<haxeflag name="--macro" value="backend.BitmapAssetMacro.install()" if="desktop || android" />
 	
 	<!-- PSYCH ENGINE CUSTOMIZATION -->
 	<define name="MODS_ALLOWED" if="desktop || android" />
@@ -60,6 +61,9 @@
 	<define name="PSYCH_WATERMARKS"/> <!-- DELETE THIS TO REMOVE WATERMARKS/DEV NAMES ON TITLE SCREEN -->
 	<define name="TITLE_SCREEN_EASTER_EGG" if="officialBuild"/> <!-- DELETE THE if="officialBuild" for enabling this on an unofficial build -->
 	<define name="CRASH_HANDLER" if="desktop release || android" />
+	<!-- Enabled by default: hide on-screen script logs and runtime terminal logs. Comment out to show them. -->
+	<define name="DISABLE_LOGS" />
+	<haxedef name="no-traces" if="DISABLE_LOGS" />
 	
 	<section if="android">
 		<!-- Lime merges its default architectures, so explicitly exclude every non-ARM64 target. -->

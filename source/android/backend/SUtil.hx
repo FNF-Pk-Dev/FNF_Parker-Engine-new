@@ -60,7 +60,9 @@ class SUtil
 				case FilePos(s, file, line, column):
 					errMsg += file + " (line " + line + ")\n";
 				default:
+					#if !DISABLE_LOGS
 					Sys.println(stackItem);
+					#end
 			}
 		}
 
@@ -71,9 +73,11 @@ class SUtil
 
 		File.saveContent(SUtil.getPath() + path, errMsg + "\n");
 
+		#if !DISABLE_LOGS
 		Sys.println(errMsg);
 		Sys.println("Crash dump saved in " + Path.normalize(path));
 		Sys.println("Making a simple alert ...");
+		#end
 
 		SUtil.applicationAlert("Uncaught Error :(!", errMsg);
 		System.exit(0);

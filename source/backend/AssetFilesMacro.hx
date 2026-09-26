@@ -64,6 +64,15 @@ class AssetFilesMacro
 							case 'openfl.display.BitmapData': macro return openfl.display.BitmapData.fromBytes(backend.AssetFiles.getBytes(assetPath));
 							case 'openfl.media.Sound': macro return
 									openfl.media.Sound.fromAudioBuffer(lime.media.AudioBuffer.fromBytes(backend.AssetFiles.getBytes(assetPath)));
+							case 'openfl.text.Font': macro
+								{
+									// Lime may represent FONT entries as generated Font subclasses.
+									// getBytes() casts those instances to Bytes and throws on hxcpp.
+									var fontID = backend.AssetFiles.getAssetID(assetPath);
+									if (fontID != null && openfl.utils.Assets.exists(fontID, openfl.utils.AssetType.FONT))
+										return openfl.utils.Assets.getFont(fontID);
+									$argument = backend.AssetFiles.materialize(assetPath);
+								};
 							default: macro $argument = backend.AssetFiles.materialize(assetPath);
 						};
 					}

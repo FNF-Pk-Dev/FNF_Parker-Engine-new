@@ -15,6 +15,7 @@ class AssetFiles
 {
 	static var files:Map<String, String>;
 	static var directories:Map<String, Array<String>>;
+	static var foldedPaths:Map<String, String>;
 	static var bypass = new sys.thread.Tls<Bool>();
 	static var extracted:Map<String, String> = [];
 	static var indexedLibraries:Int = -1;
@@ -93,24 +94,47 @@ class AssetFiles
 		}
 		files = nextFiles;
 		directories = nextDirectories;
+		foldedPaths = [];
+		for (keys in [files.keys(), directories.keys()])
+		{
+			for (key in keys)
+			{
+				var lower = key.toLowerCase();
+				// Ambiguous names still require exact casing; never pick a random asset.
+				if (foldedPaths.exists(lower) && foldedPaths.get(lower) != key)
+					foldedPaths.set(lower, null);
+				else
+					foldedPaths.set(lower, key);
+			}
+		}
 		indexedLibraries = libraries.length;
+	}
+
+	/** Song keys are lowercase, but Windows-authored mods may contain mixed-case directories. */
+	static function matchingPath(path:String):String
+	{
+		ensureIndex();
+		if (files.exists(path) || directories.exists(path))
+			return path;
+		var matched = foldedPaths.get(path.toLowerCase());
+		return matched != null ? matched : path;
 	}
 
 	public static function exists(path:String):Bool
 	{
-		ensureIndex();
+		path = matchingPath(path);
 		return files.exists(path) || directories.exists(path);
 	}
 
 	public static function isDirectory(path:String):Bool
 	{
-		ensureIndex();
+		path = matchingPath(path);
 		return directories.exists(path);
 	}
 
 	public static function readDirectory(path:String):Array<String>
 	{
-		ensureIndex();
+		path = matchingPath(path);
 		var entries = directories.get(path);
 		if (entries == null)
 			throw 'Asset directory does not exist: $path';
@@ -119,14 +143,20 @@ class AssetFiles
 
 	public static function getBytes(path:String):Bytes
 	{
-		ensureIndex();
-		var id = files.get(path);
+		var id = getAssetID(path);
 		if (id == null)
 			throw 'Asset file does not exist: $path';
 		var bytes = nativeAccess(() -> Assets.getBytes(id));
 		if (bytes == null)
 			throw 'Asset is not loaded: $id';
 		return bytes;
+	}
+
+	/** Resolve the owning library too; typed assets must use their typed loader. */
+	public static function getAssetID(path:String):Null<String>
+	{
+		path = matchingPath(path);
+		return files.get(path);
 	}
 
 	public static function getContent(path:String):String
@@ -146,6 +176,7 @@ class AssetFiles
 		var root = lime.system.System.applicationStorageDirectory;
 		if (root == null || root.length == 0)
 			throw 'No writable application storage for $key';
+
 		var directory = Path.join([root, 'asset-cache']);
 		var target = Path.join([directory, haxe.crypto.Sha256.make(bytes).toHex() + '.' + Path.extension(key)]);
 		nativeAccess(() ->
@@ -168,6 +199,7 @@ class AssetFiles
 			gid: 0,
 			uid: 0,
 			atime: time,
+
 			mtime: time,
 			ctime: time,
 			dev: 0,

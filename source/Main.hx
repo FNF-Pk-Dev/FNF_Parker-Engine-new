@@ -58,20 +58,32 @@ class Main extends Sprite
 
 	public static function main():Void
 	{
+		#if DISABLE_LOGS
+		// Also silence direct/runtime calls, which the no-traces compiler flag cannot strip.
+		haxe.Log.trace = function(_:Dynamic, ?infos:haxe.PosInfos):Void
+		{
+		};
+		#end
 		Lib.current.addChild(new Main());
 		// OpenFL keeps allocating after main returns; leave this thread managed by hxcpp's GC.
 	}
 
 	public function new()
 	{
+		super();
+		#if CRASH_HANDLER
+		// Startup states are created synchronously by addChild(new FNFGame(...)).
+		// Attach first so asset/startup failures reach the crash report as well.
+		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
+		#end
+
 		#if mobile
-		#if android
+		// ASSET_MODS uses the app-private directory prepared by StorageUtil.
+		#if (android && !ASSET_MODS)
 		StorageUtil.requestPermissions();
 		#end
 		Sys.setCwd(StorageUtil.getStorageDirectory());
 		#end
-
-		super();
 
 		if (stage != null)
 			init();
@@ -124,10 +136,6 @@ class Main extends Sprite
 		#if html5
 		FlxG.autoPause = false;
 		FlxG.mouse.visible = false;
-		#end
-
-		#if CRASH_HANDLER
-		Lib.current.loaderInfo.uncaughtErrorEvents.addEventListener(UncaughtErrorEvent.UNCAUGHT_ERROR, onCrash);
 		#end
 
 		#if desktop
@@ -246,7 +254,9 @@ class Main extends Sprite
 				case FilePos(s, file, line, column):
 					errMsg += file + " (line " + line + ")\n";
 				default:
+					#if !DISABLE_LOGS
 					Sys.println(stackItem);
+					#end
 			}
 		}
 
@@ -259,8 +269,10 @@ class Main extends Sprite
 
 		File.saveContent(path, errMsg + "\n");
 
+		#if !DISABLE_LOGS
 		Sys.println(errMsg);
 		Sys.println("Crash dump saved in " + Path.normalize(path));
+		#end
 
 		CoolUtil.showPopUp(errMsg, "Error!");
 		#if desktop
